@@ -19,7 +19,8 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@/api-clients/*": ["./clients/dist/*"]
     }
   },
   "include": [

@@ -1,0 +1,21 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: azurekeyvault
+spec:
+  type: secretstores.azure.keyvault
+  version: v1
+  metadata:
+  - name: vaultName
+    value: 'deno'
+  - name: azureTenantId
+    value: "0c4da9c5-40ea-4e7d-9c7a-e7308d4f8e38"
+  - name: azureClientId
+    value: 'e8f1a39d-cf16-45cd-8ae3-9ed57ae6cfb5'
+  - name: azureClientSecret
+    secretKeyRef:
+      name: azuread-client-secret
+      key:  azuread-client-secret
+
+auth:
+  secretStore: secretstore

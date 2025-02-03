@@ -1,0 +1,49 @@
+{
+  "version": "1.0.0",
+  "clients": {
+    "DabClient": {
+      "language": "TypeScript",
+      "typeAccessModifier": "Public",
+      "structuredMimeTypes": [
+        "application/json",
+        "text/plain;q=0.9",
+        "application/x-www-form-urlencoded;q=0.2",
+        "multipart/form-data;q=0.1"
+      ],
+      "clientNamespaceName": "Kiota",
+      "usesBackingStore": false,
+      "includeAdditionalData": true,
+      "excludeBackwardCompatible": false,
+      "disabledValidationRules": [],
+      "descriptionLocation": "http://dab:5000/api/openapi",
+      "includePatterns": [
+        "/",
+        "/Chat",
+        "/Chat/id",
+        "/Chat/id/{id}",
+        "/Document",
+        "/Document/id",
+        "/Document/id/{id}",
+        "/Document/id/{id}/createdAt",
+        "/Document/id/{id}/createdAt/{createdAt}",
+        "/Message",
+        "/Message/id",
+        "/Message/id/{id}",
+        "/Suggestion",
+        "/Suggestion/id",
+        "/Suggestion/id/{id}",
+        "/User",
+        "/User/id",
+        "/User/id/{id}",
+        "/Vote",
+        "/Vote/chatId",
+        "/Vote/chatId/{chatId}",
+        "/Vote/chatId/{chatId}/messageId",
+        "/Vote/chatId/{chatId}/messageId/{messageId}"
+      ],
+      "excludePatterns": [],
+      "outputPath": "./clients/generated-clients/client"
+    }
+  },
+  "plugins": {}
+}

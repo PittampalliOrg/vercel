@@ -1,0 +1,143 @@
+services:
+  frontend:
+    container_name: frontend
+    image: next-js
+    ports:
+      - "3000:3000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker-host.sock 
+      - .:/workspace:cached
+    networks:
+      - dapr-network
+
+  frontend_dapr:
+    container_name: frontend_dapr
+    image: "daprio/daprd"
+    command: ["./daprd", "-app-id", "frontend", "-app-port", "3000", "-resources-path", "/dapr", "-config", "/dapr/config.yaml", "-enable-api-logging", "-log-level", "debug", "--app-channel-address", "frontend"]
+    volumes:
+      - "./dapr:/dapr"
+
+    depends_on:
+      - frontend
+      - db
+    networks:
+      - dapr-network    
+
+  api:
+    container_name: api
+    image: deno-dotnet
+    ports:
+      - "8000:8000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker-host.sock 
+      - ../kiota-deno:/workspace:cached
+    networks:
+      - dapr-network    
+
+  api_dapr:
+    container_name: api_dapr
+    image: "daprio/daprd"
+
+    command: ["./daprd", "--app-id", "api", "-app-port", "8000", "--resources-path", "/dapr", "--config", "/dapr/config.yaml", "--enable-api-logging", "--log-level", "debug", "--app-channel-address", "api"]
+    volumes:
+      - "./dapr:/dapr"
+
+    depends_on:
+      - api
+      - db
+    networks:
+      - dapr-network    
+
+  dab:
+    container_name: dab
+    image: mcr.microsoft.com/azure-databases/data-api-builder
+    volumes:
+      - type: bind
+        source: ./dab-config.json
+        target: /App/dab-config.json
+        read_only: true
+    ports:
+      - "5000:5000"
+      
+    environment:
+      SQL_CONN_STRING: "Host=db;Port=5432;Database=postgres;User ID=postgres;Password=postgres;"
+      DAB_ENVIRONMENT: Development
+
+    command: ["dab", "start", "-c", "./App/dab-config.json"]
+    depends_on:
+      - db
+
+    networks:
+      - dapr-network    
+
+  dab_dapr:
+    container_name: dab_dapr
+    image: "daprio/daprd:edge"
+    command: ["./daprd", "-app-id", "dab", "-app-port", "5000", "-resources-path", "/dapr", "-config", "/dapr/config.yaml", "-enable-api-logging", "--log-level", "debug", "--app-channel-address", "dab"]
+    volumes:
+      - "./dapr:/dapr"
+
+    depends_on:
+      - dab
+    networks:
+      - dapr-network    
+
+  scheduler:
+    container_name: scheduler
+    image: "daprio/dapr"
+    command: ["./scheduler", "-port", "50007"]
+    ports:
+      - "50007:50007"
+    # WARNING - This is a tmpfs volume, your state will not be persisted across restarts
+    volumes:
+    - type: tmpfs
+      target: /data
+      tmpfs:
+        size: "10000"
+    networks:
+      - dapr-network
+
+  zipkin:
+    container_name: zipkin
+    image: "openzipkin/zipkin"
+    ports:
+      - "9411:9411"
+    networks:
+      - dapr-network
+
+  redis:
+    container_name: redis_service
+    image: "redis:latest"
+    ports:
+      - "6379:6379"
+    networks:
+      - dapr-network
+
+  placement:
+    container_name: placement
+    image: "daprio/dapr"
+    command: ["./placement", "-port", "50006"]
+    ports:
+      - "50006:50006"
+    networks:
+      - dapr-network
+
+  db:
+    container_name: db
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    networks:
+      - dapr-network      
+
+volumes:
+  postgres-data:
+networks: 
+  dapr-network:

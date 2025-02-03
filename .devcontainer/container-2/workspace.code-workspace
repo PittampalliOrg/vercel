@@ -1,0 +1,22 @@
+{
+	"folders": [
+		{
+			"path": "/workspace/.devcontainer"
+		},
+		{
+			"path": "/workspace/.vscode"
+		},
+		{
+			"path": "/workspace/backend"
+		},
+		{
+			"path": "/workspace/components"
+		},
+		{
+			"path": "/workspace/.git"
+		},
+		{
+			"path": "/workspace/docker-compose.yml"
+		}
+	]
+}

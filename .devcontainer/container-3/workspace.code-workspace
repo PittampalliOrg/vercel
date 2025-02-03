@@ -1,0 +1,49 @@
+{
+	"folders": [
+		{
+			"name": ".devcontainer",
+			"path": ".."
+		},
+		{
+			"name": ".vscode",
+			"path": "../../.vscode"
+		},
+		{
+			"name": "components",
+			"path": "../../components"
+		},
+		{
+			"name": "api",
+			"path": "../../../kiota-server"
+		}
+	],
+	"launch": {
+
+		"version": "0.2.0",
+		"configurations": [
+			{
+				"request": "launch",
+				"name": "Launch Program",
+				"type": "node",
+				"program": "/workspace/api/dev.ts",
+				"cwd": "/workspace/api",
+				"runtimeExecutable": "deno",
+				"runtimeArgs": [
+					"run",
+					"--unstable-kv",
+					"--env-file=/workspace/api/.env"
+				],
+
+				"outputCapture": "std",
+				"envFile": "/workspace/api/.env",
+				"skipFiles": [
+					"<node_internals>/**",
+					"/workspace/node_modules/**",
+					"/workspace/.next/**",
+					"**/*.js",
+					"**/fresh"
+				  ],
+			}
+		]
+	}
+}

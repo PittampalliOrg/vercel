@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+      "target": "es2016",
+      "module": "commonjs",
+      "outDir": "./dist",
+      "esModuleInterop": true,
+      "forceConsistentCasingInFileNames": true,
+      "strict": true,
+      "declaration": true
+  },
+  "include": [
+      "generated-clients/client/**/*"
+  ]
+}

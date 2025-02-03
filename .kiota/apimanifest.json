@@ -1,0 +1,159 @@
+{
+  "applicationName": "application",
+  "apiDependencies": {
+    "DabClient": {
+      "apiDescriptionUrl": "http://dab:5000/api/openapi",
+      "apiDeploymentBaseUrl": "http://dab:5000/api/",
+      "requests": [
+        {
+          "method": "GET",
+          "uriTemplate": "Suggestion/id/{id}"
+        },
+        {
+          "method": "PUT",
+          "uriTemplate": "Suggestion/id/{id}"
+        },
+        {
+          "method": "PATCH",
+          "uriTemplate": "Suggestion/id/{id}"
+        },
+        {
+          "method": "DELETE",
+          "uriTemplate": "Suggestion/id/{id}"
+        },
+        {
+          "method": "GET",
+          "uriTemplate": "Suggestion"
+        },
+        {
+          "method": "POST",
+          "uriTemplate": "Suggestion"
+        },
+        {
+          "method": "GET",
+          "uriTemplate": "Chat/id/{id}"
+        },
+        {
+          "method": "PUT",
+          "uriTemplate": "Chat/id/{id}"
+        },
+        {
+          "method": "PATCH",
+          "uriTemplate": "Chat/id/{id}"
+        },
+        {
+          "method": "DELETE",
+          "uriTemplate": "Chat/id/{id}"
+        },
+        {
+          "method": "GET",
+          "uriTemplate": "Chat"
+        },
+        {
+          "method": "POST",
+          "uriTemplate": "Chat"
+        },
+        {
+          "method": "GET",
+          "uriTemplate": "Document/id/{id}/createdAt/{createdAt}"
+        },
+        {
+          "method": "PUT",
+          "uriTemplate": "Document/id/{id}/createdAt/{createdAt}"
+        },
+        {
+          "method": "PATCH",
+          "uriTemplate": "Document/id/{id}/createdAt/{createdAt}"
+        },
+        {
+          "method": "DELETE",
+          "uriTemplate": "Document/id/{id}/createdAt/{createdAt}"
+        },
+        {
+          "method": "GET",
+          "uriTemplate": "Document"
+        },
+        {
+          "method": "POST",
+          "uriTemplate": "Document"
+        },
+        {
+          "method": "GET",
+          "uriTemplate": "Message/id/{id}"
+        },
+        {
+          "method": "PUT",
+          "uriTemplate": "Message/id/{id}"
+        },
+        {
+          "method": "PATCH",
+          "uriTemplate": "Message/id/{id}"
+        },
+        {
+          "method": "DELETE",
+          "uriTemplate": "Message/id/{id}"
+        },
+        {
+          "method": "GET",
+          "uriTemplate": "Message"
+        },
+        {
+          "method": "POST",
+          "uriTemplate": "Message"
+        },
+        {
+          "method": "GET",
+          "uriTemplate": "User/id/{id}"
+        },
+        {
+          "method": "PUT",
+          "uriTemplate": "User/id/{id}"
+        },
+        {
+          "method": "PATCH",
+          "uriTemplate": "User/id/{id}"
+        },
+        {
+          "method": "DELETE",
+          "uriTemplate": "User/id/{id}"
+        },
+        {
+          "method": "GET",
+          "uriTemplate": "User"
+        },
+        {
+          "method": "POST",
+          "uriTemplate": "User"
+        },
+        {
+          "method": "GET",
+          "uriTemplate": "Vote/chatId/{chatId}/messageId/{messageId}"
+        },
+        {
+          "method": "PUT",
+          "uriTemplate": "Vote/chatId/{chatId}/messageId/{messageId}"
+        },
+        {
+          "method": "PATCH",
+          "uriTemplate": "Vote/chatId/{chatId}/messageId/{messageId}"
+        },
+        {
+          "method": "DELETE",
+          "uriTemplate": "Vote/chatId/{chatId}/messageId/{messageId}"
+        },
+        {
+          "method": "GET",
+          "uriTemplate": "Vote"
+        },
+        {
+          "method": "POST",
+          "uriTemplate": "Vote"
+        }
+      ],
+      "extensions": {
+        "x-ms-kiota-hash": "E0F4DEC3C17732C504ADB66E288586BD5CCEE46F5D3EE965698C1359421E4874",
+        "x-ms-kiota-version": "1.22.3"
+      }
+    }
+  }
+}

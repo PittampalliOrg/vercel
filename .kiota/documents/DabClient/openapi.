@@ -1,0 +1,3314 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Data API builder - REST Endpoint",
+    "version": "1.3.19"
+  },
+  "servers": [
+    {
+      "url": "/api"
+    }
+  ],
+  "paths": {
+    "/Suggestion/id/{id}": {
+      "get": {
+        "tags": [
+          "Suggestion"
+        ],
+        "description": "Returns an entity.",
+        "parameters": [
+          {
+            "name": "X-MS-API-ROLE",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$select",
+            "in": "query",
+            "description": "A comma separated list of fields to return in the response.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$filter",
+            "in": "query",
+            "description": "An OData expression (an expression that returns a boolean value) using the entity's fields to retrieve a subset of the results.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$orderby",
+            "in": "query",
+            "description": "Uses a comma-separated list of expressions to sort response items. Add 'desc' for descending order, otherwise it's ascending by default.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$first",
+            "in": "query",
+            "description": "An integer value that specifies the number of items to return. Default is 100.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "$after",
+            "in": "query",
+            "description": "An opaque string that specifies the cursor position after which results should be returned.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "BadRequest"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "NotFound"
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Suggestion"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Suggestion"
+        ],
+        "description": "Replace or create entity.",
+        "parameters": [
+          {
+            "name": "X-MS-API-ROLE",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Suggestion_NoPK"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "400": {
+            "description": "BadRequest"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "NotFound"
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Suggestion"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Suggestion"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Suggestion"
+        ],
+        "description": "Update or create entity.",
+        "parameters": [
+          {
+            "name": "X-MS-API-ROLE",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Suggestion_NoPK"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "400": {
+            "description": "BadRequest"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "NotFound"
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Suggestion"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Suggestion"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Suggestion"
+        ],
+        "description": "Delete entity.",
+        "parameters": [
+          {
+            "name": "X-MS-API-ROLE",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "BadRequest"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "NotFound"
+          },
+          "204": {
+            "description": "NoContent"
+          }
+        }
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "/Suggestion": {
+      "get": {
+        "tags": [
+          "Suggestion"
+        ],
+        "description": "Returns entities.",
+        "parameters": [
+          {
+            "name": "X-MS-API-ROLE",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$select",
+            "in": "query",
+            "description": "A comma separated list of fields to return in the response.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$filter",
+            "in": "query",
+            "description": "An OData expression (an expression that returns a boolean value) using the entity's fields to retrieve a subset of the results.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$orderby",
+            "in": "query",
+            "description": "Uses a comma-separated list of expressions to sort response items. Add 'desc' for descending order, otherwise it's ascending by default.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$first",
+            "in": "query",
+            "description": "An integer value that specifies the number of items to return. Default is 100.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "$after",
+            "in": "query",
+            "description": "An opaque string that specifies the cursor position after which results should be returned.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "BadRequest"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "NotFound"
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Suggestion"
+                      }
+                    },
+                    "nextLink": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Suggestion"
+        ],
+        "description": "Create entity.",
+        "parameters": [
+          {
+            "name": "X-MS-API-ROLE",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Suggestion"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "400": {
+            "description": "BadRequest"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "NotFound"
+          },
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Suggestion"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict"
+          }
+        }
+      }
+    },
+    "/Chat/id/{id}": {
+      "get": {
+        "tags": [
+          "Chat"
+        ],
+        "description": "Returns an entity.",
+        "parameters": [
+          {
+            "name": "X-MS-API-ROLE",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$select",
+            "in": "query",
+            "description": "A comma separated list of fields to return in the response.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$filter",
+            "in": "query",
+            "description": "An OData expression (an expression that returns a boolean value) using the entity's fields to retrieve a subset of the results.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$orderby",
+            "in": "query",
+            "description": "Uses a comma-separated list of expressions to sort response items. Add 'desc' for descending order, otherwise it's ascending by default.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$first",
+            "in": "query",
+            "description": "An integer value that specifies the number of items to return. Default is 100.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "$after",
+            "in": "query",
+            "description": "An opaque string that specifies the cursor position after which results should be returned.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "BadRequest"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "NotFound"
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Chat"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Chat"
+        ],
+        "description": "Replace or create entity.",
+        "parameters": [
+          {
+            "name": "X-MS-API-ROLE",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Chat_NoPK"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "400": {
+            "description": "BadRequest"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "NotFound"
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Chat"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Chat"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Chat"
+        ],
+        "description": "Update or create entity.",
+        "parameters": [
+          {
+            "name": "X-MS-API-ROLE",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Chat_NoPK"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "400": {
+            "description": "BadRequest"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "NotFound"
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Chat"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Chat"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Chat"
+        ],
+        "description": "Delete entity.",
+        "parameters": [
+          {
+            "name": "X-MS-API-ROLE",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "BadRequest"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "NotFound"
+          },
+          "204": {
+            "description": "NoContent"
+          }
+        }
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "/Chat": {
+      "get": {
+        "tags": [
+          "Chat"
+        ],
+        "description": "Returns entities.",
+        "parameters": [
+          {
+            "name": "X-MS-API-ROLE",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$select",
+            "in": "query",
+            "description": "A comma separated list of fields to return in the response.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$filter",
+            "in": "query",
+            "description": "An OData expression (an expression that returns a boolean value) using the entity's fields to retrieve a subset of the results.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$orderby",
+            "in": "query",
+            "description": "Uses a comma-separated list of expressions to sort response items. Add 'desc' for descending order, otherwise it's ascending by default.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$first",
+            "in": "query",
+            "description": "An integer value that specifies the number of items to return. Default is 100.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "$after",
+            "in": "query",
+            "description": "An opaque string that specifies the cursor position after which results should be returned.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "BadRequest"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "NotFound"
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Chat"
+                      }
+                    },
+                    "nextLink": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Chat"
+        ],
+        "description": "Create entity.",
+        "parameters": [
+          {
+            "name": "X-MS-API-ROLE",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Chat"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "400": {
+            "description": "BadRequest"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "NotFound"
+          },
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Chat"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict"
+          }
+        }
+      }
+    },
+    "/Document/id/{id}/createdAt/{createdAt}": {
+      "get": {
+        "tags": [
+          "Document"
+        ],
+        "description": "Returns an entity.",
+        "parameters": [
+          {
+            "name": "X-MS-API-ROLE",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$select",
+            "in": "query",
+            "description": "A comma separated list of fields to return in the response.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$filter",
+            "in": "query",
+            "description": "An OData expression (an expression that returns a boolean value) using the entity's fields to retrieve a subset of the results.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$orderby",
+            "in": "query",
+            "description": "Uses a comma-separated list of expressions to sort response items. Add 'desc' for descending order, otherwise it's ascending by default.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$first",
+            "in": "query",
+            "description": "An integer value that specifies the number of items to return. Default is 100.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "$after",
+            "in": "query",
+            "description": "An opaque string that specifies the cursor position after which results should be returned.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "BadRequest"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "NotFound"
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Document"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Document"
+        ],
+        "description": "Replace or create entity.",
+        "parameters": [
+          {
+            "name": "X-MS-API-ROLE",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Document_NoPK"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "400": {
+            "description": "BadRequest"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "NotFound"
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Document"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Document"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Document"
+        ],
+        "description": "Update or create entity.",
+        "parameters": [
+          {
+            "name": "X-MS-API-ROLE",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Document_NoPK"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "400": {
+            "description": "BadRequest"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "NotFound"
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Document"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Document"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Document"
+        ],
+        "description": "Delete entity.",
+        "parameters": [
+          {
+            "name": "X-MS-API-ROLE",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "BadRequest"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "NotFound"
+          },
+          "204": {
+            "description": "NoContent"
+          }
+        }
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "createdAt",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "/Document": {
+      "get": {
+        "tags": [
+          "Document"
+        ],
+        "description": "Returns entities.",
+        "parameters": [
+          {
+            "name": "X-MS-API-ROLE",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$select",
+            "in": "query",
+            "description": "A comma separated list of fields to return in the response.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$filter",
+            "in": "query",
+            "description": "An OData expression (an expression that returns a boolean value) using the entity's fields to retrieve a subset of the results.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$orderby",
+            "in": "query",
+            "description": "Uses a comma-separated list of expressions to sort response items. Add 'desc' for descending order, otherwise it's ascending by default.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$first",
+            "in": "query",
+            "description": "An integer value that specifies the number of items to return. Default is 100.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "$after",
+            "in": "query",
+            "description": "An opaque string that specifies the cursor position after which results should be returned.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "BadRequest"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "NotFound"
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Document"
+                      }
+                    },
+                    "nextLink": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Document"
+        ],
+        "description": "Create entity.",
+        "parameters": [
+          {
+            "name": "X-MS-API-ROLE",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Document"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "400": {
+            "description": "BadRequest"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "NotFound"
+          },
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Document"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict"
+          }
+        }
+      }
+    },
+    "/Message/id/{id}": {
+      "get": {
+        "tags": [
+          "Message"
+        ],
+        "description": "Returns an entity.",
+        "parameters": [
+          {
+            "name": "X-MS-API-ROLE",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$select",
+            "in": "query",
+            "description": "A comma separated list of fields to return in the response.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$filter",
+            "in": "query",
+            "description": "An OData expression (an expression that returns a boolean value) using the entity's fields to retrieve a subset of the results.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$orderby",
+            "in": "query",
+            "description": "Uses a comma-separated list of expressions to sort response items. Add 'desc' for descending order, otherwise it's ascending by default.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$first",
+            "in": "query",
+            "description": "An integer value that specifies the number of items to return. Default is 100.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "$after",
+            "in": "query",
+            "description": "An opaque string that specifies the cursor position after which results should be returned.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "BadRequest"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "NotFound"
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Message"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Message"
+        ],
+        "description": "Replace or create entity.",
+        "parameters": [
+          {
+            "name": "X-MS-API-ROLE",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Message_NoPK"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "400": {
+            "description": "BadRequest"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "NotFound"
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Message"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Message"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Message"
+        ],
+        "description": "Update or create entity.",
+        "parameters": [
+          {
+            "name": "X-MS-API-ROLE",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Message_NoPK"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "400": {
+            "description": "BadRequest"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "NotFound"
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Message"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Message"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Message"
+        ],
+        "description": "Delete entity.",
+        "parameters": [
+          {
+            "name": "X-MS-API-ROLE",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "BadRequest"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "NotFound"
+          },
+          "204": {
+            "description": "NoContent"
+          }
+        }
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "/Message": {
+      "get": {
+        "tags": [
+          "Message"
+        ],
+        "description": "Returns entities.",
+        "parameters": [
+          {
+            "name": "X-MS-API-ROLE",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$select",
+            "in": "query",
+            "description": "A comma separated list of fields to return in the response.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$filter",
+            "in": "query",
+            "description": "An OData expression (an expression that returns a boolean value) using the entity's fields to retrieve a subset of the results.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$orderby",
+            "in": "query",
+            "description": "Uses a comma-separated list of expressions to sort response items. Add 'desc' for descending order, otherwise it's ascending by default.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$first",
+            "in": "query",
+            "description": "An integer value that specifies the number of items to return. Default is 100.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "$after",
+            "in": "query",
+            "description": "An opaque string that specifies the cursor position after which results should be returned.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "BadRequest"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "NotFound"
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Message"
+                      }
+                    },
+                    "nextLink": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Message"
+        ],
+        "description": "Create entity.",
+        "parameters": [
+          {
+            "name": "X-MS-API-ROLE",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Message"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "400": {
+            "description": "BadRequest"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "NotFound"
+          },
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Message"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict"
+          }
+        }
+      }
+    },
+    "/User/id/{id}": {
+      "get": {
+        "tags": [
+          "User"
+        ],
+        "description": "Returns an entity.",
+        "parameters": [
+          {
+            "name": "X-MS-API-ROLE",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$select",
+            "in": "query",
+            "description": "A comma separated list of fields to return in the response.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$filter",
+            "in": "query",
+            "description": "An OData expression (an expression that returns a boolean value) using the entity's fields to retrieve a subset of the results.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$orderby",
+            "in": "query",
+            "description": "Uses a comma-separated list of expressions to sort response items. Add 'desc' for descending order, otherwise it's ascending by default.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$first",
+            "in": "query",
+            "description": "An integer value that specifies the number of items to return. Default is 100.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "$after",
+            "in": "query",
+            "description": "An opaque string that specifies the cursor position after which results should be returned.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "BadRequest"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "NotFound"
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/User"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "User"
+        ],
+        "description": "Replace or create entity.",
+        "parameters": [
+          {
+            "name": "X-MS-API-ROLE",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/User_NoPK"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "400": {
+            "description": "BadRequest"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "NotFound"
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/User"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/User"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "User"
+        ],
+        "description": "Update or create entity.",
+        "parameters": [
+          {
+            "name": "X-MS-API-ROLE",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/User_NoPK"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "400": {
+            "description": "BadRequest"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "NotFound"
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/User"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/User"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "User"
+        ],
+        "description": "Delete entity.",
+        "parameters": [
+          {
+            "name": "X-MS-API-ROLE",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "BadRequest"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "NotFound"
+          },
+          "204": {
+            "description": "NoContent"
+          }
+        }
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "/User": {
+      "get": {
+        "tags": [
+          "User"
+        ],
+        "description": "Returns entities.",
+        "parameters": [
+          {
+            "name": "X-MS-API-ROLE",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$select",
+            "in": "query",
+            "description": "A comma separated list of fields to return in the response.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$filter",
+            "in": "query",
+            "description": "An OData expression (an expression that returns a boolean value) using the entity's fields to retrieve a subset of the results.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$orderby",
+            "in": "query",
+            "description": "Uses a comma-separated list of expressions to sort response items. Add 'desc' for descending order, otherwise it's ascending by default.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$first",
+            "in": "query",
+            "description": "An integer value that specifies the number of items to return. Default is 100.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "$after",
+            "in": "query",
+            "description": "An opaque string that specifies the cursor position after which results should be returned.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "BadRequest"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "NotFound"
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/User"
+                      }
+                    },
+                    "nextLink": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "User"
+        ],
+        "description": "Create entity.",
+        "parameters": [
+          {
+            "name": "X-MS-API-ROLE",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/User"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "400": {
+            "description": "BadRequest"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "NotFound"
+          },
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/User"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict"
+          }
+        }
+      }
+    },
+    "/Vote/chatId/{chatId}/messageId/{messageId}": {
+      "get": {
+        "tags": [
+          "Vote"
+        ],
+        "description": "Returns an entity.",
+        "parameters": [
+          {
+            "name": "X-MS-API-ROLE",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$select",
+            "in": "query",
+            "description": "A comma separated list of fields to return in the response.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$filter",
+            "in": "query",
+            "description": "An OData expression (an expression that returns a boolean value) using the entity's fields to retrieve a subset of the results.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$orderby",
+            "in": "query",
+            "description": "Uses a comma-separated list of expressions to sort response items. Add 'desc' for descending order, otherwise it's ascending by default.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$first",
+            "in": "query",
+            "description": "An integer value that specifies the number of items to return. Default is 100.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "$after",
+            "in": "query",
+            "description": "An opaque string that specifies the cursor position after which results should be returned.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "BadRequest"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "NotFound"
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Vote"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Vote"
+        ],
+        "description": "Replace or create entity.",
+        "parameters": [
+          {
+            "name": "X-MS-API-ROLE",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Vote_NoPK"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "400": {
+            "description": "BadRequest"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "NotFound"
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Vote"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Vote"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Vote"
+        ],
+        "description": "Update or create entity.",
+        "parameters": [
+          {
+            "name": "X-MS-API-ROLE",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Vote_NoPK"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "400": {
+            "description": "BadRequest"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "NotFound"
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Vote"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Vote"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Vote"
+        ],
+        "description": "Delete entity.",
+        "parameters": [
+          {
+            "name": "X-MS-API-ROLE",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "BadRequest"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "NotFound"
+          },
+          "204": {
+            "description": "NoContent"
+          }
+        }
+      },
+      "parameters": [
+        {
+          "name": "chatId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "messageId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "/Vote": {
+      "get": {
+        "tags": [
+          "Vote"
+        ],
+        "description": "Returns entities.",
+        "parameters": [
+          {
+            "name": "X-MS-API-ROLE",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$select",
+            "in": "query",
+            "description": "A comma separated list of fields to return in the response.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$filter",
+            "in": "query",
+            "description": "An OData expression (an expression that returns a boolean value) using the entity's fields to retrieve a subset of the results.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$orderby",
+            "in": "query",
+            "description": "Uses a comma-separated list of expressions to sort response items. Add 'desc' for descending order, otherwise it's ascending by default.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$first",
+            "in": "query",
+            "description": "An integer value that specifies the number of items to return. Default is 100.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "$after",
+            "in": "query",
+            "description": "An opaque string that specifies the cursor position after which results should be returned.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "BadRequest"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "NotFound"
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Vote"
+                      }
+                    },
+                    "nextLink": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Vote"
+        ],
+        "description": "Create entity.",
+        "parameters": [
+          {
+            "name": "X-MS-API-ROLE",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Vote"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "400": {
+            "description": "BadRequest"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "NotFound"
+          },
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Vote"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Suggestion": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": ""
+          },
+          "documentId": {
+            "type": "string",
+            "format": ""
+          },
+          "documentCreatedAt": {
+            "type": "string",
+            "format": ""
+          },
+          "originalText": {
+            "type": "string",
+            "format": ""
+          },
+          "suggestedText": {
+            "type": "string",
+            "format": ""
+          },
+          "description": {
+            "type": "string",
+            "format": ""
+          },
+          "isResolved": {
+            "type": "boolean",
+            "format": ""
+          },
+          "userId": {
+            "type": "string",
+            "format": ""
+          },
+          "createdAt": {
+            "type": "string",
+            "format": ""
+          }
+        }
+      },
+      "Suggestion_NoAutoPK": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": ""
+          },
+          "documentId": {
+            "type": "string",
+            "format": ""
+          },
+          "documentCreatedAt": {
+            "type": "string",
+            "format": ""
+          },
+          "originalText": {
+            "type": "string",
+            "format": ""
+          },
+          "suggestedText": {
+            "type": "string",
+            "format": ""
+          },
+          "description": {
+            "type": "string",
+            "format": ""
+          },
+          "isResolved": {
+            "type": "boolean",
+            "format": ""
+          },
+          "userId": {
+            "type": "string",
+            "format": ""
+          },
+          "createdAt": {
+            "type": "string",
+            "format": ""
+          }
+        }
+      },
+      "Suggestion_NoPK": {
+        "type": "object",
+        "properties": {
+          "documentId": {
+            "type": "string",
+            "format": ""
+          },
+          "documentCreatedAt": {
+            "type": "string",
+            "format": ""
+          },
+          "originalText": {
+            "type": "string",
+            "format": ""
+          },
+          "suggestedText": {
+            "type": "string",
+            "format": ""
+          },
+          "description": {
+            "type": "string",
+            "format": ""
+          },
+          "isResolved": {
+            "type": "boolean",
+            "format": ""
+          },
+          "userId": {
+            "type": "string",
+            "format": ""
+          },
+          "createdAt": {
+            "type": "string",
+            "format": ""
+          }
+        }
+      },
+      "Chat": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": ""
+          },
+          "createdAt": {
+            "type": "string",
+            "format": ""
+          },
+          "userId": {
+            "type": "string",
+            "format": ""
+          },
+          "title": {
+            "type": "string",
+            "format": ""
+          },
+          "visibility": {
+            "type": "string",
+            "format": ""
+          }
+        }
+      },
+      "Chat_NoAutoPK": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": ""
+          },
+          "createdAt": {
+            "type": "string",
+            "format": ""
+          },
+          "userId": {
+            "type": "string",
+            "format": ""
+          },
+          "title": {
+            "type": "string",
+            "format": ""
+          },
+          "visibility": {
+            "type": "string",
+            "format": ""
+          }
+        }
+      },
+      "Chat_NoPK": {
+        "type": "object",
+        "properties": {
+          "createdAt": {
+            "type": "string",
+            "format": ""
+          },
+          "userId": {
+            "type": "string",
+            "format": ""
+          },
+          "title": {
+            "type": "string",
+            "format": ""
+          },
+          "visibility": {
+            "type": "string",
+            "format": ""
+          }
+        }
+      },
+      "Document": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": ""
+          },
+          "createdAt": {
+            "type": "string",
+            "format": ""
+          },
+          "title": {
+            "type": "string",
+            "format": ""
+          },
+          "content": {
+            "type": "string",
+            "format": ""
+          },
+          "userId": {
+            "type": "string",
+            "format": ""
+          },
+          "text": {
+            "type": "string",
+            "format": ""
+          }
+        }
+      },
+      "Document_NoAutoPK": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": ""
+          },
+          "createdAt": {
+            "type": "string",
+            "format": ""
+          },
+          "title": {
+            "type": "string",
+            "format": ""
+          },
+          "content": {
+            "type": "string",
+            "format": ""
+          },
+          "userId": {
+            "type": "string",
+            "format": ""
+          },
+          "text": {
+            "type": "string",
+            "format": ""
+          }
+        }
+      },
+      "Document_NoPK": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "format": ""
+          },
+          "content": {
+            "type": "string",
+            "format": ""
+          },
+          "userId": {
+            "type": "string",
+            "format": ""
+          },
+          "text": {
+            "type": "string",
+            "format": ""
+          }
+        }
+      },
+      "Message": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": ""
+          },
+          "chatId": {
+            "type": "string",
+            "format": ""
+          },
+          "role": {
+            "type": "string",
+            "format": ""
+          },
+          "content": {
+            "type": "string",
+            "format": ""
+          },
+          "createdAt": {
+            "type": "string",
+            "format": ""
+          }
+        }
+      },
+      "Message_NoAutoPK": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": ""
+          },
+          "chatId": {
+            "type": "string",
+            "format": ""
+          },
+          "role": {
+            "type": "string",
+            "format": ""
+          },
+          "content": {
+            "type": "string",
+            "format": ""
+          },
+          "createdAt": {
+            "type": "string",
+            "format": ""
+          }
+        }
+      },
+      "Message_NoPK": {
+        "type": "object",
+        "properties": {
+          "chatId": {
+            "type": "string",
+            "format": ""
+          },
+          "role": {
+            "type": "string",
+            "format": ""
+          },
+          "content": {
+            "type": "string",
+            "format": ""
+          },
+          "createdAt": {
+            "type": "string",
+            "format": ""
+          }
+        }
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": ""
+          },
+          "email": {
+            "type": "string",
+            "format": ""
+          },
+          "password": {
+            "type": "string",
+            "format": ""
+          }
+        }
+      },
+      "User_NoAutoPK": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": ""
+          },
+          "email": {
+            "type": "string",
+            "format": ""
+          },
+          "password": {
+            "type": "string",
+            "format": ""
+          }
+        }
+      },
+      "User_NoPK": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": ""
+          },
+          "password": {
+            "type": "string",
+            "format": ""
+          }
+        }
+      },
+      "Vote": {
+        "type": "object",
+        "properties": {
+          "chatId": {
+            "type": "string",
+            "format": ""
+          },
+          "messageId": {
+            "type": "string",
+            "format": ""
+          },
+          "isUpvoted": {
+            "type": "boolean",
+            "format": ""
+          }
+        }
+      },
+      "Vote_NoAutoPK": {
+        "type": "object",
+        "properties": {
+          "chatId": {
+            "type": "string",
+            "format": ""
+          },
+          "messageId": {
+            "type": "string",
+            "format": ""
+          },
+          "isUpvoted": {
+            "type": "boolean",
+            "format": ""
+          }
+        }
+      },
+      "Vote_NoPK": {
+        "type": "object",
+        "properties": {
+          "isUpvoted": {
+            "type": "boolean",
+            "format": ""
+          }
+        }
+      }
+    }
+  }
+}
