@@ -5,9 +5,9 @@
 	"dockerComposeFile": ["../../docker-compose.yml"],
 	"service": "api",
 	"workspaceFolder": "/workspace",
-	"runServices": ["api", "api_dapr", "db", "dab", "dab_dapr", "redis", "zipkin"],
+	"runServices": ["api", "api_dapr", "db", "dab", "dab_dapr", "otel-collector", "jaeger", "prometheus", "zipkin", "mongo"],
 	"shutdownAction": "none",
-	"forwardPorts": [8080, 9411],
+	 "forwardPorts": [8080],
 	"remoteEnv": {
 		"LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}"
 	},
@@ -35,9 +35,9 @@
 			"ms-azuretools.vscode-dapr",
 			"mtxr.sqltools",
 			"mtxr.sqltools-driver-pg",
-			"ms-dotnettools.csdevkit",
 			"ms-azuretools.vscode-azure-github-copilot",
-			"mikeedjones.copy-file-to-chat"
+			"mikeedjones.copy-file-to-chat",
+			"ms-python.python"
 		],
 	     "settings": {
 	             "sqltools.connections": [
@@ -61,7 +61,7 @@
 	                             "askForPassword": true
 	                     }
 	             ],
-//	        "terminal.integrated.cwd": "/workspace/kiota-server"
+	//        "terminal.integrated.cwd": "/workspace/ai-chatbot"
 	     }
 	  }
 	},
@@ -69,6 +69,11 @@
         "source=profile,target=/root,type=volume",
         "target=/root/.vscode-server,type=volume"
     ],
+	"features": {
+	"ghcr.io/devcontainers-extra/features/apt-packages": {
+		"packages": ["iputils-ping"]
+	}
+	},
 	// "features": {
 	// 	"ghcr.io/azure/azure-dev/azd:0": {"version": "latest"},
 	// 	"ghcr.io/devcontainers/features/azure-cli": {"version": "latest"},

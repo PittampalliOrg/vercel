@@ -1,3 +1,10 @@
+networks:
+  default:
+    name: opentelemetry
+    driver: bridge
+    external: true
+    attachable: true
+
 services:
   frontend:
     container_name: frontend
@@ -5,10 +12,10 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - /var/run/docker.sock:/var/run/docker-host.sock 
+      # - /var/run/docker.sock:/var/run/docker-host.sock 
       - .:/workspace:cached
-    networks:
-      - dapr-network
+    entrypoint: /usr/local/share/docker-init.sh
+    command: sleep infinity 
 
   frontend_dapr:
     container_name: frontend_dapr
@@ -19,34 +26,28 @@ services:
 
     depends_on:
       - frontend
-      - db
-    networks:
-      - dapr-network    
+      - db    
 
   api:
     container_name: api
-    image: deno-dotnet
+    image: next-js
     ports:
-      - "8000:8000"
+      - "8080:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker-host.sock 
-      - ../kiota-deno:/workspace:cached
-    networks:
-      - dapr-network    
+      - ../mastering-observability-with-opentelemetry-4515650:/workspace:cached    
 
   api_dapr:
     container_name: api_dapr
     image: "daprio/daprd"
 
-    command: ["./daprd", "--app-id", "api", "-app-port", "8000", "--resources-path", "/dapr", "--config", "/dapr/config.yaml", "--enable-api-logging", "--log-level", "debug", "--app-channel-address", "api"]
+    command: ["./daprd", "--app-id", "api", "-app-port", "8080", "--resources-path", "/dapr", "--config", "/dapr/config.yaml", "--enable-api-logging", "--log-level", "debug", "--app-channel-address", "api"]
     volumes:
       - "./dapr:/dapr"
 
     depends_on:
       - api
-      - db
-    networks:
-      - dapr-network    
+      - db    
 
   dab:
     container_name: dab
@@ -66,9 +67,7 @@ services:
     command: ["dab", "start", "-c", "./App/dab-config.json"]
     depends_on:
       - db
-
-    networks:
-      - dapr-network    
+    
 
   dab_dapr:
     container_name: dab_dapr
@@ -78,49 +77,126 @@ services:
       - "./dapr:/dapr"
 
     depends_on:
-      - dab
-    networks:
-      - dapr-network    
+      - dab    
 
-  scheduler:
-    container_name: scheduler
-    image: "daprio/dapr"
-    command: ["./scheduler", "-port", "50007"]
+  # scheduler:
+  #   container_name: scheduler
+  #   image: "daprio/dapr"
+  #   command: ["./scheduler", "-port", "50007"]
+  #   ports:
+  #     - "50007:50007"
+  #   # WARNING - This is a tmpfs volume, your state will not be persisted across restarts
+  #   volumes:
+  #   - type: tmpfs
+  #     target: /data
+  #     tmpfs:
+  #       size: "10000"
+
+  # Jaeger
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: jaeger
+    restart: always
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
     ports:
-      - "50007:50007"
-    # WARNING - This is a tmpfs volume, your state will not be persisted across restarts
+      - "16686:16686"  # Jaeger UI
+      - "14250:14250"  # gRPC endpoint for OTLP
+      - "14268:14268"  # HTTP endpoint
+
+
+  # Grafana
+  # grafana:
+  #   image: ${GRAFANA_IMAGE}
+  #   container_name: grafana
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         memory: 120M
+  #   restart: unless-stopped
+  #   environment:
+  #     - "GF_INSTALL_PLUGINS=grafana-opensearch-datasource"
+  #   volumes:
+  #     - ./src/grafana/grafana.ini:/etc/grafana/grafana.ini
+  #     - ./src/grafana/provisioning/:/etc/grafana/provisioning/
+  #   ports:
+  #     - "${GRAFANA_PORT}"
+  #   # logging: *logging
+
+  # Collector
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: otel-collector
+    restart: unless-stopped
+    # Make sure the collector uses the revised config with 0.0.0.0:8889
+    command: [ "--config=/etc/otel-collector-config.yml"]
     volumes:
-    - type: tmpfs
-      target: /data
-      tmpfs:
-        size: "10000"
-    networks:
-      - dapr-network
-
-  zipkin:
-    container_name: zipkin
-    image: "openzipkin/zipkin"
+      - ./tracing/otel-collector-config.yml:/etc/otel-collector-config.yml
     ports:
-      - "9411:9411"
-    networks:
-      - dapr-network
+      - 1888:1888 # pprof extension
+      - 8888:8888 # Prometheus metrics exposed by the Collector
+      - 8889:8889 # Prometheus exporter metrics
+      - 13133:13133 # health_check extension
+      - 4317:4317 # OTLP gRPC receiver
+      - 4318:4318 # OTLP http receiver
+      - 55679:55679 # zpages extension
+    depends_on:
+      - jaeger
 
-  redis:
-    container_name: redis_service
-    image: "redis:latest"
-    ports:
-      - "6379:6379"
-    networks:
-      - dapr-network
+  # mongo:
+  #   container_name: mongo
+  #   image: mongo:latest
+  #   restart: unless-stopped
+  #   ports:
+  #     - "27017:27017"
 
-  placement:
-    container_name: placement
-    image: "daprio/dapr"
-    command: ["./placement", "-port", "50006"]
-    ports:
-      - "50006:50006"
-    networks:
-      - dapr-network
+  # # OpenSearch
+  # opensearch:
+  #   image: ${OPENSEARCH_IMAGE}
+  #   container_name: opensearch
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         memory: 1.1G
+  #   restart: unless-stopped
+  #   environment:
+  #     - cluster.name=demo-cluster
+  #     - node.name=demo-node
+  #     - bootstrap.memory_lock=true
+  #     - discovery.type=single-node
+  #     - OPENSEARCH_JAVA_OPTS=-Xms300m -Xmx300m
+  #     - DISABLE_INSTALL_DEMO_CONFIG=true
+  #     - DISABLE_SECURITY_PLUGIN=true
+  #     # Workaround on OSX for https://bugs.openjdk.org/browse/JDK-8345296
+  #     - _JAVA_OPTIONS
+  #   ulimits:
+  #     memlock:
+  #       soft: -1
+  #       hard: -1
+  #     nofile:
+  #       soft: 65536
+  #       hard: 65536
+  #   ports:
+  #     - "9200"
+  #   healthcheck:
+  #     test: curl -s http://localhost:9200/_cluster/health | grep -E '"status":"(green|yellow)"'
+  #     start_period: 10s
+  #     interval: 5s
+  #     timeout: 10s
+  #     retries: 10
+
+  # redis:
+  #   container_name: redis_service
+  #   image: "redis:latest"
+  #   ports:
+  #     - "6379:6379"
+
+  # placement:
+  #   container_name: placement
+  #   image: "daprio/dapr"
+  #   command: ["./placement", "-port", "50006"]
+  #   ports:
+  #     - "50006:50006"
 
   db:
     container_name: db
@@ -133,11 +209,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_DB: postgres
     ports:
-      - "5432:5432"
-    networks:
-      - dapr-network      
+      - "5432:5432"      
 
 volumes:
   postgres-data:
-networks: 
-  dapr-network:

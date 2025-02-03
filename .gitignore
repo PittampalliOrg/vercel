@@ -38,3 +38,10 @@ yarn-error.log*
 .vscode
 .env*.local
 clients/dist/
+dapr/secrets.json
+
+src
+tracing/otelcol-contrib
+tracing/grafana-collector-config.yml
+xh.tar.gz
+.env.example

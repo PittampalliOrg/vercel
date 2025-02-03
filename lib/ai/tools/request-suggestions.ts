@@ -24,9 +24,12 @@ export const requestSuggestions = ({
       documentId: z
         .string()
         .describe('The ID of the document to request edits'),
+      createdAt: z
+        .string()
+        .describe('The creation timestamp of the document'),
     }),
-    execute: async ({ documentId }) => {
-      const document = await getDocumentById({ id: documentId });
+    execute: async ({ documentId, createdAt }) => {
+      const document = await getDocumentById({ id: documentId , createdAt: createdAt });
 
       if (!document || !document.content) {
         return {
@@ -77,7 +80,7 @@ export const requestSuggestions = ({
             ...suggestion,
             userId,
             createdAt: new Date(),
-            documentCreatedAt: document.createdAt,
+            documentCreatedAt: new Date(createdAt),
           })),
         });
       }

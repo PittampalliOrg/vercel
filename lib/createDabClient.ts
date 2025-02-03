@@ -1,4 +1,4 @@
-import { createDabClient, DabClient } from "@/api-clients/dabClient";
+import { createDabClient, type DabClient } from "@/api-clients/dabClient";
 import { AnonymousAuthenticationProvider } from "@microsoft/kiota-abstractions";
 import {
   registerDefaultSerializer,
@@ -9,7 +9,6 @@ import {
   JsonParseNodeFactory,
 } from "@microsoft/kiota-serialization-json";
 import { KiotaClientFactory, RetryHandler, RedirectHandler, ParametersNameDecodingHandler, UserAgentHandler, HeadersInspectionHandler, FetchRequestAdapter } from "@microsoft/kiota-http-fetchlibrary";
-import { trace } from '@opentelemetry/api'
 
 // some function that configures and returns your main Kiota-based client
 const http = KiotaClientFactory.create(undefined, [
@@ -25,30 +24,8 @@ const serializationWriterFactory = new JsonSerializationWriterFactory();
 
 // Create request adapter using the fetch-based implementation
 const adapter = new FetchRequestAdapter(authProvider, parseNodeFactory, serializationWriterFactory, http);
-adapter.baseUrl = "http://dab:5000/api";
+adapter.baseUrl = "http://frontend_dapr:3500/v1.0/invoke/dab/method/api";
 
 export const createNewDabClient = (): DabClient => {
     return createDabClient(adapter);
 }
-
-export async function GET() {
-  return await trace
-    .getTracer('nextjs-example')
-    .startActiveSpan('fetchGithubStars', async (span) => {
-      try {
-        const client = createDabClient(adapter);
-        const data = await client.user.get();
-        return Response.json(data);
-      } finally {
-        span.end()
-      }
-    })
-}
-
-
-// export async function GET() {
-// const client = createDabClient(adapter);
-//   const data = await client.user.get();
- 
-//   return Response.json(data);
-// }

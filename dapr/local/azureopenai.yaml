@@ -1,0 +1,14 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: openai
+spec:
+  type: bindings.azure.openai
+  version: v1
+  metadata:
+  - name: endpoint
+    value: https://daprazureopenai.openai.azure.com
+  - name: apiKey
+    secretKeyRef:
+      name: azure-openai-api-key
+      key:  azure-openai-api-key

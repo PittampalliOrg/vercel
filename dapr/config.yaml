@@ -5,7 +5,5 @@ metadata:
 spec:
   tracing:
     samplingRate: "1"
-    zipkin:
-      endpointAddress: "http://zipkin:9411/api/v2/spans"
-  metric:
-    enabled: true
+    otel:
+      endpointAddress: "otel-collector:4317"

@@ -1,5 +1,7 @@
 import { auth } from '@/app/(auth)/auth';
 import { getVotesByChatId, voteMessage } from '@/lib/db/queries';
+// app/[[...slugs]]/route.ts
+import { DaprServer } from "@dapr/dapr";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
