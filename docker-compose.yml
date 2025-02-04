@@ -126,20 +126,10 @@ services:
   grafana:
     image: ${GRAFANA_IMAGE}
     container_name: grafana
-    deploy:
-      resources:
-        limits:
-          memory: 120M
     restart: unless-stopped
-    environment:
-      - "GF_INSTALL_PLUGINS=grafana-opensearch-datasource"
-    volumes:
-      - ./src/grafana/grafana.ini:/etc/grafana/grafana.ini
-      - ./src/grafana/provisioning/:/etc/grafana/provisioning/
-    ports:
-      - "${GRAFANA_PORT}"
-    logging: *logging
-
+    ports: 
+      - "3005:3000"
+      
   # OpenTelemetry Collector
   otel-collector:
     image: ${COLLECTOR_CONTRIB_IMAGE}

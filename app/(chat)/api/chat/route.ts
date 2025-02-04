@@ -142,6 +142,7 @@ export async function POST(request: Request) {
               console.error('Failed to save chat');
             }
           }
+          console.log('Finished processing', response);
         },
         experimental_telemetry: {
           isEnabled: true,

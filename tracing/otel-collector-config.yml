@@ -15,21 +15,9 @@ processors:
 exporters:
   debug:
   otlp:
-    endpoint: "jaeger:4317"
+    endpoint: "grafana:4317"
     tls:
       insecure: true
-  otlphttp/prometheus:
-    endpoint: "http://prometheus:9090/api/v1/otlp"
-    tls:
-      insecure: true
-  opensearch:
-    logs_index: otel
-    http:
-      endpoint: "http://opensearch:9200"
-      tls:
-        insecure: true
-  zipkin:
-    endpoint: "http://zipkin-all-in-one:9411/api/v2/spans"
 
 extensions:
   health_check:
@@ -43,4 +31,12 @@ service:
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [otlp, debug, zipkin]
+      exporters: [otlp, debug]
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp]
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp]
