@@ -113,8 +113,6 @@ services:
     restart: unless-stopped
     ports:
       - "16686:16686"         # Jaeger UI
-      - "5317:4317"
-      - "5318:4318"
     environment:
       - METRICS_STORAGE_TYPE=prometheus
     logging: *logging

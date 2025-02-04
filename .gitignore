@@ -45,3 +45,4 @@ tracing/otelcol-contrib
 tracing/grafana-collector-config.yml
 xh.tar.gz
 .env.example
+.env.example
