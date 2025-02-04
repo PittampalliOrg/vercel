@@ -1,0 +1,27 @@
+server:
+  http_listen_port: 9009
+
+multitenancy_enabled: false
+
+distributor:
+  # Remove 'shard_by_all_labels'; it’s not recognized in new Mimir releases.
+  shard_by_all_labels: false  # or remove this line entirely
+
+ingester:
+  # The top-level 'lifecycler' block must be updated/removed.
+  # Instead, you typically define ring config in ingester.ring directly.
+  ring:
+    kvstore:
+      store: inmemory
+    replication_factor: 1
+
+# In newer Mimir versions, use 'blocks_storage' (or 'backend') instead of 'storage'.
+blocks_storage:
+  backend: filesystem
+  filesystem:
+    dir: /var/tsdb
+
+limits:
+  # Remove 'enforce_metric_name' if it’s not recognized in new versions.
+  ingestion_rate: 100000
+  ingestion_burst_size: 200000

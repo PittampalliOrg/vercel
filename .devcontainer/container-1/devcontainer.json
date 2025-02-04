@@ -5,9 +5,9 @@
 	"dockerComposeFile": ["../../docker-compose.yml"],
 	"service": "frontend",
 	"workspaceFolder": "/workspace",
-	"runServices": ["frontend", "frontend_dapr", "db", "dab", "dab_dapr", "jaeger", "otel-collector"],
-	"shutdownAction": "none",
-	 "forwardPorts": [3000, 9411, 4317, 4318, 5317, 5318, 3500, 59107, 59108],
+	// "runServices": ["frontend", "frontend_dapr", "db", "dab", "dab_dapr", "grafector", "prometheus", "opensearch", "vp_container"],
+	// "shutdownAction": "none",
+	//  "forwardPorts": [3000, 9411, 4317, 4318, 5317, 5318, 3500, 59107, 59108],
 	"remoteEnv": {
 		"LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}"
 	},
