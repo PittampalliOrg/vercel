@@ -117,10 +117,10 @@ services:
       - METRICS_STORAGE_TYPE=prometheus
     logging: *logging
   
-  zipkin-all-in-one:
-    image: openzipkin/zipkin:latest
-    ports:
-      - "9411:9411"
+  # zipkin-all-in-one:
+  #   image: openzipkin/zipkin:latest
+  #   ports:
+  #     - "9411:9411"
 
   # Grafana
   grafana:
@@ -147,14 +147,12 @@ services:
       - ./tracing/otel-collector-config.yml:/etc/otelcol-config.yml
       - ./tracing/otelcol-config-extras.yml:/etc/otelcol-config-extras.yml
     ports:
-      - "4317"
-      - "4318"
       - "55679:55679"
     depends_on:
       jaeger:
         condition: service_started
-      opensearch:
-        condition: service_healthy
+      grafana:
+        condition: service_started
     logging: *logging
     environment:
       - ENVOY_PORT
@@ -164,62 +162,62 @@ services:
       - OTEL_COLLECTOR_PORT_HTTP
 
   # Prometheus
-  prometheus:
-    image: ${PROMETHEUS_IMAGE}
-    container_name: prometheus
-    command:
-      - --web.console.templates=/etc/prometheus/consoles
-      - --web.console.libraries=/etc/prometheus/console_libraries
-      - --storage.tsdb.retention.time=1h
-      - --config.file=/etc/prometheus/prometheus-config.yaml
-      - --storage.tsdb.path=/prometheus
-      - --web.enable-lifecycle
-      - --web.route-prefix=/
-      - --web.enable-otlp-receiver
-      - --enable-feature=exemplar-storage
-    volumes:
-      - ./src/prometheus/prometheus-config.yaml:/etc/prometheus/prometheus-config.yaml
-    deploy:
-      resources:
-        limits:
-          memory: 300M
-    restart: unless-stopped
-    ports:
-      - "${PROMETHEUS_PORT}:${PROMETHEUS_PORT}"
-    logging: *logging
+  # prometheus:
+  #   image: ${PROMETHEUS_IMAGE}
+  #   container_name: prometheus
+  #   command:
+  #     - --web.console.templates=/etc/prometheus/consoles
+  #     - --web.console.libraries=/etc/prometheus/console_libraries
+  #     - --storage.tsdb.retention.time=1h
+  #     - --config.file=/etc/prometheus/prometheus-config.yaml
+  #     - --storage.tsdb.path=/prometheus
+  #     - --web.enable-lifecycle
+  #     - --web.route-prefix=/
+  #     - --web.enable-otlp-receiver
+  #     - --enable-feature=exemplar-storage
+  #   volumes:
+  #     - ./src/prometheus/prometheus-config.yaml:/etc/prometheus/prometheus-config.yaml
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         memory: 300M
+  #   restart: unless-stopped
+  #   ports:
+  #     - "${PROMETHEUS_PORT}:${PROMETHEUS_PORT}"
+  #   logging: *logging
 
   # OpenSearch
-  opensearch:
-    image: ${OPENSEARCH_IMAGE}
-    container_name: opensearch
-    deploy:
-      resources:
-        limits:
-          memory: 1.1G
-    restart: unless-stopped
-    environment:
-      - cluster.name=demo-cluster
-      - node.name=demo-node
-      - bootstrap.memory_lock=true
-      - discovery.type=single-node
-      - OPENSEARCH_JAVA_OPTS=-Xms300m -Xmx300m
-      - DISABLE_INSTALL_DEMO_CONFIG=true
-      - DISABLE_SECURITY_PLUGIN=true
-      # Workaround on OSX for https://bugs.openjdk.org/browse/JDK-8345296
-      - _JAVA_OPTIONS
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
-      nofile:
-        soft: 65536
-        hard: 65536
-    ports:
-      - "9200"
-    healthcheck:
-      test: curl -s http://localhost:9200/_cluster/health | grep -E '"status":"(green|yellow)"'
-      start_period: 10s
-      interval: 5s
-      timeout: 10s
-      retries: 10
-    logging: *logging
+  # opensearch:
+    # image: ${OPENSEARCH_IMAGE}
+    # container_name: opensearch
+    # deploy:
+    #   resources:
+    #     limits:
+    #       memory: 1.1G
+    # restart: unless-stopped
+    # environment:
+    #   - cluster.name=demo-cluster
+    #   - node.name=demo-node
+    #   - bootstrap.memory_lock=true
+    #   - discovery.type=single-node
+    #   - OPENSEARCH_JAVA_OPTS=-Xms300m -Xmx300m
+    #   - DISABLE_INSTALL_DEMO_CONFIG=true
+    #   - DISABLE_SECURITY_PLUGIN=true
+    #   # Workaround on OSX for https://bugs.openjdk.org/browse/JDK-8345296
+    #   - _JAVA_OPTIONS
+    # ulimits:
+    #   memlock:
+    #     soft: -1
+    #     hard: -1
+    #   nofile:
+    #     soft: 65536
+    #     hard: 65536
+    # ports:
+    #   - "9200"
+    # healthcheck:
+    #   test: curl -s http://localhost:9200/_cluster/health | grep -E '"status":"(green|yellow)"'
+    #   start_period: 10s
+    #   interval: 5s
+    #   timeout: 10s
+    #   retries: 10
+    # logging: *logging

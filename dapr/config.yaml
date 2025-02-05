@@ -8,6 +8,11 @@ spec:
     samplingRate: "1"
     stdout: true
     otel:
-      endpointAddress: "otel-collector:4317"
+      endpointAddress: "otel-collector:4318"
       isSecure: false
-      protocol: grpc 
+      protocol: http 
+  metrics:
+    enabled: true
+  logging:
+    apiLogging:
+      enabled: true
