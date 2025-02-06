@@ -1,13 +1,13 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the
 // README at: https://github.com/devcontainers/templates/tree/main/src/docker-existing-docker-compose
 {
-	"name": "backend",
+	"name": "natural-language-postgres",
 	"dockerComposeFile": ["../../docker-compose.yml"],
-	"service": "backend",
+	"service": "natural-language",
 	"workspaceFolder": "/workspace",
-	"runServices": ["backend", "backend_dapr", "db", "dab", "dab_dapr", "otel-collector", "jaeger", "prometheus", "zipkin"],
-	"shutdownAction": "none",
-	 "forwardPorts": [3000, 9411, 4317, 4318, 5317, 5318, 3500, 59107, 59108],
+	// "runServices": ["frontend", "frontend_dapr", "db", "dab", "dab_dapr", "grafector", "prometheus", "opensearch", "vp_container"],
+	// "shutdownAction": "none",
+	//  "forwardPorts": [3000, 9411, 4317, 4318, 5317, 5318, 3500, 59107, 59108],
 	"remoteEnv": {
 		"LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}"
 	},
@@ -36,7 +36,8 @@
 			"mtxr.sqltools",
 			"mtxr.sqltools-driver-pg",
 			"ms-azuretools.vscode-azure-github-copilot",
-			"mikeedjones.copy-file-to-chat"
+			"mikeedjones.copy-file-to-chat",
+			"ms-python.python"
 		],
 	     "settings": {
 	             "sqltools.connections": [
@@ -83,7 +84,7 @@
 	// 	"ghcr.io/devcontainers/features/dotnet": {"version": "latest"}
 	//   },
 	// Ensure Dapr is running on opening the container
-	"postCreateCommand": "dapr uninstall --all && dapr init -s",
+	"postCreateCommand": "dapr uninstall --all && dapr init -s && npm run dev",
 	// Set `remoteUser` to `root` to connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
 	"remoteUser": "node"
 }

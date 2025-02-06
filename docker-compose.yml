@@ -38,6 +38,28 @@ services:
       - frontend
       - db    
 
+  natural-language:
+    container_name: natural-language
+    image: next-js
+    ports:
+      - "4000:3000"
+    volumes:
+      # - /var/run/docker.sock:/var/run/docker-host.sock 
+      - ../natural-language-postgres:/workspace:cached
+    entrypoint: /usr/local/share/docker-init.sh
+    command: sleep infinity 
+
+  natural-language_dapr:
+    container_name: natural-language_dapr
+    image: "daprio/daprd"
+    command: ["./daprd", "-app-id", "natural-language", "-app-port", "4000", "-resources-path", "/dapr", "-config", "/dapr/config.yaml", "-enable-api-logging", "-log-level", "debug", "--app-channel-address", "natural-language"]
+    volumes:
+      - "./dapr:/dapr"
+
+    depends_on:
+      - natural-language
+      - db    
+
   # api:
   #   container_name: api
   #   image: next-js
@@ -117,10 +139,10 @@ services:
       - METRICS_STORAGE_TYPE=prometheus
     logging: *logging
   
-  # zipkin-all-in-one:
-  #   image: openzipkin/zipkin:latest
-  #   ports:
-  #     - "9411:9411"
+  zipkin:
+    image: openzipkin/zipkin:latest
+    ports:
+      - "9411:9411"
 
   # Grafana
   grafana:

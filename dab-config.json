@@ -18,7 +18,9 @@
     },
     "host": {
       "cors": {
-        "origins": ["*"],
+        "origins": [
+          "*"
+        ],
         "allow-credentials": false
       },
       "authentication": {
@@ -168,6 +170,32 @@
         "type": {
           "singular": "Vote",
           "plural": "Votes"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ]
+    },
+    "Unicorns": {
+      "source": {
+        "object": "public.unicorns",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "Unicorns",
+          "plural": "Unicorns"
         }
       },
       "rest": {

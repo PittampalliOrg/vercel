@@ -9,6 +9,7 @@ receivers:
           allowed_origins:
             - http://*
             - https://*
+
 processors:
   batch:
 
@@ -22,6 +23,14 @@ exporters:
     endpoint: "jaeger:4317"
     tls:
       insecure: true
+  zipkin:
+    endpoint: "http://zipkin:9411/api/v2/spans"
+    tls:
+      insecure: true
+  otlphttp/traceloop:
+    endpoint: "https://api.traceloop.com" 
+    headers:
+      "Authorization": "Bearer ${env:TRACELOOP_API_KEY}"
 
 extensions:
   health_check:
@@ -35,7 +44,7 @@ service:
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [otlp, otlp/jaeger, debug]
+      exporters: [otlp, otlp/jaeger, otlphttp/traceloop, debug]
     metrics:
       receivers: [otlp]
       processors: [batch]
