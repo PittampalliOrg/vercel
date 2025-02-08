@@ -1,0 +1,25 @@
+version: 2
+pipelines:
+  metrics-pipeline:
+    source:
+      # Receives OpenTelemetry metrics over gRPC (port 21890 by default).
+      otel_metrics_source:
+        # If you want TLS/mTLS, configure SSL here. For a basic setup, keep it disabled:
+        ssl: false
+        # Example for TLS usage:
+        # sslKeyCertChainFile: "/usr/share/data-prepper/cert.pem"
+        # sslKeyFile: "/usr/share/data-prepper/key.pem"
+
+    # The "otel_metrics" processor helps parse OTel format
+    processor:
+      - otel_metrics:
+
+    # Send final metrics documents to OpenSearch
+    sink:
+      - opensearch:
+          hosts: [ "http://opensearch:9200" ]
+          index: "metrics-otel-v1-%{yyyy.MM.dd}"
+          # If security is enabled in your environment, supply credentials:
+          username: "otelWriter"
+          password: "someSecurePassword"
+          # For the simplest “DISABLE_SECURITY_PLUGIN=true” setup, no auth is required

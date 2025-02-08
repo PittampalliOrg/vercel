@@ -9,47 +9,148 @@ receivers:
           allowed_origins:
             - http://*
             - https://*
+  httpcheck/frontend:
+    targets:
+      - endpoint: http://frontend:3000
+  docker_stats:
+    endpoint: unix:///var/run/docker.sock
 
-processors:
-  batch:
+  # Host metrics
+  hostmetrics:
+    scrapers:
+      cpu:
+        metrics:
+          system.cpu.utilization:
+            enabled: true
+      disk:
+      load:
+      filesystem:
+        exclude_mount_points:
+          mount_points:
+            - /dev/*
+            - /proc/*
+            - /sys/*
+            - /run/k3s/containerd/*
+            - /var/lib/docker/*
+            - /var/lib/kubelet/*
+            - /snap/*
+          match_type: regexp
+        exclude_fs_types:
+          fs_types:
+            - autofs
+            - binfmt_misc
+            - bpf
+            - cgroup2
+            - configfs
+            - debugfs
+            - devpts
+            - devtmpfs
+            - fusectl
+            - hugetlbfs
+            - iso9660
+            - mqueue
+            - nsfs
+            - overlay
+            - proc
+            - procfs
+            - pstore
+            - rpc_pipefs
+            - securityfs
+            - selinuxfs
+            - squashfs
+            - sysfs
+            - tracefs
+          match_type: strict
+      memory:
+        metrics:
+          system.memory.utilization:
+            enabled: true
+      network:
+      paging:
+      processes:
+      process:
+        mute_process_exe_error: true
+        mute_process_io_error: true
+        mute_process_user_error: true
 
 exporters:
   debug:
   otlp:
-    endpoint: "grafana:4317"
-    tls:
-      insecure: true
-  otlp/jaeger:
     endpoint: "jaeger:4317"
     tls:
       insecure: true
-  zipkin:
-    endpoint: "http://zipkin:9411/api/v2/spans"
+  otlphttp/prometheus:
+    endpoint: "http://prometheus:9090/api/v1/otlp"
     tls:
       insecure: true
+  opensearch/traces:
+    http:
+      endpoint: https://opensearch:9200
+      tls:
+        insecure: false
+        insecure_skip_verify: true
+    timeout:
+    retry_on_failure:
+      enabled: true
+      initial_interval: 100000000
+      randomization_factor: 0.5
+    dataset: traces
+  opensearch/logs:
+    http:
+      endpoint: https://opensearch:9200
+      tls:
+        insecure: false
+        insecure_skip_verify: true
+    timeout:
+    retry_on_failure:
+      enabled: true
+      initial_interval: 100000000
+      randomization_factor: 0.5
+    dataset: logs
+  otlp/traces:
+    endpoint: "data-prepper:21890"
+    tls:
+      insecure: true
+      insecure_skip_verify: true
+  otlp/metrics:
+    endpoint: "data-prepper:21891"
+    tls:
+      insecure: true
+      insecure_skip_verify: true
+  otlp/logs:
+    endpoint: "data-prepper:21892"
+    tls:
+      insecure: true
+      insecure_skip_verify: true
+  prometheusremotewrite:
+    endpoint: "http://prometheus:3000/api/v1/write"
+    target_info:
+       enabled: true
   otlphttp/traceloop:
     endpoint: "https://api.traceloop.com" 
     headers:
       "Authorization": "Bearer ${env:TRACELOOP_API_KEY}"
 
-extensions:
-  health_check:
-  pprof:
-  zpages:
 
+processors:
+  batch:
+
+connectors:
+  spanmetrics:
+    dimensions_cache_size: 1000
+    metrics_flush_interval: 15s
 
 service:
-  extensions: [health_check, pprof, zpages]
   pipelines:
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [otlp, otlp/jaeger, otlphttp/traceloop, debug]
+      exporters: [otlp, debug, spanmetrics, otlp/traces, opensearch/traces, otlphttp/traceloop]
     metrics:
-      receivers: [otlp]
+      receivers: [hostmetrics, docker_stats, httpcheck/frontend, otlp, spanmetrics]
       processors: [batch]
-      exporters: [otlp, debug]
+      exporters: [prometheusremotewrite, otlp/metrics, debug]
     logs:
       receivers: [otlp]
       processors: [batch]
-      exporters: [otlp, otlp/jaeger, debug]
+      exporters: [otlp/logs,  opensearch/logs, debug]

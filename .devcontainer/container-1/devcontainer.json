@@ -12,7 +12,7 @@
 		"LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}"
 	},
 	"customizations": {
-	  "vscode": {
+	  "vscode": 
 	     "extensions": [
 			"vscode.typescript-language-features",
 			"GitHub.copilot",

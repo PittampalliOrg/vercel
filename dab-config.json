@@ -185,32 +185,6 @@
           ]
         }
       ]
-    },
-    "Unicorns": {
-      "source": {
-        "object": "public.unicorns",
-        "type": "table"
-      },
-      "graphql": {
-        "enabled": true,
-        "type": {
-          "singular": "Unicorns",
-          "plural": "Unicorns"
-        }
-      },
-      "rest": {
-        "enabled": true
-      },
-      "permissions": [
-        {
-          "role": "anonymous",
-          "actions": [
-            {
-              "action": "*"
-            }
-          ]
-        }
-      ]
     }
   }
 }

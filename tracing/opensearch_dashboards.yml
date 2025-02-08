@@ -1,0 +1,1 @@
+opensearch.hosts: ["http://opensearch:9200"]
