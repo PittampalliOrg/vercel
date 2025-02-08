@@ -123,7 +123,7 @@ exporters:
       insecure: true
       insecure_skip_verify: true
   prometheusremotewrite:
-    endpoint: "http://prometheus:3000/api/v1/write"
+    endpoint: "http://prometheus:9090/api/v1/write"
     target_info:
        enabled: true
   otlphttp/traceloop:
@@ -141,6 +141,16 @@ connectors:
     metrics_flush_interval: 15s
 
 service:
+  telemetry:
+    metrics:
+      readers:
+        - pull:
+            exporter:
+              prometheus:
+                host: '0.0.0.0'
+                port: 8888
+
+
   pipelines:
     traces:
       receivers: [otlp]

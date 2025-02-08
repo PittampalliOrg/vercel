@@ -15,6 +15,8 @@ networks:
 volumes:
   postgres-data:
   opensearch-data:
+  prometheus_data:
+
 
 services:
   frontend:
@@ -189,6 +191,9 @@ services:
     ports:
       - "${OTEL_COLLECTOR_PORT_GRPC}"
       - "${OTEL_COLLECTOR_PORT_HTTP}"
+      - "13133:13133" # health check port
+      - "9464" # Prometheus exporter
+      - "8889" # metrics endpoint
     depends_on:
       jaeger:
         condition: service_started
@@ -203,9 +208,8 @@ services:
       - OTEL_COLLECTOR_PORT_HTTP
       - TRACELOOP_API_KEY
 
-  # Prometheus
   prometheus:
-    image: ${PROMETHEUS_IMAGE}
+    image: quay.io/prometheus/prometheus:v2.47.2
     container_name: prometheus
     command:
       - --web.console.templates=/etc/prometheus/consoles
@@ -215,17 +219,18 @@ services:
       - --storage.tsdb.path=/prometheus
       - --web.enable-lifecycle
       - --web.route-prefix=/
-      - --web.enable-otlp-receiver
       - --enable-feature=exemplar-storage
+      - --enable-feature=otlp-write-receiver
+      - --web.enable-remote-write-receiver
     volumes:
+      - prometheus_data:/usr/share/prometheus/data
       - ./src/prometheus/prometheus-config.yaml:/etc/prometheus/prometheus-config.yaml
     deploy:
       resources:
         limits:
-          memory: 300M
-    restart: unless-stopped
+          memory: 500M
     ports:
-      - "${PROMETHEUS_PORT}:${PROMETHEUS_PORT}"
+      - "${PROMETHEUS_SERVICE_PORT}:${PROMETHEUS_SERVICE_PORT}"
     logging: *logging
 
   # OpenSearch
