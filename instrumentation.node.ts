@@ -8,7 +8,9 @@ import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-proto';
 import { Resource } from '@opentelemetry/resources';
 import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
 import { SimpleLogRecordProcessor } from '@opentelemetry/sdk-logs';
+import { PgInstrumentation } from '@opentelemetry/instrumentation-pg';
 import * as traceloop from "@traceloop/node-server-sdk";
+
   
 const traceExporter =  new OTLPTraceExporter({
   url: 'http://otel-collector:4318/v1/traces'
@@ -34,6 +36,9 @@ const sdk = new opentelemetry.NodeSDK({
     "@opentelemetry/instrumentation-fs": {
       enabled: false
     }
+  }), new PgInstrumentation({
+    enhancedDatabaseReporting: true,
+    addSqlCommenterCommentToQueries: true
   })]
 });
 
