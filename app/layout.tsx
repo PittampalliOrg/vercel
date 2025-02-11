@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Toaster } from 'sonner';
 
 import { ThemeProvider } from '@/components/theme-provider';
+import OpentelemetryProvider from './opentelemetry-provider'; 
 
 import './globals.css';
 
@@ -40,6 +41,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  
   return (
     <html
       lang="en"
@@ -64,7 +66,9 @@ export default async function RootLayout({
           disableTransitionOnChange
         >
           <Toaster position="top-center" />
+          <OpentelemetryProvider>
           {children}
+          </OpentelemetryProvider>
         </ThemeProvider>
       </body>
     </html>

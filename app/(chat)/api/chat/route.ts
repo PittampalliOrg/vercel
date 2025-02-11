@@ -49,7 +49,7 @@ const allTools: AllowedTools[] = [...blocksTools, ...weatherTools];
 export async function POST(request: Request) {
   const { id, messages, modelId }: { id: string; messages: Array<Message>; modelId: string } =
     await request.json();
-
+  console.log('***POST /chat', id, messages, modelId);
   const session = await auth();
   if (!session?.user?.id) {
     return new Response('Unauthorized', { status: 401 });

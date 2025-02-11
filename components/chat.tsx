@@ -14,11 +14,6 @@ import { MultimodalInput } from './multimodal-input';
 import { Messages } from './messages';
 import { VisibilityType } from './visibility-selector';
 import { useBlockSelector } from '@/hooks/use-block';
-import {
-  startMetrics,
-  stopMetrics,
-  recordUserMessage,
-} from '../lib/chat-metrics';
 
 export function Chat({
   id,

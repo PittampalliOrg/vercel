@@ -23,7 +23,7 @@ services:
     container_name: frontend
     image: next-js
     ports:
-      - "3000:3000"
+      - "3002:3000"
     volumes:
       # - /var/run/docker.sock:/var/run/docker-host.sock 
       - .:/workspace:cached
@@ -33,7 +33,7 @@ services:
   frontend_dapr:
     container_name: frontend_dapr
     image: "daprio/daprd"
-    command: ["./daprd", "-app-id", "frontend", "-app-port", "3000", "-resources-path", "/dapr", "-config", "/dapr/config.yaml", "-enable-api-logging", "-log-level", "debug", "--app-channel-address", "frontend"]
+    command: ["./daprd", "-app-id", "frontend", "-app-port", "3002", "-resources-path", "/dapr", "-config", "/dapr/config.yaml", "-enable-api-logging", "-log-level", "debug", "--app-channel-address", "frontend"]
     volumes:
       - "./dapr:/dapr"
 
@@ -41,26 +41,26 @@ services:
       - frontend
       - db    
 
-  natural-language:
-    container_name: natural-language
+  opentelemetry:
+    container_name: opentelemetry
     image: next-js
     ports:
-      - "4000:3000"
+      - "3000:3000"
     volumes:
       # - /var/run/docker.sock:/var/run/docker-host.sock 
-      - ../natural-language-postgres:/workspace:cached
+      - ../ai-sdk-rag-starter:/workspace:cached
     entrypoint: /usr/local/share/docker-init.sh
     command: sleep infinity 
 
-  natural-language_dapr:
-    container_name: natural-language_dapr
+  opentelemetry_dapr:
+    container_name: opentelemetry_dapr
     image: "daprio/daprd"
-    command: ["./daprd", "-app-id", "natural-language", "-app-port", "4000", "-resources-path", "/dapr", "-config", "/dapr/config.yaml", "-enable-api-logging", "-log-level", "debug", "--app-channel-address", "natural-language"]
+    command: ["./daprd", "-app-id", "opentelemetry", "-app-port", "3000", "-resources-path", "/dapr", "-config", "/dapr/config.yaml", "-enable-api-logging", "-log-level", "debug", "--app-channel-address", "opentelemetry"]
     volumes:
       - "./dapr:/dapr"
 
     depends_on:
-      - natural-language
+      - opentelemetry
       - db    
 
   # api:
@@ -189,8 +189,8 @@ services:
       - ./tracing/otel-collector-config.yml:/etc/otelcol-config.yml
       - ./tracing/otelcol-config-extras.yml:/etc/otelcol-config-extras.yml
     ports:
-      - "${OTEL_COLLECTOR_PORT_GRPC}"
-      - "${OTEL_COLLECTOR_PORT_HTTP}"
+      - "${OTEL_COLLECTOR_PORT_GRPC}:${OTEL_COLLECTOR_PORT_GRPC}"
+      - "${OTEL_COLLECTOR_PORT_HTTP}:${OTEL_COLLECTOR_PORT_HTTP}"
       - "13133:13133" # health check port
       - "9464" # Prometheus exporter
       - "8889" # metrics endpoint

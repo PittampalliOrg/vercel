@@ -5,9 +5,9 @@
 	"dockerComposeFile": ["../../docker-compose.yml"],
 	"service": "frontend",
 	"workspaceFolder": "/workspace",
-	// "runServices": ["frontend", "frontend_dapr", "db", "dab", "dab_dapr", "grafector", "prometheus", "opensearch", "vp_container"],
-	// "shutdownAction": "none",
-	//  "forwardPorts": [3000, 9411, 4317, 4318, 5317, 5318, 3500, 59107, 59108],
+	"runServices": ["frontend", "frontend_dapr", "dab", "dab_dapr", "db", "jaeger", "grafana", "otel-collector", "prometheus", "opensearch", "opensearch-dashboards", "data-prepper"],
+	"shutdownAction": "none",
+	"forwardPorts": [3000],
 	"remoteEnv": {
 		"LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}"
 	},
@@ -64,7 +64,7 @@
 	//        "terminal.integrated.cwd": "/workspace/ai-chatbot"
 	     }
 	  }
-	},
+	,
 	"mounts": [
         "source=profile,target=/root,type=volume",
         "target=/root/.vscode-server,type=volume"
@@ -84,7 +84,7 @@
 	// 	"ghcr.io/devcontainers/features/dotnet": {"version": "latest"}
 	//   },
 	// Ensure Dapr is running on opening the container
-	"postCreateCommand": "dapr uninstall --all && dapr init -s && npm run dev",
+	// "postCreateCommand": "dapr uninstall --all && dapr init -s",
 	// Set `remoteUser` to `root` to connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
 	"remoteUser": "node"
 }

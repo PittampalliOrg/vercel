@@ -11,7 +11,7 @@ receivers:
             - https://*
   httpcheck/frontend:
     targets:
-      - endpoint: http://frontend:3000
+      - endpoint: http://opentelemetry:3000
   docker_stats:
     endpoint: unix:///var/run/docker.sock
 
@@ -75,6 +75,7 @@ receivers:
 
 exporters:
   debug:
+    verbosity: detailed
   otlp:
     endpoint: "jaeger:4317"
     tls:
@@ -85,10 +86,9 @@ exporters:
       insecure: true
   opensearch/traces:
     http:
-      endpoint: https://opensearch:9200
+      endpoint: http://opensearch:9200
       tls:
-        insecure: false
-        insecure_skip_verify: true
+        insecure: true
     timeout:
     retry_on_failure:
       enabled: true
@@ -97,10 +97,9 @@ exporters:
     dataset: traces
   opensearch/logs:
     http:
-      endpoint: https://opensearch:9200
+      endpoint: http://opensearch:9200
       tls:
-        insecure: false
-        insecure_skip_verify: true
+        insecure: true
     timeout:
     retry_on_failure:
       enabled: true
@@ -124,8 +123,11 @@ exporters:
       insecure_skip_verify: true
   prometheusremotewrite:
     endpoint: "http://prometheus:9090/api/v1/write"
-    target_info:
-       enabled: true
+    resource_to_telemetry_conversion:
+      enabled: true
+    timeout: 60s
+    tls:
+      insecure_skip_verify: true
   otlphttp/traceloop:
     endpoint: "https://api.traceloop.com" 
     headers:
@@ -134,33 +136,38 @@ exporters:
 
 processors:
   batch:
+  memory_limiter:
+    check_interval: 5s
+    limit_mib: 4000
+    spike_limit_mib: 500
 
 connectors:
   spanmetrics:
     dimensions_cache_size: 1000
     metrics_flush_interval: 15s
 
+
+
 service:
   telemetry:
     metrics:
       readers:
-        - pull:
+        - periodic:
             exporter:
-              prometheus:
-                host: '0.0.0.0'
-                port: 8888
-
+              otlp:
+                protocol: grpc/protobuf
+                endpoint: http://otel-collector:4317
 
   pipelines:
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [otlp, debug, spanmetrics, otlp/traces, opensearch/traces, otlphttp/traceloop]
+      exporters: [otlp, debug, spanmetrics, otlp/traces, otlphttp/traceloop]
     metrics:
       receivers: [hostmetrics, docker_stats, httpcheck/frontend, otlp, spanmetrics]
       processors: [batch]
-      exporters: [prometheusremotewrite, otlp/metrics, debug]
+      exporters: [prometheusremotewrite, otlp/metrics]
     logs:
       receivers: [otlp]
       processors: [batch]
-      exporters: [otlp/logs,  opensearch/logs, debug]
+      exporters: [otlp/logs, opensearch/logs, debug]
