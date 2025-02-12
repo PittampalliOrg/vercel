@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Toaster } from 'sonner';
 
 import { ThemeProvider } from '@/components/theme-provider';
+import InitHighlight from "../init-client";
 
 import './globals.css';
 
@@ -66,6 +67,7 @@ export default async function RootLayout({
         >
           <Toaster position="top-center" />
           {children}
+          <InitHighlight />
         </ThemeProvider>
       </body>
     </html>
