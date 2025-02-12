@@ -10,6 +10,10 @@ import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from '@opentelemetry/semantic
 import { SimpleLogRecordProcessor } from '@opentelemetry/sdk-logs';
 import { PgInstrumentation } from '@opentelemetry/instrumentation-pg';
 import * as traceloop from "@traceloop/node-server-sdk";
+import { envDetectorSync, hostDetectorSync, processDetectorSync } from '@opentelemetry/resources';
+// api.diag.setLogger(new api.DiagConsoleLogger(), api.DiagLogLevel.DEBUG);
+import { BunyanInstrumentation } from '@opentelemetry/instrumentation-bunyan';
+import { UndiciInstrumentation } from "@opentelemetry/instrumentation-undici";
 
   
 const traceExporter =  new OTLPTraceExporter({
@@ -29,6 +33,11 @@ const sdk = new opentelemetry.NodeSDK({
     [ATTR_SERVICE_NAME]: 'frontend',
     [ATTR_SERVICE_VERSION]: '1.0.0'
   }),
+  resourceDetectors: [
+    envDetectorSync,
+    processDetectorSync,
+    hostDetectorSync
+  ],
   traceExporter: traceExporter,
   metricReader: metricReader,
   logRecordProcessors: [new SimpleLogRecordProcessor(logRecordExporter)],
@@ -39,7 +48,9 @@ const sdk = new opentelemetry.NodeSDK({
   }), new PgInstrumentation({
     enhancedDatabaseReporting: true,
     addSqlCommenterCommentToQueries: true
-  })]
+  }),
+  new BunyanInstrumentation(),
+  new UndiciInstrumentation()]
 });
 
 traceloop.initialize({ 
