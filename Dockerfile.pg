@@ -1,0 +1,22 @@
+# Dockerfile.pg
+FROM pgvector/pgvector:pg17
+
+USER root
+
+# Install dependencies for fetching otelcol-contrib
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
+# Adjust OTEL_VERSION as needed
+ARG OTEL_VERSION=0.119.0
+
+# Download and install the otelcol-contrib binary
+RUN curl -sSL \
+    "https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v${OTEL_VERSION}/otelcol-contrib_${OTEL_VERSION}_linux_amd64.tar.gz" \
+  | tar -xz -C /usr/local/bin/ otelcol-contrib
+
+# Copy our custom startup script
+COPY start.sh /start.sh
+RUN chmod +x /start.sh
+
+# Use our script as the container's entrypoint
+ENTRYPOINT ["/start.sh"]

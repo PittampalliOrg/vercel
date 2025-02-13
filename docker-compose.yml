@@ -116,17 +116,21 @@ services:
 
   db:
     container_name: db
-    image: pgvector/pgvector:pg17
+    build:
+      context: .            # Path to your docker-compose.yml and Dockerfile.db
+      dockerfile: Dockerfile.pg
     restart: unless-stopped
     volumes:
       - postgres-data:/var/lib/postgresql/data
+      - ./tracing/pg-collector-config.yml:/etc/otelcol-config.yml 
     environment:
       POSTGRES_PASSWORD: postgres
       POSTGRES_USER: postgres
       POSTGRES_DB: postgres
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      
     ports:
-      - "5432:5432"      
-    
+      - "5432:5432"
 
   # ********************
   # Telemetry Components

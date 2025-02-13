@@ -7,6 +7,8 @@ import type {
   Message,
 } from 'ai';
 import cx from 'classnames';
+import { trace } from '@opentelemetry/api'; // <-- ADD THIS
+
 import type React from 'react';
 import {
   useRef,
@@ -29,6 +31,7 @@ import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { SuggestedActions } from './suggested-actions';
 import equal from 'fast-deep-equal';
+import InitClient from "../init-client"
 
 function PureMultimodalInput({
   chatId,
@@ -58,9 +61,7 @@ function PureMultimodalInput({
     chatRequestOptions?: ChatRequestOptions,
   ) => Promise<string | null | undefined>;
   handleSubmit: (
-    event?: {
-      preventDefault?: () => void;
-    },
+    event?: { preventDefault?: () => void },
     chatRequestOptions?: ChatRequestOptions,
   ) => void;
   className?: string;
@@ -88,15 +89,11 @@ function PureMultimodalInput({
     }
   };
 
-  const [localStorageInput, setLocalStorageInput] = useLocalStorage(
-    'input',
-    '',
-  );
+  const [localStorageInput, setLocalStorageInput] = useLocalStorage('input', '');
 
   useEffect(() => {
     if (textareaRef.current) {
       const domValue = textareaRef.current.value;
-      // Prefer DOM value over localStorage to handle hydration
       const finalValue = domValue || localStorageInput || '';
       setInput(finalValue);
       adjustHeight();
@@ -117,19 +114,37 @@ function PureMultimodalInput({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadQueue, setUploadQueue] = useState<Array<string>>([]);
 
+  // ---------------------------------------------------------------------------------------
+  // Manual Span Example #1: Submitting a message (which might call an LLM or route)
+  // ---------------------------------------------------------------------------------------
   const submitForm = useCallback(() => {
-    window.history.replaceState({}, '', `/chat/${chatId}`);
-
-    handleSubmit(undefined, {
-      experimental_attachments: attachments,
+    // 1) Start a new span to represent the user's action of submitting a message
+    const tracer = trace.getTracer('client-tracer');
+    const span = tracer.startSpan('user-submits-message', {
+      attributes: {
+        'chat.id': chatId,
+        'input.length': input.length,
+      },
     });
 
-    setAttachments([]);
-    setLocalStorageInput('');
-    resetHeight();
+    try {
+      // If you're using ZoneContextManager, the context should automatically propagate
+      window.history.replaceState({}, '', `/chat/${chatId}`);
 
-    if (width && width > 768) {
-      textareaRef.current?.focus();
+      handleSubmit(undefined, {
+        experimental_attachments: attachments,
+      });
+
+      setAttachments([]);
+      setLocalStorageInput('');
+      resetHeight();
+
+      if (width && width > 768) {
+        textareaRef.current?.focus();
+      }
+    } finally {
+      // 2) End the span once we've triggered the request
+      span.end();
     }
   }, [
     attachments,
@@ -138,13 +153,26 @@ function PureMultimodalInput({
     setLocalStorageInput,
     width,
     chatId,
+    input,
   ]);
 
+  // ---------------------------------------------------------------------------------------
+  // Manual Span Example #2: Uploading a file
+  // ---------------------------------------------------------------------------------------
   const uploadFile = async (file: File) => {
-    const formData = new FormData();
-    formData.append('file', file);
+    // Start a span representing a file upload
+    const tracer = trace.getTracer('client-tracer');
+    const span = tracer.startSpan('user-file-upload', {
+      attributes: {
+        'file.name': file.name,
+        'file.size': file.size,
+      },
+    });
 
     try {
+      const formData = new FormData();
+      formData.append('file', file);
+
       const response = await fetch('/api/files/upload', {
         method: 'POST',
         body: formData,
@@ -164,6 +192,9 @@ function PureMultimodalInput({
       toast.error(error);
     } catch (error) {
       toast.error('Failed to upload file, please try again!');
+    } finally {
+      // End the file upload span
+      span.end();
     }
   };
 
@@ -174,15 +205,16 @@ function PureMultimodalInput({
       setUploadQueue(files.map((file) => file.name));
 
       try {
+        // Kick off multiple file upload promises
         const uploadPromises = files.map((file) => uploadFile(file));
         const uploadedAttachments = await Promise.all(uploadPromises);
         const successfullyUploadedAttachments = uploadedAttachments.filter(
-          (attachment) => attachment !== undefined,
+          (attachment) => attachment !== undefined
         );
 
         setAttachments((currentAttachments) => [
           ...currentAttachments,
-          ...successfullyUploadedAttachments,
+          ...(successfullyUploadedAttachments as Attachment[]),
         ]);
       } catch (error) {
         console.error('Error uploading files!', error);
@@ -190,7 +222,7 @@ function PureMultimodalInput({
         setUploadQueue([]);
       }
     },
-    [setAttachments],
+    [setAttachments]
   );
 
   return (
@@ -244,7 +276,6 @@ function PureMultimodalInput({
         onKeyDown={(event) => {
           if (event.key === 'Enter' && !event.shiftKey) {
             event.preventDefault();
-
             if (isLoading) {
               toast.error('Please wait for the model to finish its response!');
             } else {
@@ -273,15 +304,15 @@ function PureMultimodalInput({
   );
 }
 
+// Memoized component remains the same
 export const MultimodalInput = memo(
   PureMultimodalInput,
   (prevProps, nextProps) => {
     if (prevProps.input !== nextProps.input) return false;
     if (prevProps.isLoading !== nextProps.isLoading) return false;
     if (!equal(prevProps.attachments, nextProps.attachments)) return false;
-
     return true;
-  },
+  }
 );
 
 function PureAttachmentsButton({
@@ -305,7 +336,6 @@ function PureAttachmentsButton({
     </Button>
   );
 }
-
 const AttachmentsButton = memo(PureAttachmentsButton);
 
 function PureStopButton({
@@ -328,7 +358,6 @@ function PureStopButton({
     </Button>
   );
 }
-
 const StopButton = memo(PureStopButton);
 
 function PureSendButton({
@@ -353,7 +382,6 @@ function PureSendButton({
     </Button>
   );
 }
-
 const SendButton = memo(PureSendButton, (prevProps, nextProps) => {
   if (prevProps.uploadQueue.length !== nextProps.uploadQueue.length)
     return false;

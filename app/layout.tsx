@@ -1,9 +1,7 @@
 import type { Metadata } from 'next';
 import { Toaster } from 'sonner';
-
 import { ThemeProvider } from '@/components/theme-provider';
-import InitHighlight from "../init-client";
-
+import InitClient from '../init-client';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -41,6 +39,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  console.log('Client instrumentation started.');
   return (
     <html
       lang="en"
@@ -65,8 +64,8 @@ export default async function RootLayout({
           disableTransitionOnChange
         >
           <Toaster position="top-center" />
+          <InitClient />
           {children}
-          <InitHighlight />
         </ThemeProvider>
       </body>
     </html>

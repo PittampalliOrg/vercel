@@ -1,13 +1,2 @@
-{"level":"info","message":"Hello world","spanId":"799f6b9be48e14c3","traceFlags":1,"traceId":"b148a458a7ee6de4642a5ce5f4490c6f"}
-{"level":"info","message":{"spanId":"ed4797350785adc1","traceFlags":1,"traceId":"3a6d05a1d71fc3d514e089f31c4f01bf"}}
-{"level":"info","message":"log from main"}
-{"level":"info","message":"log from main","spanId":"f96555dfc3a41483","traceFlags":1,"traceId":"b303cf130e08aafdb8f02e0b23cd6f2a"}
-{"level":"info","message":"log from main","spanId":"0fb8ba5144faabe9","traceFlags":1,"traceId":"a8b689c7063a6fd47f592fa34a84ca67"}
-{"level":"info","message":"log from main","spanId":"bdd94522a066ad2e","traceFlags":1,"traceId":"d9a6e3887ba0c804cde738dfb6ec8601"}
-{"level":"info","message":"log from main","spanId":"e9ed32fe59353c31","traceFlags":1,"traceId":"44284fe9fbcda9cd31dfbb1c3dbce3ef"}
-{"level":"info","message":"log from main","spanId":"39ac8fc5644f7d56","traceFlags":1,"traceId":"aa34cdefc1ae261fbe17f9ab359fd894"}
-{"level":"info","message":"log from main","spanId":"8a572a16ee6b6b5d","traceFlags":1,"traceId":"af38ff96d1e2812195b213d6fc822b71"}
-{"level":"info","message":"log from main","spanId":"83f8c834f0b90938","traceFlags":1,"traceId":"a85065b6c8b7f520de48837d3f733e53"}
-{"level":"info","message":"log from main","spanId":"edd7367a2ea8fd85","traceFlags":1,"traceId":"9b0772b06e51c7b7ee15d036acda4659"}
-{"level":"info","message":"log from main","spanId":"1c57a65b4b397bc7","traceFlags":1,"traceId":"b39f8fc9768df11c999bf2b909651fcc"}
-{"level":"info","message":"log from main","spanId":"4bba4ac4a72843a7","traceFlags":1,"traceId":"6fc73b066576615bd5c42dbe8191bc62"}
+{"level":"info","message":"log from main","spanId":"56502267a33cefa8","traceFlags":1,"traceId":"2bc69bbd58b915a0e0bdf127f23a8a94"}
+{"level":"info","message":"log from main","spanId":"c5cbefd898ce0fdd","traceFlags":1,"traceId":"11fd7899fc7f46eaea59800fb3c1334b"}

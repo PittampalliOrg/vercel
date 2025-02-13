@@ -17,6 +17,9 @@ import {
   vote,
 } from './schema';
 import { BlockKind } from '@/components/block';
+import { trace, Span } from '@opentelemetry/api';
+
+const tracer = trace.getTracer('queries');
 
 // Optionally, if not using email/pass login, you can
 // use the Drizzle adapter for Auth.js / NextAuth
@@ -27,12 +30,14 @@ const client = postgres(process.env.POSTGRES_URL!);
 const db = drizzle(client);
 
 export async function getUser(email: string): Promise<Array<User>> {
+  return tracer.startActiveSpan('getUser', async (span: Span) => {
   try {
     return await db.select().from(user).where(eq(user.email, email));
   } catch (error) {
     console.error('Failed to get user from database');
     throw error;
   }
+});
 }
 
 export async function createUser(email: string, password: string) {

@@ -29,7 +29,6 @@ receivers:
         trace_flags:
           parse_from: attributes.traceFlags
 
-
   # Host metrics
   hostmetrics:
     scrapers:
