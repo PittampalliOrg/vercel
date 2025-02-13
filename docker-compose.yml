@@ -188,6 +188,7 @@ services:
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - ./tracing/otel-collector-config.yml:/etc/otelcol-config.yml
       - ./tracing/otelcol-config-extras.yml:/etc/otelcol-config-extras.yml
+      - ./logs:/logs
     ports:
       - "${OTEL_COLLECTOR_PORT_GRPC}:${OTEL_COLLECTOR_PORT_GRPC}"
       - "${OTEL_COLLECTOR_PORT_HTTP}:${OTEL_COLLECTOR_PORT_HTTP}"

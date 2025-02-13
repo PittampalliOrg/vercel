@@ -14,6 +14,21 @@ receivers:
       - endpoint: http://opentelemetry:3000
   docker_stats:
     endpoint: unix:///var/run/docker.sock
+  filelog:
+    include_file_path: true
+    include:
+      - ./logs/*.log
+    operators:
+      - id: container-parser
+        type: container
+      - type: trace_parser
+        trace_id:
+          parse_from: attributes.traceId
+        span_id:
+          parse_from: attributes.spanId
+        trace_flags:
+          parse_from: attributes.traceFlags
+
 
   # Host metrics
   hostmetrics:
@@ -76,7 +91,7 @@ receivers:
 exporters:
   debug:
     verbosity: detailed
-  otlp:
+  otlp/jaeger:
     endpoint: "jaeger:4317"
     tls:
       insecure: true
@@ -132,6 +147,10 @@ exporters:
     endpoint: "https://api.traceloop.com" 
     headers:
       "Authorization": "Bearer ${env:TRACELOOP_API_KEY}"
+  otlphttp/betterstack:
+    endpoint: "https://s1202625.eu-nbg-2.betterstackdata.com"
+    headers:
+      Authorization: "Bearer zYyRMpCtN1ipLRpJQQKDeW16"
 
 
 processors:
@@ -162,12 +181,12 @@ service:
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [otlp, debug, spanmetrics, otlp/traces, otlphttp/traceloop]
+      exporters: [otlp/jaeger, spanmetrics, otlp/traces, otlphttp/traceloop]
     metrics:
-      receivers: [hostmetrics, docker_stats, httpcheck/frontend, otlp, spanmetrics]
+      receivers: [httpcheck/frontend, otlp, spanmetrics]
       processors: [batch]
       exporters: [prometheusremotewrite, otlp/metrics]
-    logs:
-      receivers: [otlp]
+    logs/betterstack:
+      receivers: [filelog] # your logs receivers
       processors: [batch]
-      exporters: [otlp/logs, opensearch/logs, debug]
+      exporters: [otlphttp/betterstack, otlp/logs, debug]

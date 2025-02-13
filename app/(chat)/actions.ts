@@ -31,6 +31,8 @@ export async function generateTitleFromUserMessage({
     prompt: JSON.stringify(message),
   });
 
+
+
   return title;
 }
 

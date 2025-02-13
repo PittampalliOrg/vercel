@@ -4,10 +4,8 @@ import { Chat } from '@/components/chat';
 import { DEFAULT_MODEL_NAME, models } from '@/lib/ai/models';
 import { generateUUID } from '@/lib/utils';
 import { DataStreamHandler } from '@/components/data-stream-handler';
-import { initHighlightServer } from "../../init-server";
 
 export default async function Page() {
-  await initHighlightServer();
 
   const id = generateUUID();
 

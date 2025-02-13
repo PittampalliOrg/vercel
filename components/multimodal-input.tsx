@@ -29,7 +29,6 @@ import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { SuggestedActions } from './suggested-actions';
 import equal from 'fast-deep-equal';
-import { recordUserMessage } from '../lib/chat-metrics';
 
 function PureMultimodalInput({
   chatId,
@@ -119,19 +118,14 @@ function PureMultimodalInput({
   const [uploadQueue, setUploadQueue] = useState<Array<string>>([]);
 
   const submitForm = useCallback(() => {
-    // If user typed a non-empty message or has attachments, increment the OTel counter
-    if (input.trim().length > 0 || attachments.length > 0) {
-      recordUserMessage(); // <--- increment the metric
-    }
-
-    // Standard chat flow
     window.history.replaceState({}, '', `/chat/${chatId}`);
+
     handleSubmit(undefined, {
       experimental_attachments: attachments,
     });
 
-    // Reset attachments, local storage, and height
     setAttachments([]);
+    setLocalStorageInput('');
     resetHeight();
 
     if (width && width > 768) {
@@ -141,9 +135,9 @@ function PureMultimodalInput({
     attachments,
     handleSubmit,
     setAttachments,
+    setLocalStorageInput,
     width,
     chatId,
-    input, // Add input so it triggers recalculations if needed
   ]);
 
   const uploadFile = async (file: File) => {
@@ -235,14 +229,12 @@ function PureMultimodalInput({
           ))}
         </div>
       )}
+
       <Textarea
         ref={textareaRef}
         placeholder="Send a message..."
         value={input}
-        onChange={(event) => {
-          setInput(event.target.value);
-          adjustHeight();
-        }}
+        onChange={handleInput}
         className={cx(
           'min-h-[24px] max-h-[calc(75dvh)] overflow-hidden resize-none rounded-2xl !text-base bg-muted pb-10 dark:border-zinc-700',
           className,
