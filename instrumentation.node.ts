@@ -1,4 +1,4 @@
-// instrumentation.node.ts
+
 import * as opentelemetry from '@opentelemetry/sdk-node';
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-proto';
@@ -64,11 +64,4 @@ traceloop.initialize({
   baseUrl: 'http://otel-collector:4318',
 });
 
-// Optionally export a Winston logger for use in your app
-export const logger = createLogger({
-  transports: [
-    new transports.File({ filename: 'logs/combined.log' }),
-    new transports.File({ filename: 'logs/error.log', level: 'error' }),
-    new transports.Console(),
-  ],
-});
+

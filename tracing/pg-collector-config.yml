@@ -1,37 +1,40 @@
 receivers:
-    postgresql:
-        collection_interval: 1m0s
-        databases:
-            - postgres
-        endpoint: localhost:5432
-        password: postgres
-        tls:
-            insecure: true
-        transport: tcp
-        username: postgres
-    sqlquery:
-      driver: postgres
-      datasource: "host=db port=5432 user=postgres password=postgres sslmode=disable"
-      storage: file_storage
-      queries:
-        - sql: "select * from chat where id > $$1"
-          tracking_start_value: "10000"
-          tracking_column: log_id
-          logs:
-            - body_column: log_body
-              attribute_columns: [ "log_attribute_1", "log_attribute_2" ]
-        - sql: "select count(*) as count, genre from movie group by genre"
-          metrics:
-            - metric_name: movie.genres
-              value_column: "count"
-              attribute_columns: ["genre"]
-              static_attributes:
-                dbinstance: mydbinstance
+  postgresql:
+    collection_interval: 2m0s
+    databases:
+      - postgres
+    endpoint: localhost:5432
+    password: postgres
+    tls:
+      insecure: true
+    transport: tcp
+    username: postgres
+  sqlquery/postgres:
+    driver: postgres
+    # Adjust host/port/db/user/password as needed for your environment:
+    datasource: "host=db port=5432 user=postgres password=postgres dbname=postgres sslmode=disable"
+    # OPTIONAL: if you want to store the last tracking column across restarts,
+    # set `storage: your_storage_extension_name_here`
+    queries:
+      - sql: "SELECT id, chat_id, created_at
+          FROM message
+          WHERE created_at > $1
+          ORDER BY created_at ASC"
+        tracking_column: created_at
+        # Choose a start time well before your earliest data, e.g. Jan 1, 2024:
+        tracking_start_value: "2024-01-01 00:00:00"
+
+        logs:
+          - body_column: content
+            # Put columns you want as log attributes:
+            attribute_columns: ["id", "chat_id", "created_at"]
+            # If you also want the actual timestamp included, you could add "created_at" above.
+
 exporters:
   otlp:
-    endpoint: "otel-collector:4317"
+    endpoint: "data-prepper:21892"
     tls:
-        insecure: true
+      insecure: true
   debug:
     verbosity: detailed
   otlp/metrics:
@@ -47,19 +50,17 @@ exporters:
     tls:
       insecure_skip_verify: true
 processors:
-    resourcedetection:
-        detectors:
-            - system
-        system:
-            hostname_sources:
-                - os
+  resourcedetection:
+    detectors:
+      - system
+    system:
+      hostname_sources:
+        - os
+  batch:
 
 service:
-    pipelines:
-        metrics:
-            receivers: [postgresql]
-            processors: [resourcedetection]
-            exporters: [prometheusremotewrite, debug]
-    telemetry:
-        metrics:
-            address: localhost:8888
+  pipelines:
+    metrics:
+      receivers: [postgresql]
+      processors: [batch]
+      exporters: [otlp/metrics, debug]

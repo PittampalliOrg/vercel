@@ -44,7 +44,6 @@ const blocksTools: AllowedTools[] = [
   'updateDocument',
   'requestSuggestions',
 ];
-
 const weatherTools: AllowedTools[] = ['getWeather'];
 const allTools: AllowedTools[] = [...blocksTools, ...weatherTools];
 
@@ -56,15 +55,15 @@ export async function POST(request: Request) {
   }
 
   const extractedContext = propagation.extract(context.active(), carrier);
-
-  // 2) Create or get a tracer for the server
   const serverTracer = trace.getTracer('server-tracer');
 
-  // 3) Run the entire POST logic in that extracted context, with a new "POST /api/chat" span
-  return await context.with(extractedContext, async () => {
-    return await serverTracer.startActiveSpan('POST /api/chat', async (span) => {
+  // 2) Run the entire POST logic in that extracted context, with a new "POST /api/chat" span
+  return context.with(extractedContext, async () => {
+    return serverTracer.startActiveSpan('POST /api/chat', async (span) => {
       try {
-        // (A) Existing code below...
+        span.setAttribute('source.file', 'app/(chat)/api/chat/route.ts:58');
+        span.addEvent('Handling POST /api/chat');
+
         const { id, messages, modelId }: {
           id: string;
           messages: Array<Message>;
@@ -89,18 +88,15 @@ export async function POST(request: Request) {
           return new Response('No user message found', { status: 400 });
         }
 
-        // (B) Use Traceloop workflow as before, but now inside an OTel span
         return traceloop.withWorkflow(
           { name: 'chat' },
           async () => {
-            // Ensure chat record exists; if not, create it
             let chat = await getChatById({ id });
             if (!chat) {
               const title = await generateTitleFromUserMessage({ message: userMessage });
               await saveChat({ id, userId: session.user.id, title });
             }
 
-            // Persist the user's newest message
             const userMessageId = generateUUID();
             await saveMessages({
               messages: [
@@ -113,10 +109,8 @@ export async function POST(request: Request) {
               ],
             });
 
-            // Return a streaming response
             return createDataStreamResponse({
               execute: (dataStream) => {
-                // Immediately inform the client of the user message ID
                 dataStream.writeData({
                   type: 'user-message-id',
                   content: userMessageId,
@@ -140,7 +134,6 @@ export async function POST(request: Request) {
                     }),
                   },
                   onFinish: async ({ response }) => {
-                    // When streaming finishes, persist the assistant messages
                     try {
                       const cleaned = sanitizeResponseMessages(response.messages);
                       await saveMessages({
@@ -170,7 +163,6 @@ export async function POST(request: Request) {
                   },
                 });
 
-                // Merge the token-by-token stream into the DataStream
                 result.mergeIntoDataStream(dataStream);
               },
             });
@@ -178,12 +170,14 @@ export async function POST(request: Request) {
           { question: userMessage.content }
         );
       } catch (err) {
-        // Mark the OTel span as error
-        span.recordException(err);
+        span.recordException(err as Error);
         span.setStatus({ code: SpanStatusCode.ERROR });
         console.error('Error in POST /api/chat:', err);
         return new Response('Internal Server Error', { status: 500 });
       } finally {
+        const traceId = span.spanContext().traceId;
+        const spanId = span.spanContext().spanId;
+
         span.end();
       }
     });
@@ -191,36 +185,39 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  // You can do the same manual extraction if you want the DELETE route to continue the client's trace:
-  // const carrier: Record<string, string> = {};
-  // for (const [key, value] of request.headers.entries()) {
-  //   carrier[key] = value;
-  // }
-  // const extractedContext = propagation.extract(context.active(), carrier);
-  // ...
-  // But to keep it simple here, unchanged from your code:
+  // For demonstration, we add a startActiveSpan here
+  const serverTracer = trace.getTracer('server-tracer');
+  return serverTracer.startActiveSpan('DELETE /api/chat', async (span) => {
+    try {
+      span.setAttribute('source.file', 'app/(chat)/api/chat/route.ts:183');
+      span.addEvent('Handling DELETE /api/chat');
 
-  const { searchParams } = new URL(request.url);
-  const id = searchParams.get('id');
-  if (!id) {
-    return new Response('Not Found', { status: 404 });
-  }
+      const { searchParams } = new URL(request.url);
+      const id = searchParams.get('id');
+      if (!id) {
+        return new Response('Not Found', { status: 404 });
+      }
 
-  const session = await auth();
-  if (!session?.user) {
-    return new Response('Unauthorized', { status: 401 });
-  }
+      const session = await auth();
+      if (!session?.user) {
+        return new Response('Unauthorized', { status: 401 });
+      }
 
-  try {
-    const chat = await getChatById({ id });
-    if (chat.userId !== session.user.id) {
-      return new Response('Unauthorized', { status: 401 });
+      const chat = await getChatById({ id });
+      if (chat.userId !== session.user.id) {
+        return new Response('Unauthorized', { status: 401 });
+      }
+      await deleteChatById({ id });
+      return new Response('Chat deleted', { status: 200 });
+    } catch (err) {
+      span.recordException(err as Error);
+      span.setStatus({ code: SpanStatusCode.ERROR });
+      return new Response('Error deleting chat', { status: 500 });
+    } finally {
+      const traceId = span.spanContext().traceId;
+      const spanId = span.spanContext().spanId;
+ 
+      span.end();
     }
-    await deleteChatById({ id });
-    return new Response('Chat deleted', { status: 200 });
-  } catch (error) {
-    return new Response('An error occurred while processing your request', {
-      status: 500,
-    });
-  }
+  });
 }

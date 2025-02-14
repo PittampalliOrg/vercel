@@ -24,6 +24,7 @@ export default function InitClient() {
           url: 'http://127.0.0.1:4318/v1/traces', // or your collector’s URL
         })
       )],
+      forceFlushTimeoutMillis: 60000
     });
 
     provider.register({
@@ -40,11 +41,12 @@ export default function InitClient() {
             'http://localhost:3000',
             'http://localhost:3002',
             'http://localhost:3003',
+            new RegExp(`\\/api\\/.*`),
           ],
         }),
         new XMLHttpRequestInstrumentation(),
         new UserInteractionInstrumentation({
-          eventNames: ['click', 'submit', 'mousedown', 'keydown', 'keypress'],
+          eventNames: ['click', 'submit', 'mousedown', 'keypress'],
         }),
       ],
     });

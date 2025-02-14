@@ -1,76 +1,116 @@
 // vercel/app/(chat)/api/[[...route]]/route.ts
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server';
+import { trace, SpanStatusCode } from '@opentelemetry/api';
 
-export const runtime = 'nodejs'
+export const runtime = 'nodejs';
 
-// Adjust to the actual URL where your Hono backend is hosted
-const HONO_BACKEND_URL = process.env.HONO_BACKEND_URL || 'http://api:8000'
+const HONO_BACKEND_URL = process.env.HONO_BACKEND_URL || 'http://api:8000';
 
 export async function GET(req: NextRequest) {
-  const { pathname, searchParams } = new URL(req.url)
+  const tracer = trace.getTracer('server-tracer');
+  return tracer.startActiveSpan('GET /api/[...route]', async (span) => {
+    try {
+      span.setAttribute('source.file', 'app/(chat)/api/[[...route]]/route.ts:15');
+      span.addEvent('Proxying GET to HONO');
 
-  // The path after `/api/`, because your catch-all folder is `[...route]`
-  // If your Next.js route is /api/xxx, then `pathname.replace('/api', '')` is 'xxx'
-  const path = pathname.replace('/api', '')
+      const { pathname, searchParams } = new URL(req.url);
+      const path = pathname.replace('/api', '');
+      const targetUrl = `${HONO_BACKEND_URL}${path}?${searchParams.toString()}`;
 
-  // Construct the URL to your Hono server
-  const targetUrl = `${HONO_BACKEND_URL}${path}?${searchParams.toString()}`
+      const headers = new Headers(req.headers);
+      const response = await fetch(targetUrl, {
+        method: 'GET',
+        headers,
+      });
 
-  // Forward the request headers if needed
-  const headers = new Headers(req.headers)
+      return new NextResponse(response.body, {
+        status: response.status,
+        headers: response.headers,
+      });
+    } catch (err) {
+      span.recordException(err as Error);
+      span.setStatus({ code: SpanStatusCode.ERROR });
+      return NextResponse.json({ error: 'Proxy GET error' }, { status: 500 });
+    } finally {
+      const traceId = span.spanContext().traceId;
+      const spanId = span.spanContext().spanId;
 
-  // Proxy the request to the Hono server
-  const response = await fetch(targetUrl, {
-    method: 'GET',
-    headers,
-  })
-
-  // Return the response directly
-  return new NextResponse(response.body, {
-    status: response.status,
-    headers: response.headers,
-  })
+      span.end();
+    }
+  });
 }
 
 export async function POST(req: NextRequest) {
-  // For POST (and similarly for PATCH, PUT, DELETE, etc.):
-  const { pathname, searchParams } = new URL(req.url)
-  const path = pathname.replace('/api', '')
-  const targetUrl = `${HONO_BACKEND_URL}${path}?${searchParams.toString()}`
+  const tracer = trace.getTracer('server-tracer');
+  return tracer.startActiveSpan('POST /api/[...route]', async (span) => {
+    try {
+      span.setAttribute('source.file', 'app/(chat)/api/[[...route]]/route.ts:48');
+      span.addEvent('Proxying POST to HONO');
 
-  // We forward the body and headers
-  const headers = new Headers(req.headers)
-  const body = await req.blob() // or req.arrayBuffer(), req.text(), etc. depending on your data
+      const { pathname, searchParams } = new URL(req.url);
+      const path = pathname.replace('/api', '');
+      const targetUrl = `${HONO_BACKEND_URL}${path}?${searchParams.toString()}`;
 
-  const response = await fetch(targetUrl, {
-    method: 'POST',
-    headers,
-    body,
-  })
+      const headers = new Headers(req.headers);
+      const body = await req.blob();
 
-  return new NextResponse(response.body, {
-    status: response.status,
-    headers: response.headers,
-  })
+      const response = await fetch(targetUrl, {
+        method: 'POST',
+        headers,
+        body,
+      });
+
+      return new NextResponse(response.body, {
+        status: response.status,
+        headers: response.headers,
+      });
+    } catch (err) {
+      span.recordException(err as Error);
+      span.setStatus({ code: SpanStatusCode.ERROR });
+      return NextResponse.json({ error: 'Proxy POST error' }, { status: 500 });
+    } finally {
+      const traceId = span.spanContext().traceId;
+      const spanId = span.spanContext().spanId;
+
+      span.end();
+    }
+  });
 }
 
 export async function PATCH(req: NextRequest) {
-  const { pathname, searchParams } = new URL(req.url)
-  const path = pathname.replace('/api', '')
-  const targetUrl = `${HONO_BACKEND_URL}${path}?${searchParams.toString()}`
+  const tracer = trace.getTracer('server-tracer');
+  return tracer.startActiveSpan('PATCH /api/[...route]', async (span) => {
+    try {
+      span.setAttribute('source.file', 'app/(chat)/api/[[...route]]/route.ts:82');
+      span.addEvent('Proxying PATCH to HONO');
 
-  const headers = new Headers(req.headers)
-  const body = await req.blob()
+      const { pathname, searchParams } = new URL(req.url);
+      const path = pathname.replace('/api', '');
+      const targetUrl = `${HONO_BACKEND_URL}${path}?${searchParams.toString()}`;
 
-  const response = await fetch(targetUrl, {
-    method: 'PATCH',
-    headers,
-    body,
-  })
+      const headers = new Headers(req.headers);
+      const body = await req.blob();
 
-  return new NextResponse(response.body, {
-    status: response.status,
-    headers: response.headers,
-  })
+      const response = await fetch(targetUrl, {
+        method: 'PATCH',
+        headers,
+        body,
+      });
+
+      return new NextResponse(response.body, {
+        status: response.status,
+        headers: response.headers,
+      });
+    } catch (err) {
+      span.recordException(err as Error);
+      span.setStatus({ code: SpanStatusCode.ERROR });
+      return NextResponse.json({ error: 'Proxy PATCH error' }, { status: 500 });
+    } finally {
+      const traceId = span.spanContext().traceId;
+      const spanId = span.spanContext().spanId;
+
+      span.end();
+    }
+  });
 }
