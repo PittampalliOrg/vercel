@@ -35,10 +35,10 @@ yarn-error.log*
 
 .env
 .vercel
-.vscode
 .env*.local
 clients/dist/
 dapr/secrets.json
+**.go
 
 src
 tracing/otelcol-contrib
@@ -47,3 +47,8 @@ xh.tar.gz
 .env.example
 .env.example
 tracing/grafana.yaml
+logs/combined.log
+logs/error.log
+logs/**
+psql_logs/**
+tracing/otel-collector-config.yml

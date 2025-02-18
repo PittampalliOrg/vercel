@@ -1,0 +1,11 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "echoWorkspaceFolder",
+        "type": "shell",
+        "command": "echo ${lineNumber}"
+      }
+    ]
+  }
+  

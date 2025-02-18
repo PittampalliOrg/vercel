@@ -1,0 +1,54 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Next.js: debug server-side",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "npm run dev"
+    },
+    {
+      "name": "Next.js: debug client-side",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://127.0.0.1:3002"
+    },
+    {
+      "name": "Next.js: debug client-side (Firefox)",
+      "type": "firefox",
+      "request": "launch",
+      "url": "http://127.0.0.1:3002",
+      "reAttach": true,
+      "pathMappings": [
+        {
+          "url": "webpack://_N_E",
+          "path": "${workspaceFolder}"
+        }
+      ]
+    },
+    {
+      "name": "Next.js: debug full stack",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "${workspaceFolder}/node_modules/next/dist/bin/next",
+      "runtimeArgs": [
+        "${workspaceFolder}",
+        "PORT=3002",
+        "dev",
+        "--turbo",
+        "NODE_OPTIONS='--inspect'",
+        "NEXT_OTEL_VERBOSE=1"
+      ],
+      "skipFiles": ["<node_internals>/**"],
+      "serverReadyAction": {
+        "action": "debugWithEdge",
+        "killOnServerStop": true,
+        // Use a pattern that always matches and then set the URI to your fixed URL
+        "pattern": ".+",
+        "uriFormat": "http://127.0.0.1:3002/",
+        "webRoot": "${workspaceFolder}"
+      },
+      "showAsyncStacks": true
+    }
+  ]
+}

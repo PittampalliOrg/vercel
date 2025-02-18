@@ -21,6 +21,7 @@ import {
 import { BlockKind } from '@/components/block';
 import { logger } from '@/lib/logger';
 import { drizzleTracer } from './drizzleTracer'; // custom tracer from your snippet or similar
+import { trace, context } from '@opentelemetry/api';
 
 // Connect Postgres
 const client = postgres(process.env.POSTGRES_URL!);
@@ -210,6 +211,7 @@ export async function voteMessage({
   type: 'up' | 'down';
 }) {
   return drizzleTracer.startActiveSpan('drizzle.voteMessage', async (span) => {
+    
     try {
       // Build the SELECT
       const selectQ = db.select().from(vote).where(and(eq(vote.messageId, messageId)));

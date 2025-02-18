@@ -15,6 +15,7 @@ import { envDetectorSync, processDetectorSync, hostDetectorSync } from '@opentel
 import * as traceloop from '@traceloop/node-server-sdk';
 import { createLogger, transports } from 'winston';
 
+
 // --- Create Exporters ---
 const traceExporter = new OTLPTraceExporter({
   url: 'http://otel-collector:4318/v1/traces',
