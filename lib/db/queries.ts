@@ -19,9 +19,9 @@ import {
 } from './schema';
 
 import { BlockKind } from '@/components/block';
-import { logger } from '@/lib/logger';
+import { pino } from 'pino';
 import { drizzleTracer } from './drizzleTracer'; // custom tracer from your snippet or similar
-import { trace, context } from '@opentelemetry/api';
+import { logger } from "@/lib/logger"
 
 // Connect Postgres
 const client = postgres(process.env.POSTGRES_URL!);

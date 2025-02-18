@@ -17,7 +17,7 @@ receivers:
   filelog:
     include_file_path: true
     include:
-      - ./logs/*.log
+      - ./psql_logs/*.log
     operators:
       - id: container-parser
         type: container
@@ -98,6 +98,14 @@ exporters:
     endpoint: "http://prometheus:9090/api/v1/otlp"
     tls:
       insecure: true
+  otlphttp/loki:
+    endpoint: "http://loki:3100/otlp"
+    tls:
+      insecure: true
+  otlphttp/tempo:
+    endpoint: "http://tempo:3200"
+    tls:
+      insecure: true
   opensearch/traces:
     http:
       endpoint: http://opensearch:9200
@@ -150,42 +158,89 @@ exporters:
     endpoint: "https://s1202625.eu-nbg-2.betterstackdata.com"
     headers:
       Authorization: "Bearer zYyRMpCtN1ipLRpJQQKDeW16"
-
+  azuredataexplorer:
+    cluster_uri: "https://azdexplorer.northcentralus.kusto.windows.net"
+    application_id: "11d953d9-3ed7-4f8c-92d0-a6c311dba3f1"
+    application_key: "${env:AZURE_STORAGE_EXPLORER_KEY}"
+    tenant_id: "0c4da9c5-40ea-4e7d-9c7a-e7308d4f8e38"
+    db_name: "db"
+    metrics_table_name: "metrics"
+    logs_table_name: "logs"
+    traces_table_name: "traces"
+    ingestion_type : "managed"
+  kafka:
+    brokers:
+      - localhost:9092
+    protocol_version: 2.0.0
+  file/no_rotation:
+    path: ./logs/logs.json
+  clickhouse:
+    endpoint: https://fm2rea9csi.eastus2.azure.clickhouse.cloud:8443
+    # ttl: 72h
+    traces_table_name: traces
+    logs_table_name: logs
+    create_schema: true
+    timeout: 5s
+    database: default
+    sending_queue:
+      queue_size: 1000
+    retry_on_failure:
+      enabled: true
+      initial_interval: 5s
+      max_interval: 30s
+      max_elapsed_time: 300s
+    username: "default"
+    password: ${env:CLICKHOUSE_PASSWORD}
+  # azureblobexporter:
+  #   url: "https://otelstorage2312.blob.core.windows.net/"
+  #   container:
+  #     logs: "logs"
+  #     metrics: "metrics"
+  #     traces: "traces"
+  #   auth:
+  #     type: "connection_string"
+  #     connection_string: "DefaultEndpointsProtocol=https;AccountName=otelstorage2312;AccountKey=${env:AZURE_OTEL_STORAGE_ACCOUNT_KEY};EndpointSuffix=core.windows.net"
 
 processors:
+  transform:
+    error_mode: ignore
+    log_statements:
+      - context: log
+        statements:
+          - set(attributes["test"], instrumentation_scope.name)
   batch:
+    send_batch_size: 100000
+    timeout: 5s
   memory_limiter:
-    check_interval: 5s
-    limit_mib: 4000
+    check_interval: 2s
+    limit_mib: 1800
     spike_limit_mib: 500
+  resourcedetection/system:
+    detectors: [ "system" ]
+    system:
+      hostname_sources: [ "os" ]
+  resource:
+    attributes:
+      - key: service.name
+        value: "serviceName"
+        action: upsert
 
 connectors:
   spanmetrics:
     dimensions_cache_size: 1000
     metrics_flush_interval: 15s
 
-
-
 service:
-  telemetry:
-    metrics:
-      readers:
-        - periodic:
-            exporter:
-              otlp:
-                protocol: grpc/protobuf
-                endpoint: http://otel-collector:4317
-
   pipelines:
     traces:
       receivers: [otlp]
-      processors: [batch]
-      exporters: [otlp/jaeger, spanmetrics, otlp/traces, otlphttp/traceloop]
-    metrics:
-      receivers: [httpcheck/frontend, otlp, spanmetrics]
-      processors: [batch]
-      exporters: [prometheusremotewrite, otlp/metrics]
-    logs/betterstack:
-      receivers: [filelog] # your logs receivers
-      processors: [batch]
-      exporters: [otlphttp/betterstack, otlp/logs, debug]
+      processors: [ memory_limiter, resourcedetection/system, resource, batch ]
+      exporters: [clickhouse, debug]
+    # metrics:
+    #   receivers: [otlp, spanmetrics]
+    #   processors: [batch]
+    #   exporters: [prometheusremotewrite, otlp/metrics, debug]
+    logs:
+      receivers: [otlp]
+      processors: [ memory_limiter, resourcedetection/system, resource, batch ]
+      exporters: [clickhouse, debug]

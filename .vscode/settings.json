@@ -1,4 +1,38 @@
 {
     "typescript.tsdk": "node_modules/typescript/lib",
-    "typescript.enablePromptUseWorkspaceTsdk": true
+    "typescript.enablePromptUseWorkspaceTsdk": true,
+    "sqltools.connections": [
+      {
+        "driver": "PostgreSQL",
+        "name": "PostgreSQL",
+        "server": "db",
+        "port": 5432,
+        "database": "postgres",
+        "username": "postgres",
+        "password": "postgres",
+        "askForPassword": false
+      },
+      {
+        "driver": "PostgreSQL",
+        "name": "PostgreSQL",
+        "server": "vinodvm.postgres.database.azure.com",
+        "port": 5432,
+        "database": "postgres",
+        "username": "vpittamp",
+        "askForPassword": true
+      },
+      {
+        "server": "http://clickhouse",
+        "port": 8123,
+        "database": "default",
+        "useJWT": false,
+        "requestTimeout": 30000,
+        "enableTls": false,
+        "previewLimit": 50,
+        "password": "password",
+        "username": "user",
+        "driver": "ClickHouse",
+        "name": "clickhouse"
+      }
+    ]
   }

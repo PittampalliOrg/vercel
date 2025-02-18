@@ -15,6 +15,7 @@ import { UserInteractionInstrumentation } from '@opentelemetry/instrumentation-u
 
 export default function InitClient() {
   useEffect(() => {
+    
   const provider = new WebTracerProvider({
       resource: new Resource({
         [ATTR_SERVICE_NAME]: 'browser', // Name for your client
@@ -36,14 +37,7 @@ export default function InitClient() {
     registerInstrumentations({
       instrumentations: [
         new DocumentLoadInstrumentation(),
-        new FetchInstrumentation({
-          propagateTraceHeaderCorsUrls: [
-            'http://localhost:3000',
-            'http://localhost:3002',
-            'http://localhost:3003',
-            new RegExp(`\\/api\\/.*`),
-          ],
-        }),
+        new FetchInstrumentation(),
         new XMLHttpRequestInstrumentation(),
         new UserInteractionInstrumentation({
           eventNames: ['click', 'submit', 'mousedown', 'keypress'],

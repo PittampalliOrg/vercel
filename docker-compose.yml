@@ -117,20 +117,36 @@ services:
   db:
     container_name: db
     build:
-      context: .            # Path to your docker-compose.yml and Dockerfile.db
+      context: .                  # Path to your Dockerfile.pg
       dockerfile: Dockerfile.pg
     restart: unless-stopped
+
     volumes:
       - postgres-data:/var/lib/postgresql/data
-      - ./tracing/pg-collector-config.yml:/etc/otelcol-config.yml 
+      - ./tracing/pg-collector-config.yml:/etc/otelcol-config.yml
+      - ./tracing/customPostgresql.conf:/etc/postgresql.conf
+      - ./psql_logs:/logs
+      - /etc/passwd:/etc/passwd:ro
+      - /etc/group:/etc/group:ro
+
     environment:
       POSTGRES_PASSWORD: postgres
       POSTGRES_USER: postgres
       POSTGRES_DB: postgres
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
-      
+
     ports:
       - "5432:5432"
+
+    # ------------------------------------------------------------------
+    # The command below:
+    #  1) Starts otelcol-contrib in the background
+    #  2) "exec postgres -c config_file=/etc/postgresql.conf" is the
+    #     main/foreground process for the container.
+    # ------------------------------------------------------------------
+    command: >
+      bash -c "otelcol-contrib --config=/etc/otelcol-config.yml &
+               exec postgres -c config_file=/etc/postgresql.conf"
 
   # ********************
   # Telemetry Components
@@ -156,24 +172,34 @@ services:
     environment:
       - METRICS_STORAGE_TYPE=prometheus
     logging: *logging
-
-  # Grafana
+  # loki:
+  #   image: grafana/loki:main
+  #   ports:
+  #     - "3100:3100"
+  #   volumes:
+  #     - ./loki-fundamentals/loki-config.yaml:/etc/loki/local-config.yaml
+  #   command: -config.file=/etc/loki/local-config.yaml
   grafana:
-    image: ${GRAFANA_IMAGE}
-    container_name: grafana
-    deploy:
-      resources:
-        limits:
-          memory: 120M
-    restart: unless-stopped
-    environment:
-      - "GF_INSTALL_PLUGINS=grafana-opensearch-datasource"
+    image: grafana/grafana:latest
     volumes:
-      - ./src/grafana/grafana.ini:/etc/grafana/grafana.ini
-      - ./src/grafana/provisioning/:/etc/grafana/provisioning/
+      - ./tracing/grafana.ini:/etc/grafana/grafana.ini
+      - ./tracing/datasource.yaml:/etc/grafana/provisioning/datasources/datasource.yaml
+    environment:
+      GF_INSTALL_PLUGINS: grafana-clickhouse-datasource,vertamedia-clickhouse-datasource
+      GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS: vertamedia-clickhouse-datasource
     ports:
-      - "3005:${GRAFANA_PORT}"
-    logging: *logging
+      - "3005:3000"
+
+  # clickhouse:
+  #   image: clickhouse/clickhouse-server:latest
+  #   ports:
+  #     - "9000:9000"
+  #     - "8123:8123"
+  #   environment:
+  #     CLICKHOUSE_DB: otel
+  #     CLICKHOUSE_USER: user
+  #     CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+  #     CLICKHOUSE_PASSWORD: password
 
   # OpenTelemetry Collector
   otel-collector:

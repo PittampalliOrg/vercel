@@ -14,9 +14,10 @@ RUN curl -sSL \
     "https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v${OTEL_VERSION}/otelcol-contrib_${OTEL_VERSION}_linux_amd64.tar.gz" \
   | tar -xz -C /usr/local/bin/ otelcol-contrib
 
-# Copy our custom startup script
-COPY start.sh /start.sh
-RUN chmod +x /start.sh
-
-# Use our script as the container's entrypoint
-ENTRYPOINT ["/start.sh"]
+# -----------------------------------------------------------------------------
+# IMPORTANT:
+# We do NOT copy start.sh, and we do NOT replace the default entrypoint. 
+# We keep the base image's built-in entrypoint: ["docker-entrypoint.sh"]
+# which is designed for postgres, environment-based initialization, etc.
+# -----------------------------------------------------------------------------
+USER postgres

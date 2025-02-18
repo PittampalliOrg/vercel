@@ -39,7 +39,7 @@
         "NODE_OPTIONS='--inspect'",
         "NEXT_OTEL_VERBOSE=1"
       ],
-      "skipFiles": ["<node_internals>/**"],
+      "skipFiles": ["<node_internals>/**", "**/node_modules/**", "**/server/**"],
       "serverReadyAction": {
         "action": "debugWithEdge",
         "killOnServerStop": true,

@@ -30,6 +30,7 @@ import { createDocument } from '@/lib/ai/tools/create-document';
 import { updateDocument } from '@/lib/ai/tools/update-document';
 import { requestSuggestions } from '@/lib/ai/tools/request-suggestions';
 import { getWeather } from '@/lib/ai/tools/get-weather';
+import { logger } from "@/lib/logger"
 
 export const maxDuration = 60;
 
@@ -54,6 +55,8 @@ export async function POST(request: Request) {
     carrier[key] = value;
   }
 
+  logger.info('Logging POST /chat', request.headers.entries());
+  
   const extractedContext = propagation.extract(context.active(), carrier);
   const serverTracer = trace.getTracer('server-tracer');
 
@@ -61,16 +64,13 @@ export async function POST(request: Request) {
   return context.with(extractedContext, async () => {
     return serverTracer.startActiveSpan('POST /api/chat', async (span) => {
       try {
-        span.setAttribute('source.file', 'app/(chat)/api/chat/route.ts:58');
-        span.addEvent('Handling POST /api/chat');
-
+        span.addEvent('Handling POST /api/chat', carrier);
+        logger.error('Handling POST /api/chat', carrier);
         const { id, messages, modelId }: {
           id: string;
           messages: Array<Message>;
           modelId: string;
         } = await request.json();
-
-        console.log('***POST /chat', id, messages, modelId);
 
         const session = await auth();
         if (!session?.user?.id) {
@@ -156,6 +156,7 @@ export async function POST(request: Request) {
                     } catch (error) {
                       console.error('Failed to save chat', error);
                     }
+                    logger.info('Chat saved', response)
                   },
                   experimental_telemetry: {
                     isEnabled: true,
