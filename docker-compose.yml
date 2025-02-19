@@ -147,6 +147,36 @@ services:
     command: >
       bash -c "otelcol-contrib --config=/etc/otelcol-config.yml &
                exec postgres -c config_file=/etc/postgresql.conf"
+  rest:
+    container_name: rest
+    image: postgrest/postgrest
+    ports:
+      - "3011:3000"
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      PGRST_DB_URI: postgres://postgres:${POSTGRESQL_PASSWORD}@${POSTGRESQL_HOST}:${POSTGRESQL_PORT}/${POSTGRESQL_DB}
+      PGRST_OPENAPI_SERVER_PROXY_URI: http://127.0.0.1:3000
+      PGRST_DB_SCHEMAS: ${PGRST_DB_SCHEMAS}
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${JWT_SECRET}
+      PGRST_DB_USE_LEGACY_GUCS: "false"
+      PGRST_APP_SETTINGS_JWT_SECRET: ${JWT_SECRET}
+      PGRST_APP_SETTINGS_JWT_EXP: ${JWT_EXPIRY}
+    command:
+      [
+        "postgrest"
+      ]
+
+  swagger:
+    image: swaggerapi/swagger-ui
+    ports:
+      - "8080:8080"
+    expose:
+      - "8080"
+    environment:
+      API_URL: http://localhost:3011/
 
   # ********************
   # Telemetry Components
@@ -238,6 +268,9 @@ services:
       - OTEL_COLLECTOR_PORT_GRPC
       - OTEL_COLLECTOR_PORT_HTTP
       - TRACELOOP_API_KEY
+      - AZURE_STORAGE_EXPLORER_KEY
+      - CLICKHOUSE_CLOUD_ENDPOINT
+      - CLICKHOUSE_CLOUD_PASSWORD
 
   prometheus:
     image: quay.io/prometheus/prometheus:v2.47.2

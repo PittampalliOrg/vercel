@@ -117,6 +117,7 @@
     "next-auth": "5.0.0-beta.25",
     "next-themes": "^0.3.0",
     "orderedmap": "^2.1.1",
+    "pg": "^8.13.3",
     "pino": "^9.6.0",
     "pino-caller": "^3.4.0",
     "pino-opentelemetry-transport": "^1.0.1",

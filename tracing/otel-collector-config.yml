@@ -11,7 +11,7 @@ receivers:
             - https://*
   httpcheck/frontend:
     targets:
-      - endpoint: http://opentelemetry:3000
+      - endpoint: http://frontend:3000
   docker_stats:
     endpoint: unix:///var/run/docker.sock
   filelog:
@@ -86,6 +86,13 @@ receivers:
         mute_process_exe_error: true
         mute_process_io_error: true
         mute_process_user_error: true
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: 'otel-collector'
+          scrape_interval: 10s
+          static_configs:
+            - targets: ['0.0.0.0:8888']
 
 exporters:
   debug:
@@ -175,7 +182,7 @@ exporters:
   file/no_rotation:
     path: ./logs/logs.json
   clickhouse:
-    endpoint: https://fm2rea9csi.eastus2.azure.clickhouse.cloud:8443
+    endpoint: ${env:CLICKHOUSE_CLOUD_ENDPOINT}
     # ttl: 72h
     traces_table_name: traces
     logs_table_name: logs
@@ -190,7 +197,7 @@ exporters:
       max_interval: 30s
       max_elapsed_time: 300s
     username: "default"
-    password: ${env:CLICKHOUSE_PASSWORD}
+    password: ${env:CLICKHOUSE_CLOUD_PASSWORD}
   # azureblobexporter:
   #   url: "https://otelstorage2312.blob.core.windows.net/"
   #   container:
@@ -235,11 +242,11 @@ service:
     traces:
       receivers: [otlp]
       processors: [ memory_limiter, resourcedetection/system, resource, batch ]
+      exporters: [clickhouse, debug, spanmetrics]
+    metrics:
+      receivers: [hostmetrics, docker_stats, httpcheck/frontend, otlp, prometheus, spanmetrics]
+      processors: [batch]
       exporters: [clickhouse, debug]
-    # metrics:
-    #   receivers: [otlp, spanmetrics]
-    #   processors: [batch]
-    #   exporters: [prometheusremotewrite, otlp/metrics, debug]
     logs:
       receivers: [otlp]
       processors: [ memory_limiter, resourcedetection/system, resource, batch ]
