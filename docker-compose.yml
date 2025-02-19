@@ -134,6 +134,12 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_DB: postgres
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      PGPORT: ${POSTGRES_PORT}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXP: ${JWT_EXPIRY}
 
     ports:
       - "5432:5432"
@@ -157,7 +163,7 @@ services:
       - db
     environment:
       PGRST_DB_URI: postgres://postgres:${POSTGRESQL_PASSWORD}@${POSTGRESQL_HOST}:${POSTGRESQL_PORT}/${POSTGRESQL_DB}
-      PGRST_OPENAPI_SERVER_PROXY_URI: http://127.0.0.1:3000
+      PGRST_OPENAPI_SERVER_PROXY_URI: http://127.0.0.1:3011
       PGRST_DB_SCHEMAS: ${PGRST_DB_SCHEMAS}
       PGRST_DB_ANON_ROLE: anon
       PGRST_JWT_SECRET: ${JWT_SECRET}
