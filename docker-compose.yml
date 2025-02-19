@@ -11,6 +11,9 @@ networks:
     driver: bridge
     external: true
     attachable: true
+  sentry-self-hosted_default:
+    name: sentry-self-hosted_default
+    external: true
 
 volumes:
   postgres-data:
@@ -29,6 +32,9 @@ services:
       - .:/workspace:cached
     entrypoint: /usr/local/share/docker-init.sh
     command: sleep infinity 
+    networks:
+      - default
+      - sentry-self-hosted_default
 
   frontend_dapr:
     container_name: frontend_dapr
@@ -116,43 +122,26 @@ services:
 
   db:
     container_name: db
-    build:
-      context: .                  # Path to your Dockerfile.pg
-      dockerfile: Dockerfile.pg
+    image: pgvector/pgvector:pg17
     restart: unless-stopped
-
     volumes:
       - postgres-data:/var/lib/postgresql/data
-      - ./tracing/pg-collector-config.yml:/etc/otelcol-config.yml
-      - ./tracing/customPostgresql.conf:/etc/postgresql.conf
-      - ./psql_logs:/logs
-      - /etc/passwd:/etc/passwd:ro
-      - /etc/group:/etc/group:ro
-
     environment:
       POSTGRES_PASSWORD: postgres
       POSTGRES_USER: postgres
       POSTGRES_DB: postgres
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
-      PGPORT: ${POSTGRES_PORT}
-      POSTGRES_PORT: ${POSTGRES_PORT}
-      PGPASSWORD: ${POSTGRES_PASSWORD}
-      PGDATABASE: ${POSTGRES_DB}
-      JWT_SECRET: ${JWT_SECRET}
-      JWT_EXP: ${JWT_EXPIRY}
-
     ports:
-      - "5432:5432"
+      - "5432:5432"    
 
-    # ------------------------------------------------------------------
-    # The command below:
-    #  1) Starts otelcol-contrib in the background
-    #  2) "exec postgres -c config_file=/etc/postgresql.conf" is the
-    #     main/foreground process for the container.
-    # ------------------------------------------------------------------
-    command: >
-      bash -c "otelcol-contrib --config=/etc/otelcol-config.yml &
-               exec postgres -c config_file=/etc/postgresql.conf"
+    # # ------------------------------------------------------------------
+    # # The command below:
+    # #  1) Starts otelcol-contrib in the background
+    # #  2) "exec postgres -c config_file=/etc/postgresql.conf" is the
+    # #     main/foreground process for the container.
+    # # ------------------------------------------------------------------
+    # command: >
+    #   bash -c "otelcol-contrib --config=/etc/otelcol-config.yml &
+    #            exec postgres -c config_file=/etc/postgresql.conf"
   rest:
     container_name: rest
     image: postgrest/postgrest

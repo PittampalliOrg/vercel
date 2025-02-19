@@ -3,38 +3,21 @@ FROM pgvector/pgvector:pg17
 
 USER root
 
-# Install dependencies needed for downloading and extracting:
-#  - curl      (for fetching binaries)
-#  - xz-utils  (for extracting .tar.xz archives)
-#  - libpq5    (ensures libpq is present for PostgREST)
-RUN apt-get update && apt-get install -y \
-    curl \
-    xz-utils \
-    libpq5 \
- && rm -rf /var/lib/apt/lists/*
+# Install dependencies for fetching otelcol-contrib
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
-# -----------------------------------------------
-# 1) Install otelcol-contrib
-# -----------------------------------------------
+# Adjust OTEL_VERSION as needed
 ARG OTEL_VERSION=0.119.0
+
+# Download and install the otelcol-contrib binary
 RUN curl -sSL \
     "https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v${OTEL_VERSION}/otelcol-contrib_${OTEL_VERSION}_linux_amd64.tar.gz" \
   | tar -xz -C /usr/local/bin/ otelcol-contrib
 
-# -----------------------------------------------
-# 2) Install PostgREST
-#    Adjust POSTGREST_VERSION as needed
-# -----------------------------------------------
-ARG POSTGREST_VERSION=11.2.0
-RUN curl -sSL \
-      "https://github.com/PostgREST/postgrest/releases/download/v${POSTGREST_VERSION}/postgrest-v${POSTGREST_VERSION}-linux-x64-static.tar.xz" \
-      -o /tmp/postgrest.tar.xz \
- && tar -xJf /tmp/postgrest.tar.xz -C /usr/local/bin/ \
- && rm /tmp/postgrest.tar.xz \
- && chmod +x /usr/local/bin/postgrest
-
-# -----------------------------------------------
-# Keep base Postgres entrypoint:
-#  "docker-entrypoint.sh" from the pgvector image
-# -----------------------------------------------
+# -----------------------------------------------------------------------------
+# IMPORTANT:
+# We do NOT copy start.sh, and we do NOT replace the default entrypoint. 
+# We keep the base image's built-in entrypoint: ["docker-entrypoint.sh"]
+# which is designed for postgres, environment-based initialization, etc.
+# -----------------------------------------------------------------------------
 USER postgres
