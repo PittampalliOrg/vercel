@@ -11,9 +11,6 @@ networks:
     driver: bridge
     external: true
     attachable: true
-  sentry-self-hosted_default:
-    name: sentry-self-hosted_default
-    external: true
 
 volumes:
   postgres-data:
@@ -32,9 +29,6 @@ services:
       - .:/workspace:cached
     entrypoint: /usr/local/share/docker-init.sh
     command: sleep infinity 
-    networks:
-      - default
-      - sentry-self-hosted_default
 
   frontend_dapr:
     container_name: frontend_dapr
