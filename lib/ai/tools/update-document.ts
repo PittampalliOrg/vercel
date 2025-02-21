@@ -9,9 +9,11 @@ import {
 import { Model } from '../models';
 import { Session } from 'next-auth';
 import { z } from 'zod';
-import { getDocumentById, saveDocument } from '@/lib/db/queries';
+// import { getDocumentById, saveDocument } from '@/lib/db/queries';
 import { customModel, imageGenerationModel } from '..';
 import { updateDocumentPrompt } from '../prompts';
+
+import { dbActions } from '@/lib/db/queries';
 
 interface UpdateDocumentProps {
   model: Model;
@@ -33,7 +35,7 @@ export const updateDocument = ({
         .describe('The description of changes that need to be made'),
     }),
     execute: async ({ id, description }) => {
-      const document = await getDocumentById({ id });
+      const document = await dbActions.getDocumentById({ id });
 
       if (!document) {
         return {
@@ -127,7 +129,7 @@ export const updateDocument = ({
       }
 
       if (session.user?.id) {
-        await saveDocument({
+        await dbActions.saveDocument({
           id,
           title: document.title,
           content: draftText,

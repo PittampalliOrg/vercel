@@ -12,9 +12,6 @@ import { envDetectorSync, processDetectorSync, hostDetectorSync } from '@opentel
 import * as traceloop from '@traceloop/node-server-sdk';
 import { logger } from "@/lib/logger"
 import { NodeSDK } from '@opentelemetry/sdk-node';
-import opentelemetry from '@opentelemetry/sdk-node';
-import { ResourceAttributes } from '@opentelemetry/resources';
-import { SEMRESATTRS_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
 
 
 // --- Create Exporters ---
@@ -30,9 +27,9 @@ const metricReader = new PeriodicExportingMetricReader({
   exporter: metricExporter,
 });
 
-// const logRecordExporter = new OTLPLogExporter({
-//   url: 'http://otel-collector:4318/v1/logs',
-// });
+const logRecordExporter = new OTLPLogExporter({
+  url: 'http://otel-collector:4318/v1/logs',
+});
 
 // --- Create NodeSDK ---
 const sdk = new NodeSDK({
@@ -58,9 +55,9 @@ const sdk = new NodeSDK({
 sdk.start();
 
 // Traceloop optional: if you have special config
-traceloop.initialize({
-  disableBatch: true,
-  baseUrl: 'http://otel-collector:4318',
-});
+// traceloop.initialize({
+//   disableBatch: true,
+//   baseUrl: 'http://otel-collector:4318',
+// });
 
-logger.info('Frontend started');
+// logger.info('Frontend started');

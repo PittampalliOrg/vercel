@@ -21,7 +21,7 @@
       "runtimeArgs": [
         "${workspaceFolder}",
         "dev",
-        "--turbo",
+        // "--turbo",
         "NODE_OPTIONS='--inspect'",
         "NEXT_OTEL_VERBOSE=1"
       ],
