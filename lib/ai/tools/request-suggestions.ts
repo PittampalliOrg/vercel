@@ -29,7 +29,7 @@ export const requestSuggestions = ({
         .describe('The creation timestamp of the document'),
     }),
     execute: async ({ documentId, createdAt }) => {
-      const document = await getDocumentById({ id: documentId , createdAt: createdAt });
+      const document = await getDocumentById({ id: documentId });
 
       if (!document || !document.content) {
         return {

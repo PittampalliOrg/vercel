@@ -10,7 +10,7 @@ export async function GET() {
       span.addEvent('Handling GET /api/history');
 
       const session = await auth();
-      if (!session || !session.user) {
+      if (!session || !session.user || !session.user.id) {
         return new Response('Unauthorized!', { status: 401 });
       }
 

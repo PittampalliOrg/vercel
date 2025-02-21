@@ -9,22 +9,9 @@
     },
     {
       "name": "Next.js: debug client-side",
-      "type": "chrome",
+      "type": "msedge",
       "request": "launch",
-      "url": "http://127.0.0.1:3002"
-    },
-    {
-      "name": "Next.js: debug client-side (Firefox)",
-      "type": "firefox",
-      "request": "launch",
-      "url": "http://127.0.0.1:3002",
-      "reAttach": true,
-      "pathMappings": [
-        {
-          "url": "webpack://_N_E",
-          "path": "${workspaceFolder}"
-        }
-      ]
+      "url": "http://127.0.0.1:3000"
     },
     {
       "name": "Next.js: debug full stack",
@@ -33,7 +20,6 @@
       "runtimeExecutable": "${workspaceFolder}/node_modules/next/dist/bin/next",
       "runtimeArgs": [
         "${workspaceFolder}",
-        "PORT=3002",
         "dev",
         "--turbo",
         "NODE_OPTIONS='--inspect'",
@@ -45,7 +31,7 @@
         "killOnServerStop": true,
         // Use a pattern that always matches and then set the URI to your fixed URL
         "pattern": ".+",
-        "uriFormat": "http://127.0.0.1:3002/",
+        "uriFormat": "http://127.0.0.1:3000/",
         "webRoot": "${workspaceFolder}"
       },
       "showAsyncStacks": true

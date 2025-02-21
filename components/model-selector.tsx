@@ -14,6 +14,9 @@ import { models } from '@/lib/ai/models';
 import { cn } from '@/lib/utils';
 
 import { CheckCircleFillIcon, ChevronDownIcon } from './icons';
+import { trace } from '@opentelemetry/api';
+
+const tracer = trace.getTracer('client-tracer');
 
 export function ModelSelector({
   selectedModelId,
@@ -21,6 +24,7 @@ export function ModelSelector({
 }: {
   selectedModelId: string;
 } & React.ComponentProps<typeof Button>) {
+
   const [open, setOpen] = useState(false);
   const [optimisticModelId, setOptimisticModelId] =
     useOptimistic(selectedModelId);
@@ -50,8 +54,12 @@ export function ModelSelector({
             key={model.id}
             onSelect={() => {
               setOpen(false);
-
               startTransition(() => {
+                tracer.startActiveSpan('ModelSelector', (span) => {
+                  span.setAttribute('model.id', model.id);
+                  span.addEvent('Handling ModelSelector');
+                  span.end();
+                });
                 setOptimisticModelId(model.id);
                 saveModelId(model.id);
               });

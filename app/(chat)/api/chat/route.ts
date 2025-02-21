@@ -94,7 +94,7 @@ export async function POST(request: Request) {
             let chat = await getChatById({ id });
             if (!chat) {
               const title = await generateTitleFromUserMessage({ message: userMessage });
-              await saveChat({ id, userId: session.user.id, title });
+              await saveChat({ id, userId: session.user!.id!, title });
             }
 
             const userMessageId = generateUUID();
