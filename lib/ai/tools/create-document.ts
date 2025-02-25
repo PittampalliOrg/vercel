@@ -13,7 +13,7 @@ import { codePrompt } from '../prompts';
 // import { dbActions.saveDocument } from '@/lib/db/queries';
 import { Session } from 'next-auth';
 import { Model } from '../models';
-import { dbActions } from '@/lib/db/queries';
+import { dbActions, BlockKind } from '@/lib/db/queries';
 
 interface CreateDocumentProps {
   model: Model;
@@ -131,7 +131,7 @@ export const createDocument = ({
         await dbActions.saveDocument({
           id,
           title,
-          kind,
+          kind: kind as BlockKind, // Cast to BlockKind
           content: draftText,
           userId: session.user.id,
         });

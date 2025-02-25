@@ -1,3 +1,4 @@
+// 'blocks/text.tsx'
 import { Block } from '@/components/create-block';
 import { DiffView } from '@/components/diffview';
 import { DocumentSkeleton } from '@/components/document-skeleton';
@@ -15,7 +16,7 @@ import { toast } from 'sonner';
 import { getSuggestions } from './actions';
 
 interface TextBlockMetadata {
-  suggestions: Array<Suggestion>;
+  suggestions: Suggestion[];  // Ensuring it's an array of Suggestion
 }
 
 export const textBlock = new Block<'text', TextBlockMetadata>({
@@ -24,17 +25,19 @@ export const textBlock = new Block<'text', TextBlockMetadata>({
   initialize: async ({ documentId, setMetadata }) => {
     const suggestions = await getSuggestions({ documentId });
 
+    // Ensure that 'suggestions' is set as an array
     setMetadata({
-      suggestions,
+      suggestions: Array.isArray(suggestions) ? suggestions : [],  // Ensure it's an array
     });
   },
   onStreamPart: ({ streamPart, setMetadata, setBlock }) => {
     if (streamPart.type === 'suggestion') {
       setMetadata((metadata) => {
+        // Ensure suggestions array is properly updated
         return {
           suggestions: [
-            ...metadata.suggestions,
-            streamPart.content as Suggestion,
+            ...metadata.suggestions, 
+            streamPart.content as Suggestion,  // type cast as Suggestion
           ],
         };
       });
@@ -106,7 +109,7 @@ export const textBlock = new Block<'text', TextBlockMetadata>({
       onClick: ({ handleVersionChange }) => {
         handleVersionChange('toggle');
       },
-      isDisabled: ({ currentVersionIndex, setMetadata }) => {
+      isDisabled: ({ currentVersionIndex }) => {
         if (currentVersionIndex === 0) {
           return true;
         }
@@ -176,3 +179,4 @@ export const textBlock = new Block<'text', TextBlockMetadata>({
     },
   ],
 });
+

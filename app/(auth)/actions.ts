@@ -61,7 +61,7 @@ export const register = async (
       password: formData.get('password'),
     });
 
-    const [user] = await dbActions.getUser(validatedData.email);
+    const user = await dbActions.getUser(validatedData.email);
 
     if (user) {
       return { status: 'user_exists' } as RegisterActionState;

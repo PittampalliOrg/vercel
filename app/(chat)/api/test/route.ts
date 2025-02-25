@@ -1,14 +1,20 @@
-import postgrest from '@/lib/db/postgrest'
+import { db, dbActions } from "../../../../lib/db/queries";
+import { vote, chat } from "../../../../lib/db/schema";
+import { and, asc, desc, eq, gt, gte } from 'drizzle-orm';
+import { logger } from "../../../../lib/logger";
+import { createSelectSchema, BuildSchema } from "drizzle-zod";
 
-const REST_URL = 'http://rest:3000'
+const chatSelectSchema = createSelectSchema(chat);
+
 // Create a single supabase client for interacting with your database
 export async function GET() {
 
-      const { data, error } = await postgrest
-        .from('user')
-        .select('*')
+      const data = await db.select().from(chat).where(eq(chat.userId, "06b9a326-7056-42e0-bb95-36e39eb82f1c"))
+  
 
-        console.log(data)
+      createSelectSchema(chat)
+
+      const responseType = typeof data
 
       return new Response(JSON.stringify(data));
 }

@@ -1,5 +1,7 @@
 import type { NextConfig } from 'next';
-
+import unTypiaNext from "@ryoppippi/unplugin-typia/next";
+ 
+/** @type {import('next').NextConfig} */
 const nextConfig: NextConfig = {
   experimental: {
     ppr: false
@@ -51,4 +53,8 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default unTypiaNext(
+  nextConfig,
+  {} // options of unplugin-typia
+);
+

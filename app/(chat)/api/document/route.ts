@@ -1,10 +1,6 @@
+// 'app/(chat)/api/document/route.ts'
 import { auth } from '@/app/(auth)/auth';
-import { BlockKind } from '@/components/block';
-// import {
-//   deleteDocumentsByIdAfterTimestamp,
-//   getDocumentsById,
-//   saveDocument,
-// } from '@/lib/db/queries';
+import { BlockKind } from '@/lib/db/queries';
 import { dbActions } from '@/lib/db/queries';
 
 export async function GET(request: Request) {
@@ -22,6 +18,11 @@ export async function GET(request: Request) {
   }
 
   const documents = await dbActions.getDocumentsById({ id });
+
+  // Check if documents is an array before destructuring
+  if (!Array.isArray(documents)) {
+    return new Response('Unexpected response format', { status: 500 });
+  }
 
   const [document] = documents;
 
@@ -54,14 +55,27 @@ export async function POST(request: Request) {
     content,
     title,
     kind,
-  }: { content: string; title: string; kind: BlockKind } = await request.json();
+  }: { content: string; title: string; kind: string } = await request.json();
+
+  // Ensure kind is a valid BlockKind
+  if (!['text', 'code', 'image'].includes(kind)) {
+    return new Response('Invalid kind', { status: 400 });
+  }
+
+  // Convert the request "kind" into the BlockKind enum
+  const blockKind =
+    kind === 'text'
+      ? BlockKind.Text
+      : kind === 'code'
+      ? BlockKind.Code
+      : BlockKind.Image;
 
   if (session.user?.id) {
     const document = await dbActions.saveDocument({
       id,
       content,
       title,
-      kind,
+      kind: blockKind,
       userId: session.user.id,
     });
 
@@ -69,6 +83,7 @@ export async function POST(request: Request) {
   }
   return new Response('Unauthorized', { status: 401 });
 }
+
 
 export async function PATCH(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -87,6 +102,11 @@ export async function PATCH(request: Request) {
   }
 
   const documents = await dbActions.getDocumentsById({ id });
+
+  // Check if documents is an array before destructuring
+  if (!Array.isArray(documents)) {
+    return new Response('Unexpected response format', { status: 500 });
+  }
 
   const [document] = documents;
 

@@ -247,7 +247,7 @@ service:
     #   receivers: [hostmetrics, docker_stats, httpcheck/frontend, otlp, prometheus, spanmetrics]
     #   processors: [batch]
     #   exporters: [clickhouse]
-    # logs:
-    #   receivers: [otlp]
-    #   processors: [ memory_limiter, resourcedetection/system, resource, batch ]
-    #   exporters: [clickhouse]
+    logs:
+      receivers: [otlp]
+      processors: [ memory_limiter, resourcedetection/system, resource, batch ]
+      exporters: [clickhouse]

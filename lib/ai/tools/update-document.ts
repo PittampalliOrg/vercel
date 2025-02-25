@@ -14,6 +14,7 @@ import { customModel, imageGenerationModel } from '..';
 import { updateDocumentPrompt } from '../prompts';
 
 import { dbActions } from '@/lib/db/queries';
+import { BlockKind } from '@/lib/db/queries';
 
 interface UpdateDocumentProps {
   model: Model;
@@ -133,7 +134,7 @@ export const updateDocument = ({
           id,
           title: document.title,
           content: draftText,
-          kind: document.kind,
+          kind: document.kind as BlockKind, // Cast to BlockKind
           userId: session.user.id,
         });
       }
