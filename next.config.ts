@@ -3,8 +3,14 @@ import unTypiaNext from "@ryoppippi/unplugin-typia/next";
  
 /** @type {import('next').NextConfig} */
 const nextConfig: NextConfig = {
+  output: 'standalone',
   experimental: {
-    ppr: false
+    ppr: false,
+    turbo: {
+    },
+    serverActions: {
+      allowedOrigins: ['localhost:3000'],
+    },
   },
   images: {
     remotePatterns: [

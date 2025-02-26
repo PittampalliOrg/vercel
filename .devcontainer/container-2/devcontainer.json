@@ -1,15 +1,15 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the
 // README at: https://github.com/devcontainers/templates/tree/main/src/docker-existing-docker-compose
 {
-	"name": "opentelemetry",
+	"name": "next",
 	"dockerComposeFile": [
 		"../../docker-compose.yml"
 	],
-	"service": "opentelemetry",
+	"service": "next",
 	"workspaceFolder": "/workspace",
 	"runServices": [
-		"opentelemetry",
-		"opentelemetry_dapr",
+		"next",
+		"next_dapr",
 		"dab",
 		"dab_dapr",
 		"db",

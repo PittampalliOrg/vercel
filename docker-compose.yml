@@ -11,9 +11,6 @@ networks:
     driver: bridge
     external: true
     attachable: true
-  sentry-self-hosted_default:
-    name: sentry-self-hosted_default
-    external: true
 
 volumes:
   postgres-data:
@@ -22,52 +19,64 @@ volumes:
 
 
 services:
-  frontend:
-    container_name: frontend
-    image: next-js
-    ports:
-      - "3000:3000"
-    volumes:
-      # - /var/run/docker.sock:/var/run/docker-host.sock 
-      - .:/workspace:cached
-    entrypoint: /usr/local/share/docker-init.sh
-    command: sleep infinity 
-    networks:
-      - default
-      - sentry-self-hosted_default
-
-  frontend_dapr:
-    container_name: frontend_dapr
-    image: "daprio/daprd"
-    command: ["./daprd", "-app-id", "frontend", "-app-port", "3000", "-resources-path", "/dapr", "-config", "/dapr/config.yaml", "-enable-api-logging", "-log-level", "debug", "--app-channel-address", "frontend"]
-    volumes:
-      - "./dapr:/dapr"
-
-    depends_on:
-      - frontend
-      - db    
-
-  # opentelemetry:
-  #   container_name: opentelemetry
+  # frontend:
+  #   container_name: frontend
   #   image: next-js
   #   ports:
   #     - "3000:3000"
   #   volumes:
   #     # - /var/run/docker.sock:/var/run/docker-host.sock 
-  #     - ../ai-sdk-rag-starter:/workspace:cached
+  #     - .:/workspace:cached
   #   entrypoint: /usr/local/share/docker-init.sh
   #   command: sleep infinity 
+  #   environment:
+  #     - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
 
-  # opentelemetry_dapr:
-  #   container_name: opentelemetry_dapr
+  # frontend_dapr:
+  #   container_name: frontend_dapr
   #   image: "daprio/daprd"
-  #   command: ["./daprd", "-app-id", "opentelemetry", "-app-port", "3000", "-resources-path", "/dapr", "-config", "/dapr/config.yaml", "-enable-api-logging", "-log-level", "debug", "--app-channel-address", "opentelemetry"]
+  #   command: ["./daprd", "-app-id", "frontend", "-app-port", "3000", "-resources-path", "/dapr", "-config", "/dapr/config.yaml", "-enable-api-logging", "-log-level", "debug", "--app-channel-address", "frontend"]
   #   volumes:
   #     - "./dapr:/dapr"
 
   #   depends_on:
-  #     - opentelemetry
+  #     - frontend
   #     - db    
+
+  nginx:
+    build:
+      dockerfile: ../reactsummit24/.docker/nginx/Dockerfile.nginx
+      context: ../reactsummit24/
+    environment:
+      - NGINX_APP_HOST=next
+      - NGINX_APP_PORT=3000
+    volumes:
+      - ../reactsummit24/.docker/nginx/nginx-reverse-proxy.conf:/etc/nginx/templates/default.conf.template
+      - ../reactsummit24/.docker/nginx/nginx.conf:/etc/nginx/nginx.conf
+    ports:
+      - 8080:8080
+    depends_on:
+      - next
+      - otel-collector
+
+  next:
+    build:
+      dockerfile: ../reactsummit24/.docker/app/Dockerfile.app
+      context: ../reactsummit24/
+    ports:
+      - '3000:3000'
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+
+  next_dapr:
+    container_name: next_dapr
+    image: "daprio/daprd"
+    command: ["./daprd", "-app-id", "next", "-app-port", "3000", "-resources-path", "/dapr", "-config", "/dapr/config.yaml", "-enable-api-logging", "-log-level", "debug", "--app-channel-address", "next"]
+    volumes:
+      - "./dapr:/dapr"
+
+    depends_on:
+      - next
 
   # api:
   #   container_name: api
@@ -167,9 +176,9 @@ services:
   swagger:
     image: swaggerapi/swagger-ui
     ports:
-      - "8080:8080"
+      - "8081:8080"
     expose:
-      - "8080"
+      - "8081"
     environment:
       API_URL: http://localhost:3011/
 
