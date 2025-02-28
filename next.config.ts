@@ -1,9 +1,9 @@
 import type { NextConfig } from 'next';
-import unTypiaNext from "@ryoppippi/unplugin-typia/next";
+// import unTypiaNext from "@ryoppippi/unplugin-typia/next";
  
-/** @type {import('next').NextConfig} */
+// /** @type {import('next').NextConfig} */
 const nextConfig: NextConfig = {
-  output: 'standalone',
+  // output: 'standalone',
   experimental: {
     ppr: false,
     turbo: {
@@ -37,7 +37,7 @@ const nextConfig: NextConfig = {
             // you wouldn't need CORS at all. 
             // But if it's truly cross-origin, specify it exactly here:
             key: 'Access-Control-Allow-Origin',
-            value: 'http://localhost:3003', 
+            value: 'http://localhost:3000', 
           },
           {
             key: 'Access-Control-Allow-Methods',
@@ -59,8 +59,9 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default unTypiaNext(
-  nextConfig,
-  {} // options of unplugin-typia
-);
+export default nextConfig;
+// export default unTypiaNext(
+//   nextConfig,
+//   {} // options of unplugin-typia
+// );
 

@@ -1,10 +1,9 @@
 import type { Metadata } from 'next';
 import { Toaster } from 'sonner';
 import { ThemeProvider } from '@/components/theme-provider';
-import InitClient from '../init-client';
 import './globals.css';
 import { trace } from '@opentelemetry/api';
-import Script from 'next/script';
+import { TelemetryProvider } from "@/components/telemetry-provider";
 
 // Define metadata with a function to get active span at request time
 export async function generateMetadata(): Promise<Metadata> {
@@ -21,7 +20,7 @@ export async function generateMetadata(): Promise<Metadata> {
           }-01`
         : '',
     },
-  };
+  } satisfies Metadata;
 }
 
 export const viewport = {
@@ -73,6 +72,7 @@ export default async function RootLayout({
         />
       </head>
       <body className="antialiased">
+        <TelemetryProvider>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -80,10 +80,9 @@ export default async function RootLayout({
           disableTransitionOnChange
         >
           <Toaster position="top-center" />
-          <InitClient />
           {children}
-          <Script src="/instrumentation.browser.js" />
         </ThemeProvider>
+        </TelemetryProvider>
       </body>
     </html>
   );

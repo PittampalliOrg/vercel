@@ -19,64 +19,69 @@ volumes:
 
 
 services:
-  # frontend:
-  #   container_name: frontend
-  #   image: next-js
-  #   ports:
-  #     - "3000:3000"
-  #   volumes:
-  #     # - /var/run/docker.sock:/var/run/docker-host.sock 
-  #     - .:/workspace:cached
-  #   entrypoint: /usr/local/share/docker-init.sh
-  #   command: sleep infinity 
-  #   environment:
-  #     - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+  frontend:
+    container_name: frontend
+    image: next-js
+    # ports:
+    #   - "3000:3000"
+    volumes:
+      # - /var/run/docker.sock:/var/run/docker-host.sock 
+      - .:/workspace:cached
+    # entrypoint: /usr/local/share/docker-init.sh
+    command: sleep infinity 
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+    expose:
+    - "3000"
 
-  # frontend_dapr:
-  #   container_name: frontend_dapr
-  #   image: "daprio/daprd"
-  #   command: ["./daprd", "-app-id", "frontend", "-app-port", "3000", "-resources-path", "/dapr", "-config", "/dapr/config.yaml", "-enable-api-logging", "-log-level", "debug", "--app-channel-address", "frontend"]
-  #   volumes:
-  #     - "./dapr:/dapr"
+  frontend_dapr:
+    container_name: frontend_dapr
+    image: "daprio/daprd"
+    command: ["./daprd", "-app-id", "frontend", "-app-port", "3000", "-resources-path", "/dapr", "-config", "/dapr/config.yaml", "-enable-api-logging", "-log-level", "debug", "--app-channel-address", "frontend"]
+    volumes:
+      - "./dapr:/dapr"
 
-  #   depends_on:
-  #     - frontend
-  #     - db    
+    depends_on:
+      - frontend
+      - db    
 
   nginx:
     build:
       dockerfile: ../reactsummit24/.docker/nginx/Dockerfile.nginx
       context: ../reactsummit24/
-    environment:
-      - NGINX_APP_HOST=next
-      - NGINX_APP_PORT=3000
     volumes:
       - ../reactsummit24/.docker/nginx/nginx-reverse-proxy.conf:/etc/nginx/templates/default.conf.template
       - ../reactsummit24/.docker/nginx/nginx.conf:/etc/nginx/nginx.conf
     ports:
       - 8080:8080
-    depends_on:
-      - next
-      - otel-collector
+    environment:
+      - NGINX_APP_HOST=frontend
+      - NGINX_APP_PORT=3000
 
-  next:
+  playground:
     build:
-      dockerfile: ../reactsummit24/.docker/app/Dockerfile.app
-      context: ../reactsummit24/
-    ports:
-      - '3000:3000'
+      dockerfile: ../next-app-router-playground/.docker/app/Dockerfile.app
+      context: ../next-app-router-playground/
+    volumes:
+      # - /var/run/docker.sock:/var/run/docker-host.sock 
+      - ../next-app-router-playground:/workspace:cached
+    # ports:
+    #   - '3000:3000'
+    command: sleep infinity 
     environment:
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+    expose:
+    - "3000"
 
-  next_dapr:
-    container_name: next_dapr
+  playground_dapr:
+    container_name: playground_dapr
     image: "daprio/daprd"
-    command: ["./daprd", "-app-id", "next", "-app-port", "3000", "-resources-path", "/dapr", "-config", "/dapr/config.yaml", "-enable-api-logging", "-log-level", "debug", "--app-channel-address", "next"]
+    command: ["./daprd", "-app-id", "playground", "-app-port", "3000", "-resources-path", "/dapr", "-config", "/dapr/config.yaml", "-enable-api-logging", "-log-level", "debug", "--app-channel-address", "playground"]
     volumes:
       - "./dapr:/dapr"
 
     depends_on:
-      - next
+      - playground
 
   # api:
   #   container_name: api

@@ -1,8 +1,6 @@
 'use server';
 
 import { z } from 'zod';
-
-// import { createUser, getUser } from '@/lib/db/queries';
 import { dbActions } from '@/lib/db/queries';
 import { signIn } from './auth';
 
@@ -63,9 +61,11 @@ export const register = async (
 
     const user = await dbActions.getUser(validatedData.email);
 
-    if (user) {
+    if (user.length > 0) {
       return { status: 'user_exists' } as RegisterActionState;
     }
+
+    // Ensure user exists before inserting chat
     await dbActions.createUser(validatedData.email, validatedData.password);
     await signIn('credentials', {
       email: validatedData.email,
