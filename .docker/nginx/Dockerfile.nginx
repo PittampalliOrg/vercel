@@ -1,0 +1,38 @@
+FROM nginxinc/nginx-unprivileged:1.27.4
+
+# Become root to install packages
+USER root
+
+# 1) Install minimal dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends --no-install-suggests \
+  apt-transport-https \
+  ca-certificates \
+  curl \
+  gnupg \
+  lsb-release
+
+# 2) (Optional) Override Debian codename if "bookworm" isn't supported
+# ENV DEBIAN_CODENAME=bullseye
+
+# 3) Create ~/.gnupg so GPG doesn't complain
+RUN mkdir -p /root/.gnupg && chmod 700 /root/.gnupg
+
+# 4) Fetch & dearmor the official NGINX GPG key
+RUN curl -fsSL https://nginx.org/keys/nginx_signing.key \
+  | gpg --batch --yes --dearmor -o /usr/share/keyrings/nginx.gpg
+
+# 5) Add the official NGINX mainline repo
+RUN echo "deb [arch=amd64 signed-by=/usr/share/keyrings/nginx.gpg] \
+    http://nginx.org/packages/mainline/debian \
+    $(lsb_release -cs) nginx" \
+    > /etc/apt/sources.list.d/nginx.list
+
+# 6) Install the open-source Otel module for NGINX
+RUN apt-get update && apt-get install -y --no-install-recommends --no-install-suggests \
+  nginx-module-otel
+
+# Return to unprivileged 'nginx' user
+USER nginx
+
+# Run Nginx in the foreground
+CMD ["nginx", "-g", "daemon off;"]

@@ -9,7 +9,7 @@ const nextConfig: NextConfig = {
     turbo: {
     },
     serverActions: {
-      allowedOrigins: ['localhost:3000'],
+      allowedOrigins: ["localhost:3000", "localhost:8080"],
     },
   },
   images: {
