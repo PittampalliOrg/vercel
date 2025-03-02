@@ -30,9 +30,9 @@ export function SubmitButton({
         </span>
       )}
 
-      <output aria-live="polite" className="sr-only">
+      <span aria-live="polite" className="sr-only" role="status">
         {pending || isSuccessful ? 'Loading' : 'Submit form'}
-      </output>
+      </span>
     </Button>
   );
 }

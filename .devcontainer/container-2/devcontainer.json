@@ -7,8 +7,8 @@
 	],
 	"service": "playground",
 	"workspaceFolder": "/workspace",
-	// "runServices": ["playground", "playground_dapr"],
-	// "shutdownAction": "none",
+	"runServices": ["playground", "playground_dapr"],
+	"shutdownAction": "none",
 	"remoteEnv": {
 		"LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}"
 	},

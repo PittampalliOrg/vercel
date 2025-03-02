@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
-    "start": "node /workspace/.next/standalone/server.js",
+    "start": "node .next/standalone/server.js",
     "lint": "next lint && biome lint --write --unsafe",
     "lint:fix": "next lint --fix && biome lint --write --unsafe",
     "format": "biome format --write",
@@ -120,7 +120,7 @@
     "log4js": "^6.9.1",
     "lucide-react": "^0.446.0",
     "nanoid": "^5.0.8",
-    "next": "15.2.0",
+    "next": "15.0.3-canary.2",
     "next-auth": "5.0.0-beta.25",
     "next-themes": "^0.3.0",
     "orderedmap": "^2.1.1",

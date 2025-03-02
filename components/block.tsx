@@ -98,7 +98,7 @@ function PureBlock({
     mutate: mutateDocuments,
   } = useSWR<Array<Document>>(
     block.documentId !== 'init' && block.status !== 'streaming'
-      ? `/api/document?id=${block.documentId}`
+      ? `${process.env.NEXT_PUBLIC_BASE_PATH}/api/document?id=${block.documentId}`
       : null,
     fetcher,
   );
@@ -136,7 +136,7 @@ function PureBlock({
       if (!block) return;
 
       mutate<Array<Document>>(
-        `/api/document?id=${block.documentId}`,
+        `${process.env.NEXT_PUBLIC_BASE_PATH}/api/document?id=${block.documentId}`,
         async (currentDocuments) => {
           if (!currentDocuments) return undefined;
 
@@ -148,7 +148,7 @@ function PureBlock({
           }
 
           if (currentDocument.content !== updatedContent) {
-            await fetch(`/api/document?id=${block.documentId}`, {
+            await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/document?id=${block.documentId}`, {
               method: 'POST',
               body: JSON.stringify({
                 title: block.title,

@@ -1,17 +1,13 @@
-import type { NextConfig } from 'next';
-// import unTypiaNext from "@ryoppippi/unplugin-typia/next";
- 
-// /** @type {import('next').NextConfig} */
-const nextConfig: NextConfig = {
-  // output: 'standalone',
-  experimental: {
-    ppr: false,
-    turbo: {
-    },
-    serverActions: {
-      allowedOrigins: ["localhost:3000", "localhost:8080"],
-    },
-  },
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  // Set the base path for the application
+  // basePath: '/frontend', // or '/playground' for the other app
+  
+  // // Match asset prefix with the base path
+  // assetPrefix: '/frontend', // or '/playground' for the other app
+  
+  // Use standalone output mode for better deployment
+  output: 'standalone',
   images: {
     remotePatterns: [
       {
@@ -19,49 +15,42 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  logging: {
-    fetches: {
-      fullUrl: true,
-      hmrRefreshes: true
-    }
-  },
+  // Add custom cache headers for API routes
   async headers() {
     return [
       {
-        source: '/api/:path*',
+        // Add no-cache headers to API routes
+        source: "/api/:path*",
         headers: [
-          {
-            // Instead of `*`, list the exact origin that is making the request.
-            // e.g., if your site is served at http://localhost:3003,
-            // and your server is also at the same http://localhost:3003, 
-            // you wouldn't need CORS at all. 
-            // But if it's truly cross-origin, specify it exactly here:
-            key: 'Access-Control-Allow-Origin',
-            value: 'http://localhost:3000', 
-          },
-          {
-            key: 'Access-Control-Allow-Methods',
-            value: 'GET,POST,OPTIONS',
-          },
-          {
-            key: 'Access-Control-Allow-Headers',
-            // no literal `...`
-            value: 'Content-Type, traceparent',
-          },
-          {
-            // This is required when using `credentials: "include"`
-            key: 'Access-Control-Allow-Credentials',
-            value: 'true',
-          },
-        ],
+          { key: "Cache-Control", value: "no-store, no-cache, must-revalidate" },
+          { key: "Pragma", value: "no-cache" },
+          { key: "Expires", value: "0" }
+        ]
       },
+      {
+        // Optional: Add CORS headers if needed
+        source: "/:path*",
+        headers: [
+          { key: "Access-Control-Allow-Origin", value: "*" },
+          { key: "Access-Control-Allow-Methods", value: "GET, POST, PUT, DELETE, OPTIONS" },
+          { key: "Access-Control-Allow-Headers", value: "Content-Type, Authorization" }
+        ]
+      }
     ];
   },
-};
+  
+  // Optional: Add rewrites if you need to handle specific paths differently
+  async rewrites() {
+    return {
+      beforeFiles: [
+        // Example: You can add custom rewrites here if needed
+        // {
+        //   source: '/some-path',
+        //   destination: '/custom-destination'
+        // }
+      ]
+    };
+  }
+}
 
-export default nextConfig;
-// export default unTypiaNext(
-//   nextConfig,
-//   {} // options of unplugin-typia
-// );
-
+module.exports = nextConfig;

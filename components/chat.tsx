@@ -46,12 +46,12 @@ export function Chat({
     initialMessages,
     experimental_throttle: 100,
     onFinish: () => {
-      mutate('/api/history');
+      mutate(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/history`);
     },
   });
 
   const { data: votes } = useSWR<Array<Vote>>(
-    `/api/vote?chatId=${id}`,
+    `${process.env.NEXT_PUBLIC_BASE_PATH}/api/vote?chatId=${id}`,
     fetcher,
   );
 

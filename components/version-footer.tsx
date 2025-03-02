@@ -57,8 +57,8 @@ export const VersionFooter = ({
             setIsMutating(true);
 
             mutate(
-              `/api/document?id=${block.documentId}`,
-              await fetch(`/api/document?id=${block.documentId}`, {
+              `${process.env.NEXT_PUBLIC_BASE_PATH}/api/document?id=${block.documentId}`,
+              await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/document?id=${block.documentId}`, {
                 method: 'PATCH',
                 body: JSON.stringify({
                   timestamp: getDocumentTimestampByIndex(
