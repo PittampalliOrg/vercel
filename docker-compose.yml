@@ -84,18 +84,6 @@ services:
       - frontend
       - db    
 
-  # nginx:
-  #   build:
-  #     dockerfile: ./.docker/nginx/Dockerfile.nginx
-  #     context: .
-  #   volumes:
-  #     - ./.docker/nginx/nginx-reverse-proxy.conf:/etc/nginx/templates/default.conf.template
-  #     - ./.docker/nginx/nginx.conf:/etc/nginx/nginx.conf
-  #   ports:
-  #     - 8080:8080
-  #   depends_on:
-  #     - frontend
-
   playground:
     build:
       dockerfile: ../next-app-router-playground/.docker/app/Dockerfile.app
@@ -318,7 +306,7 @@ services:
       - CLICKHOUSE_CLOUD_PASSWORD
 
   prometheus:
-    image: quay.io/prometheus/prometheus:v2.47.2
+    image: ${PROMETHEUS_IMAGE}
     container_name: prometheus
     command:
       - --web.console.templates=/etc/prometheus/consoles
@@ -328,18 +316,17 @@ services:
       - --storage.tsdb.path=/prometheus
       - --web.enable-lifecycle
       - --web.route-prefix=/
+      - --web.enable-otlp-receiver
       - --enable-feature=exemplar-storage
-      - --enable-feature=otlp-write-receiver
-      - --web.enable-remote-write-receiver
     volumes:
-      - prometheus_data:/usr/share/prometheus/data
-      - ./src/prometheus/prometheus-config.yaml:/etc/prometheus/prometheus-config.yaml
+      - ./tracing/prometheus-config.yaml:/etc/prometheus/prometheus-config.yaml
     deploy:
       resources:
         limits:
-          memory: 500M
+          memory: 300M
+    restart: unless-stopped
     ports:
-      - "${PROMETHEUS_SERVICE_PORT}:${PROMETHEUS_SERVICE_PORT}"
+      - "${PROMETHEUS_PORT}:${PROMETHEUS_PORT}"
     logging: *logging
 
   # OpenSearch

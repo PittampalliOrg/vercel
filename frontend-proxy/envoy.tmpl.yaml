@@ -41,6 +41,10 @@ static_resources:
                           route: { cluster: frontend, prefix_rewrite: "/" }
                         - match: { prefix: "/playground" }
                           route: { cluster: playground, prefix_rewrite: "/" }
+                        - match: { prefix: "/jaeger" }
+                          route: { cluster: jaeger }
+                        - match: { prefix: "/grafana" }
+                          route: { cluster: grafana }                          
                         - match: { prefix: "/" }
                           route: { cluster: frontend }
                 http_filters:
@@ -201,7 +205,32 @@ static_resources:
                   address:
                     socket_address:
                       address: playground
-                      port_value: 3000                     
+                      port_value: 3000        
+    - name: grafana
+      type: STRICT_DNS
+      lb_policy: ROUND_ROBIN
+      load_assignment:
+        cluster_name: grafana
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: ${GRAFANA_HOST}
+                      port_value: ${GRAFANA_PORT}
+
+    - name: jaeger
+      type: STRICT_DNS
+      lb_policy: ROUND_ROBIN
+      load_assignment:
+        cluster_name: jaeger
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: ${JAEGER_HOST}
+                      port_value: ${JAEGER_PORT}                                 
 admin:
   address:
     socket_address:
