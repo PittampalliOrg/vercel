@@ -1,149 +1,123 @@
+// 'app/(chat)/api/document/route.ts'
 import { auth } from '@/app/(auth)/auth';
-import { BlockKind } from '@/components/block';
-import {
-  deleteDocumentsByIdAfterTimestamp,
-  getDocumentsById,
-  saveDocument,
-} from '@/lib/db/queries';
-import { trace, SpanStatusCode } from '@opentelemetry/api';
+import { BlockKind } from '@/lib/db/queries';
+import { dbActions } from '@/lib/db/queries';
 
 export async function GET(request: Request) {
-  const tracer = trace.getTracer('server-tracer');
-  return tracer.startActiveSpan('GET /api/document', async (span) => {
-    try {
-      span.setAttribute('source.file', 'app/(chat)/api/document/route.ts:10');
-      span.addEvent('Handling GET /api/document');
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get('id');
 
-      const { searchParams } = new URL(request.url);
-      const id = searchParams.get('id');
+  if (!id) {
+    return new Response('Missing id', { status: 400 });
+  }
 
-      if (!id) {
-        return new Response('Missing id', { status: 400 });
-      }
+  const session = await auth();
 
-      const session = await auth();
-      if (!session || !session.user) {
-        return new Response('Unauthorized', { status: 401 });
-      }
+  if (!session || !session.user) {
+    return new Response('Unauthorized', { status: 401 });
+  }
 
-      const documents = await getDocumentsById({ id });
-      const [document] = documents;
+  const documents = await dbActions.getDocumentsById({ id });
 
-      if (!document) {
-        return new Response('Not Found', { status: 404 });
-      }
+  // Check if documents is an array before destructuring
+  if (!Array.isArray(documents)) {
+    return new Response('Unexpected response format', { status: 500 });
+  }
 
-      if (document.userId !== session.user.id) {
-        return new Response('Unauthorized', { status: 401 });
-      }
+  const [document] = documents;
 
-      return new Response(JSON.stringify(documents), { status: 200 });
-    } catch (err) {
-      span.recordException(err as Error);
-      span.setStatus({ code: SpanStatusCode.ERROR });
-      return new Response('Document GET error', { status: 500 });
-    } finally {
-      const traceId = span.spanContext().traceId;
-      const spanId = span.spanContext().spanId;
+  if (!document) {
+    return new Response('Not Found', { status: 404 });
+  }
 
-      span.end();
-    }
-  });
+  if (document.userId !== session.user.id) {
+    return new Response('Unauthorized', { status: 401 });
+  }
+
+  return Response.json(documents, { status: 200 });
 }
 
 export async function POST(request: Request) {
-  const tracer = trace.getTracer('server-tracer');
-  return tracer.startActiveSpan('POST /api/document', async (span) => {
-    try {
-      span.setAttribute('source.file', 'app/(chat)/api/document/route.ts:49');
-      span.addEvent('Handling POST /api/document');
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get('id');
 
-      const { searchParams } = new URL(request.url);
-      const id = searchParams.get('id');
+  if (!id) {
+    return new Response('Missing id', { status: 400 });
+  }
 
-      if (!id) {
-        return new Response('Missing id', { status: 400 });
-      }
+  const session = await auth();
 
-      const session = await auth();
-      if (!session) {
-        return new Response('Unauthorized', { status: 401 });
-      }
+  if (!session) {
+    return new Response('Unauthorized', { status: 401 });
+  }
 
-      const { content, title, kind }: {
-        content: string;
-        title: string;
-        kind: BlockKind;
-      } = await request.json();
+  const {
+    content,
+    title,
+    kind,
+  }: { content: string; title: string; kind: string } = await request.json();
 
-      if (session.user?.id) {
-        const document = await saveDocument({
-          id,
-          content,
-          title,
-          kind,
-          userId: session.user.id,
-        });
+  // Ensure kind is a valid BlockKind
+  if (!['text', 'code', 'image'].includes(kind)) {
+    return new Response('Invalid kind', { status: 400 });
+  }
 
-        return new Response(JSON.stringify(document), { status: 200 });
-      }
-      return new Response('Unauthorized', { status: 401 });
-    } catch (err) {
-      span.recordException(err as Error);
-      span.setStatus({ code: SpanStatusCode.ERROR });
-      return new Response('Document POST error', { status: 500 });
-    } finally {
-      const traceId = span.spanContext().traceId;
-      const spanId = span.spanContext().spanId;
+  // Convert the request "kind" into the BlockKind enum
+  const blockKind =
+    kind === 'text'
+      ? BlockKind.Text
+      : kind === 'code'
+      ? BlockKind.Code
+      : BlockKind.Image;
 
-      span.end();
-    }
-  });
+  if (session.user?.id) {
+    const document = await dbActions.saveDocument({
+      id,
+      content,
+      title,
+      kind: blockKind,
+      userId: session.user.id,
+    });
+
+    return Response.json(document, { status: 200 });
+  }
+  return new Response('Unauthorized', { status: 401 });
 }
 
+
 export async function PATCH(request: Request) {
-  const tracer = trace.getTracer('server-tracer');
-  return tracer.startActiveSpan('PATCH /api/document', async (span) => {
-    try {
-      span.setAttribute('source.file', 'app/(chat)/api/document/route.ts:94');
-      span.addEvent('Handling PATCH /api/document');
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get('id');
 
-      const { searchParams } = new URL(request.url);
-      const id = searchParams.get('id');
+  const { timestamp }: { timestamp: string } = await request.json();
 
-      const { timestamp }: { timestamp: string } = await request.json();
+  if (!id) {
+    return new Response('Missing id', { status: 400 });
+  }
 
-      if (!id) {
-        return new Response('Missing id', { status: 400 });
-      }
+  const session = await auth();
 
-      const session = await auth();
-      if (!session || !session.user) {
-        return new Response('Unauthorized', { status: 401 });
-      }
+  if (!session || !session.user) {
+    return new Response('Unauthorized', { status: 401 });
+  }
 
-      const documents = await getDocumentsById({ id });
-      const [doc] = documents;
+  const documents = await dbActions.getDocumentsById({ id });
 
-      if (doc.userId !== session.user.id) {
-        return new Response('Unauthorized', { status: 401 });
-      }
+  // Check if documents is an array before destructuring
+  if (!Array.isArray(documents)) {
+    return new Response('Unexpected response format', { status: 500 });
+  }
 
-      await deleteDocumentsByIdAfterTimestamp({
-        id,
-        timestamp: new Date(timestamp),
-      });
+  const [document] = documents;
 
-      return new Response('Deleted', { status: 200 });
-    } catch (err) {
-      span.recordException(err as Error);
-      span.setStatus({ code: SpanStatusCode.ERROR });
-      return new Response('Document PATCH error', { status: 500 });
-    } finally {
-      const traceId = span.spanContext().traceId;
-      const spanId = span.spanContext().spanId;
+  if (document.userId !== session.user.id) {
+    return new Response('Unauthorized', { status: 401 });
+  }
 
-      span.end();
-    }
+  await dbActions.deleteDocumentsByIdAfterTimestamp({
+    id,
+    timestamp: new Date(timestamp),
   });
+
+  return new Response('Deleted', { status: 200 });
 }

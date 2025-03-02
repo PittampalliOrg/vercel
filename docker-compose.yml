@@ -11,9 +11,6 @@ networks:
     driver: bridge
     external: true
     attachable: true
-  sentry-self-hosted_default:
-    name: sentry-self-hosted_default
-    external: true
 
 volumes:
   postgres-data:
@@ -22,24 +19,64 @@ volumes:
 
 
 services:
+
+  frontend-proxy:
+    image: ${IMAGE_NAME}:${DEMO_VERSION}-frontend-proxy
+    container_name: frontend-proxy
+    build:
+      context: ./frontend-proxy
+      dockerfile: Dockerfile
+    deploy:
+      resources:
+        limits:
+          memory: 65M
+    restart: unless-stopped
+    ports:
+      - "${ENVOY_PORT}:${ENVOY_PORT}"
+      - 10000:10000
+    environment:
+      - FRONTEND_PORT
+      - FRONTEND_HOST
+      - LOCUST_WEB_HOST
+      - LOCUST_WEB_PORT
+      - GRAFANA_PORT
+      - GRAFANA_HOST
+      - JAEGER_PORT
+      - JAEGER_HOST
+      - OTEL_COLLECTOR_HOST
+      - IMAGE_PROVIDER_HOST
+      - IMAGE_PROVIDER_PORT
+      - OTEL_COLLECTOR_PORT_GRPC
+      - OTEL_COLLECTOR_PORT_HTTP
+      - OTEL_RESOURCE_ATTRIBUTES
+      - OTEL_SERVICE_NAME=frontend-proxy
+      - ENVOY_PORT
+      - FLAGD_HOST
+      - FLAGD_PORT
+      - FLAGD_UI_HOST
+      - FLAGD_UI_PORT
+    depends_on:
+      frontend:
+        condition: service_started
+    dns_search: ""
   frontend:
     container_name: frontend
     image: next-js
-    ports:
-      - "3002:3000"
     volumes:
-      # - /var/run/docker.sock:/var/run/docker-host.sock 
       - .:/workspace:cached
-    entrypoint: /usr/local/share/docker-init.sh
+      - ./.next:/app/.next
+      - ./public:/app/public
+    environment:
+      - NEXT_PUBLIC_BASE_PATH=/frontend
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
     command: sleep infinity 
-    networks:
-      - default
-      - sentry-self-hosted_default
+    expose:
+    - "3000"
 
   frontend_dapr:
     container_name: frontend_dapr
     image: "daprio/daprd"
-    command: ["./daprd", "-app-id", "frontend", "-app-port", "3002", "-resources-path", "/dapr", "-config", "/dapr/config.yaml", "-enable-api-logging", "-log-level", "debug", "--app-channel-address", "frontend"]
+    command: ["./daprd", "-app-id", "frontend", "-app-port", "3000", "-resources-path", "/dapr", "-config", "/dapr/config.yaml", "-enable-api-logging", "-log-level", "debug", "--app-channel-address", "frontend"]
     volumes:
       - "./dapr:/dapr"
 
@@ -47,27 +84,28 @@ services:
       - frontend
       - db    
 
-  opentelemetry:
-    container_name: opentelemetry
-    image: next-js
-    ports:
-      - "3000:3000"
+  playground:
+    build:
+      dockerfile: ../next-app-router-playground/.docker/app/Dockerfile.app
+      context: ../next-app-router-playground/
     volumes:
-      # - /var/run/docker.sock:/var/run/docker-host.sock 
-      - ../ai-sdk-rag-starter:/workspace:cached
-    entrypoint: /usr/local/share/docker-init.sh
-    command: sleep infinity 
+      - ../next-app-router-playground:/workspace:cached
+    environment:
+      - NEXT_PUBLIC_BASE_PATH=/playground  # Correctly commented out
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+    command: sleep infinity
+    expose:
+      - "3000"
 
-  opentelemetry_dapr:
-    container_name: opentelemetry_dapr
+  playground_dapr:
+    container_name: playground_dapr
     image: "daprio/daprd"
-    command: ["./daprd", "-app-id", "opentelemetry", "-app-port", "3000", "-resources-path", "/dapr", "-config", "/dapr/config.yaml", "-enable-api-logging", "-log-level", "debug", "--app-channel-address", "opentelemetry"]
+    command: ["./daprd", "-app-id", "playground", "-app-port", "3000", "-resources-path", "/dapr", "-config", "/dapr/config.yaml", "-enable-api-logging", "-log-level", "debug", "--app-channel-address", "playground"]
     volumes:
       - "./dapr:/dapr"
 
     depends_on:
-      - opentelemetry
-      - db    
+      - playground
 
   # api:
   #   container_name: api
@@ -167,9 +205,9 @@ services:
   swagger:
     image: swaggerapi/swagger-ui
     ports:
-      - "8080:8080"
+      - "8081:8080"
     expose:
-      - "8080"
+      - "8081"
     environment:
       API_URL: http://localhost:3011/
 
@@ -213,7 +251,7 @@ services:
       GF_INSTALL_PLUGINS: grafana-clickhouse-datasource,vertamedia-clickhouse-datasource
       GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS: vertamedia-clickhouse-datasource
     ports:
-      - "3005:3000"
+      - "${GRAFANA_PORT}"
 
   # clickhouse:
   #   image: clickhouse/clickhouse-server:latest
@@ -253,8 +291,8 @@ services:
     depends_on:
       jaeger:
         condition: service_started
-      opensearch:
-        condition: service_healthy
+      # opensearch:
+      #   condition: service_healthy
     logging: *logging
     environment:
       - ENVOY_PORT
@@ -268,7 +306,7 @@ services:
       - CLICKHOUSE_CLOUD_PASSWORD
 
   prometheus:
-    image: quay.io/prometheus/prometheus:v2.47.2
+    image: ${PROMETHEUS_IMAGE}
     container_name: prometheus
     command:
       - --web.console.templates=/etc/prometheus/consoles
@@ -278,87 +316,86 @@ services:
       - --storage.tsdb.path=/prometheus
       - --web.enable-lifecycle
       - --web.route-prefix=/
+      - --web.enable-otlp-receiver
       - --enable-feature=exemplar-storage
-      - --enable-feature=otlp-write-receiver
-      - --web.enable-remote-write-receiver
     volumes:
-      - prometheus_data:/usr/share/prometheus/data
-      - ./src/prometheus/prometheus-config.yaml:/etc/prometheus/prometheus-config.yaml
+      - ./tracing/prometheus-config.yaml:/etc/prometheus/prometheus-config.yaml
     deploy:
       resources:
         limits:
-          memory: 500M
+          memory: 300M
+    restart: unless-stopped
     ports:
-      - "${PROMETHEUS_SERVICE_PORT}:${PROMETHEUS_SERVICE_PORT}"
+      - "${PROMETHEUS_PORT}:${PROMETHEUS_PORT}"
     logging: *logging
 
   # OpenSearch
-  opensearch:
-    image: opensearchproject/opensearch:latest
-    container_name: opensearch
-    deploy:
-      resources:
-        limits:
-          memory: 1.1G
-    restart: unless-stopped
-    environment:
-      - cluster.name=opensearch-cluster # Name the cluster
-      - node.name=opensearch # Name the node that will run in this container
-      - discovery.seed_hosts=opensearch # Nodes to look for when discovering the cluster
-      - cluster.initial_cluster_manager_nodes=opensearch # Nodes eligibile to serve as cluster manager
-      - bootstrap.memory_lock=true # Disable JVM heap memory swapping
-      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m" # Set min and max JVM heap sizes to at least 50% of system RAM
-      - "DISABLE_INSTALL_DEMO_CONFIG=true" # Prevents execution of bundled demo script which installs demo certificates and security configurations to OpenSearch
-      - "DISABLE_SECURITY_PLUGIN=true" # Disables Security plugin
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
-      nofile:
-        soft: 65536
-        hard: 65536
-    volumes:
-      - opensearch-data:/usr/share/opensearch/data # Creates volume called opensearch-data1 and mounts it to the container
-    ports:
-      - "9200:9200"
-    healthcheck:
-      test: curl -s http://localhost:9200/_cluster/health | grep -E '"status":"(green|yellow)"'
-      start_period: 10s
-      interval: 5s
-      timeout: 10s
-      retries: 10
-    logging: *logging
-  opensearch-dashboards:
-    image: opensearchproject/opensearch-dashboards:latest # Make sure the version of opensearch-dashboards matches the version of opensearch installed on other nodes
-    container_name: opensearch-dashboards
-    ports:
-      - 5601:5601 # Map host port 5601 to container port 5601
-    expose:
-      - "5601" # Expose port 5601 for web access to OpenSearch Dashboards
-    volumes:
-      - ./src/dashboards/config/opensearch_dashboards.yml:/usr/share/opensearch-dashboards/config/opensearch_dashboards.yml
-    environment:
-      - 'OPENSEARCH_HOSTS=["http://opensearch:9200"]'
-      - "DISABLE_SECURITY_DASHBOARDS_PLUGIN=true" # disables security dashboards plugin in OpenSearch Dashboards
-  data-prepper:
-    platform: linux/amd64
-    image: opensearchproject/data-prepper:latest
-    container_name: dataprepper
-    volumes:
-      - /data/service-map/
-      - ./src/dataprepper/templates/ss4o_metrics.json:/usr/share/data-prepper/templates/ss4o_metrics.json
-      - ./src/dataprepper/templates/ss4o_logs.json:/usr/share/data-prepper/templates/ss4o_logs.json
-      - ./src/dataprepper/templates/ss4o_traces.json:/usr/share/data-prepper/templates/ss4o_traces.json
-      - ./src/dataprepper/pipelines.yaml:/usr/share/data-prepper/pipelines/pipelines.yaml
-      - ./src/dataprepper/data-prepper-config.yaml:/usr/share/data-prepper/config/data-prepper-config.yaml
-    ports:
-      - "21890:21890"
-      - "21891:21891"
-      - "21892:21892"
-    expose:
-      - "21890"
-      - "21891"
-      - "21892"
-    logging: *logging
-    depends_on:
-      - opensearch-dashboards
+  # opensearch:
+  #   image: opensearchproject/opensearch:latest
+  #   container_name: opensearch
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         memory: 1.1G
+  #   restart: unless-stopped
+  #   environment:
+  #     - cluster.name=opensearch-cluster # Name the cluster
+  #     - node.name=opensearch # Name the node that will run in this container
+  #     - discovery.seed_hosts=opensearch # Nodes to look for when discovering the cluster
+  #     - cluster.initial_cluster_manager_nodes=opensearch # Nodes eligibile to serve as cluster manager
+  #     - bootstrap.memory_lock=true # Disable JVM heap memory swapping
+  #     - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m" # Set min and max JVM heap sizes to at least 50% of system RAM
+  #     - "DISABLE_INSTALL_DEMO_CONFIG=true" # Prevents execution of bundled demo script which installs demo certificates and security configurations to OpenSearch
+  #     - "DISABLE_SECURITY_PLUGIN=true" # Disables Security plugin
+  #   ulimits:
+  #     memlock:
+  #       soft: -1
+  #       hard: -1
+  #     nofile:
+  #       soft: 65536
+  #       hard: 65536
+  #   volumes:
+  #     - opensearch-data:/usr/share/opensearch/data # Creates volume called opensearch-data1 and mounts it to the container
+  #   ports:
+  #     - "9200:9200"
+  #   healthcheck:
+  #     test: curl -s http://localhost:9200/_cluster/health | grep -E '"status":"(green|yellow)"'
+  #     start_period: 10s
+  #     interval: 5s
+  #     timeout: 10s
+  #     retries: 10
+  #   logging: *logging
+  # opensearch-dashboards:
+  #   image: opensearchproject/opensearch-dashboards:latest # Make sure the version of opensearch-dashboards matches the version of opensearch installed on other nodes
+  #   container_name: opensearch-dashboards
+  #   ports:
+  #     - 5601:5601 # Map host port 5601 to container port 5601
+  #   expose:
+  #     - "5601" # Expose port 5601 for web access to OpenSearch Dashboards
+  #   volumes:
+  #     - ./src/dashboards/config/opensearch_dashboards.yml:/usr/share/opensearch-dashboards/config/opensearch_dashboards.yml
+  #   environment:
+  #     - 'OPENSEARCH_HOSTS=["http://opensearch:9200"]'
+  #     - "DISABLE_SECURITY_DASHBOARDS_PLUGIN=true" # disables security dashboards plugin in OpenSearch Dashboards
+  # data-prepper:
+    # platform: linux/amd64
+    # image: opensearchproject/data-prepper:latest
+    # container_name: dataprepper
+    # volumes:
+    #   - /data/service-map/
+    #   - ./src/dataprepper/templates/ss4o_metrics.json:/usr/share/data-prepper/templates/ss4o_metrics.json
+    #   - ./src/dataprepper/templates/ss4o_logs.json:/usr/share/data-prepper/templates/ss4o_logs.json
+    #   - ./src/dataprepper/templates/ss4o_traces.json:/usr/share/data-prepper/templates/ss4o_traces.json
+    #   - ./src/dataprepper/pipelines.yaml:/usr/share/data-prepper/pipelines/pipelines.yaml
+    #   - ./src/dataprepper/data-prepper-config.yaml:/usr/share/data-prepper/config/data-prepper-config.yaml
+    # ports:
+    #   - "21890:21890"
+    #   - "21891:21891"
+    #   - "21892:21892"
+    # expose:
+    #   - "21890"
+    #   - "21891"
+    #   - "21892"
+    # logging: *logging
+    # depends_on:
+    #   - opensearch-dashboards

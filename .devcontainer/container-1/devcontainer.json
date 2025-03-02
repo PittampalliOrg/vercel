@@ -3,9 +3,9 @@
 	"dockerComposeFile": ["../../docker-compose.yml"],
 	"service": "frontend",
 	"workspaceFolder": "/workspace",
-	// "runServices": ["frontend", "frontend_dapr", "dab", "dab_dapr", "db", "jaeger", "grafana", "otel-collector", "prometheus", "opensearch", "opensearch-dashboards", "data-prepper"],
+	// "runServices": ["frontend", "frontend_dapr"],
 	// "shutdownAction": "none",
-	"forwardPorts": [3000, 3002, 16686],
+	// "forwardPorts": [3000, 3002, 16686],
 	"remoteEnv": {
 		"LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}"
 	},

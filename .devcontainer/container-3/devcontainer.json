@@ -60,7 +60,7 @@
 	                             "username": "vpittamp",
 	                             "askForPassword": true
 	                     }
-	             ],
+	             ]
 	//        "terminal.integrated.cwd": "/workspace/ai-chatbot"
 	     }
 	  }

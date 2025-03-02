@@ -2,10 +2,11 @@ import { z } from 'zod';
 import { Model } from '../models';
 import { Session } from 'next-auth';
 import { DataStreamWriter, streamObject, tool } from 'ai';
-import { getDocumentById, saveSuggestions } from '@/lib/db/queries';
+// import { getDocumentById, saveSuggestions } from '@/lib/db/queries';
 import { Suggestion } from '@/lib/db/schema';
 import { customModel } from '..';
 import { generateUUID } from '@/lib/utils';
+import { dbActions } from '@/lib/db/queries';
 
 interface RequestSuggestionsProps {
   model: Model;
@@ -29,7 +30,7 @@ export const requestSuggestions = ({
         .describe('The creation timestamp of the document'),
     }),
     execute: async ({ documentId, createdAt }) => {
-      const document = await getDocumentById({ id: documentId });
+      const document = await dbActions.getDocumentById({ id: documentId });
 
       if (!document || !document.content) {
         return {
@@ -75,7 +76,7 @@ export const requestSuggestions = ({
       if (session.user?.id) {
         const userId = session.user.id;
 
-        await saveSuggestions({
+        await dbActions.saveSuggestions({
           suggestions: suggestions.map((suggestion) => ({
             ...suggestion,
             userId,

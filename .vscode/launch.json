@@ -11,7 +11,7 @@
       "name": "Next.js: debug client-side",
       "type": "msedge",
       "request": "launch",
-      "url": "http://127.0.0.1:3000"
+      "url": "http://localhost:8080/frontend/",
     },
     {
       "name": "Next.js: debug full stack",
@@ -21,7 +21,7 @@
       "runtimeArgs": [
         "${workspaceFolder}",
         "dev",
-        "--turbo",
+        "--turbopack",
         "NODE_OPTIONS='--inspect'",
         "NEXT_OTEL_VERBOSE=1"
       ],
@@ -31,7 +31,7 @@
         "killOnServerStop": true,
         // Use a pattern that always matches and then set the URI to your fixed URL
         "pattern": ".+",
-        "uriFormat": "http://127.0.0.1:3000/",
+        "uriFormat": "http://localhost:8080/frontend/",
         "webRoot": "${workspaceFolder}"
       },
       "showAsyncStacks": true

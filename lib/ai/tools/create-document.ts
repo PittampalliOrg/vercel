@@ -10,9 +10,10 @@ import {
 import { z } from 'zod';
 import { customModel, imageGenerationModel } from '..';
 import { codePrompt } from '../prompts';
-import { saveDocument } from '@/lib/db/queries';
+// import { dbActions.saveDocument } from '@/lib/db/queries';
 import { Session } from 'next-auth';
 import { Model } from '../models';
+import { dbActions, BlockKind } from '@/lib/db/queries';
 
 interface CreateDocumentProps {
   model: Model;
@@ -127,10 +128,10 @@ export const createDocument = ({
       }
 
       if (session.user?.id) {
-        await saveDocument({
+        await dbActions.saveDocument({
           id,
           title,
-          kind,
+          kind: kind as BlockKind, // Cast to BlockKind
           content: draftText,
           userId: session.user.id,
         });

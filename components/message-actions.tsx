@@ -14,10 +14,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from './ui/tooltip';
-import { memo } from 'react';
-import equal from 'fast-deep-equal';
 
-export function PureMessageActions({
+export function MessageActions({
   chatId,
   message,
   vote,
@@ -64,7 +62,7 @@ export function PureMessageActions({
               onClick={async () => {
                 const messageId = getMessageIdFromAnnotations(message);
 
-                const upvote = fetch('/api/vote', {
+                const upvote = fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/vote`, {
                   method: 'PATCH',
                   body: JSON.stringify({
                     chatId,
@@ -77,7 +75,7 @@ export function PureMessageActions({
                   loading: 'Upvoting Response...',
                   success: () => {
                     mutate<Array<Vote>>(
-                      `/api/vote?chatId=${chatId}`,
+                      `${process.env.NEXT_PUBLIC_BASE_PATH}/api/vote?chatId=${chatId}`,
                       (currentVotes) => {
                         if (!currentVotes) return [];
 
@@ -118,7 +116,7 @@ export function PureMessageActions({
               onClick={async () => {
                 const messageId = getMessageIdFromAnnotations(message);
 
-                const downvote = fetch('/api/vote', {
+                const downvote = fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/vote`, {
                   method: 'PATCH',
                   body: JSON.stringify({
                     chatId,
@@ -131,7 +129,7 @@ export function PureMessageActions({
                   loading: 'Downvoting Response...',
                   success: () => {
                     mutate<Array<Vote>>(
-                      `/api/vote?chatId=${chatId}`,
+                      `${process.env.NEXT_PUBLIC_BASE_PATH}/api/vote?chatId=${chatId}`,
                       (currentVotes) => {
                         if (!currentVotes) return [];
 
@@ -166,13 +164,3 @@ export function PureMessageActions({
     </TooltipProvider>
   );
 }
-
-export const MessageActions = memo(
-  PureMessageActions,
-  (prevProps, nextProps) => {
-    if (!equal(prevProps.vote, nextProps.vote)) return false;
-    if (prevProps.isLoading !== nextProps.isLoading) return false;
-
-    return true;
-  },
-);
