@@ -1,7 +1,11 @@
 // 'app/(chat)/api/document/route.ts'
 import { auth } from '@/app/(auth)/auth';
-import { BlockKind } from '@/lib/db/queries';
-import { dbActions } from '@/lib/db/queries';
+import { ArtifactKind } from '@/components/artifact';
+import {
+  deleteDocumentsByIdAfterTimestamp,
+  getDocumentsById,
+  saveDocument,
+} from '@/lib/db/queries';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -55,20 +59,8 @@ export async function POST(request: Request) {
     content,
     title,
     kind,
-  }: { content: string; title: string; kind: string } = await request.json();
-
-  // Ensure kind is a valid BlockKind
-  if (!['text', 'code', 'image'].includes(kind)) {
-    return new Response('Invalid kind', { status: 400 });
-  }
-
-  // Convert the request "kind" into the BlockKind enum
-  const blockKind =
-    kind === 'text'
-      ? BlockKind.Text
-      : kind === 'code'
-      ? BlockKind.Code
-      : BlockKind.Image;
+  }: { content: string; title: string; kind: ArtifactKind } =
+    await request.json();
 
   if (session.user?.id) {
     const document = await dbActions.saveDocument({

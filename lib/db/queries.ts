@@ -1,6 +1,6 @@
 import 'server-only';
 import { genSaltSync, hashSync } from 'bcrypt-ts';
-import { and, asc, desc, eq, gt, gte } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, gte, inArray } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { createSelectSchema, createInsertSchema, createUpdateSchema } from 'drizzle-zod';
@@ -20,9 +20,7 @@ import {
   type Suggestion,
   type Message,
 } from './schema';
-
-// Get the tracer instance
-const tracer = trace.getTracer('db-operations');
+import { ArtifactKind } from '@/components/artifact';
 
 // Ensure BlockKind is an enum with string values for zod validation
 export enum BlockKind {
@@ -705,28 +703,33 @@ class DbActions {
     }
   }
 
-  @ValidateAndLog
-  async saveDocument({
-    id,
-    title,
-    kind,
-    content,
-    userId,
-  }: {
-    id: string;
-    title: string;
-    kind: BlockKind;
-    content: string;
-    userId: string;
-  }) {
-    try {
-      const documentData = { id, title, kind, content, userId, createdAt: new Date() };
-      return await db.insert(document).values(documentData);
-    } catch (error) {
-      logger.error('Failed to save document in database', { error });
-      throw error;
-    }
+export async function saveDocument({
+  id,
+  title,
+  kind,
+  content,
+  userId,
+}: {
+  id: string;
+  title: string;
+  kind: ArtifactKind;
+  content: string;
+  userId: string;
+}) {
+  try {
+    return await db.insert(document).values({
+      id,
+      title,
+      kind,
+      content,
+      userId,
+      createdAt: new Date(),
+    });
+  } catch (error) {
+    console.error('Failed to save document in database');
+    throw error;
   }
+}
 
   @ValidateAndLog
   async getDocumentsById({ id }: { id: string }) {
@@ -830,28 +833,43 @@ class DbActions {
     }
   }
 
-  @ValidateAndLog
-  async deleteMessagesByChatIdAfterTimestamp({
-    chatId,
-    timestamp,
-  }: {
-    chatId: string;
-    timestamp: Date;
-  }) {
-    try {
+export async function deleteMessagesByChatIdAfterTimestamp({
+  chatId,
+  timestamp,
+}: {
+  chatId: string;
+  timestamp: Date;
+}) {
+  try {
+    const messagesToDelete = await db
+      .select({ id: message.id })
+      .from(message)
+      .where(
+        and(eq(message.chatId, chatId), gte(message.createdAt, timestamp)),
+      );
+
+    const messageIds = messagesToDelete.map((message) => message.id);
+
+    if (messageIds.length > 0) {
+      await db
+        .delete(vote)
+        .where(
+          and(eq(vote.chatId, chatId), inArray(vote.messageId, messageIds)),
+        );
+
       return await db
         .delete(message)
         .where(
-          and(eq(message.chatId, chatId), gte(message.createdAt, timestamp)),
+          and(eq(message.chatId, chatId), inArray(message.id, messageIds)),
         );
-    } catch (error) {
-      logger.error(
-        'Failed to delete messages by id after timestamp from database',
-        { chatId, timestamp, error }
-      );
-      throw error;
     }
+  } catch (error) {
+    console.error(
+      'Failed to delete messages by id after timestamp from database',
+    );
+    throw error;
   }
+}
 
   @ValidateAndLog
   async updateChatVisiblityById({

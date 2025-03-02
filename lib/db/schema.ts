@@ -85,9 +85,7 @@ export const document = pgTable(
     createdAt: timestamp('created_at').notNull(),
     title: text('title').notNull(),
     content: text('content'),
-    // Replacing `varchar('text', { enum: ['text','code','image'] })`
-    // with `varchar('kind', { enum: ['text','code','image'] })`.
-    kind: varchar('kind', { enum: ['text', 'code', 'image'] })
+    kind: varchar('text', { enum: ['text', 'code', 'image', 'sheet'] })
       .notNull()
       .default('text'),
     userId: uuid('user_id')
