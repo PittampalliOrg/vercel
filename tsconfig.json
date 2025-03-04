@@ -24,6 +24,9 @@
     "plugins": [
       {
         "name": "next"
+      },
+      {
+        "transform": "typia/lib/transform"
       }
     ],
     "paths": {
@@ -40,9 +43,8 @@
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    ".next/types/**/*.ts",
-    "next.config.ts"
-  ],
+    ".next/types/**/*.ts"
+, "next.config.mjs"  ],
   "exclude": [
     "node_modules",
     "src",

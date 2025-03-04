@@ -242,7 +242,7 @@ service:
     traces:
       receivers: [otlp]
       processors: [ batch ]
-      exporters: [clickhouse, otlp/jaeger, debug]
+      exporters: [otlp/jaeger, debug]
     # metrics:
     #   receivers: [hostmetrics, docker_stats, httpcheck/frontend, otlp, prometheus, spanmetrics]
     #   processors: [batch]
@@ -250,4 +250,4 @@ service:
     logs:
       receivers: [otlp]
       processors: [ memory_limiter, resourcedetection/system, resource, batch ]
-      exporters: [clickhouse]
+      exporters: [debug]
