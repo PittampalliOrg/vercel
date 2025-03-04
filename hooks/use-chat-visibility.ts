@@ -14,7 +14,7 @@ export function useChatVisibility({
   initialVisibility: VisibilityType;
 }) {
   const { mutate, cache } = useSWRConfig();
-  const history: Array<Chat> = cache.get(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/history`)?.data;
+  const history: Array<Chat> = cache.get('/api/history')?.data;
 
   const { data: localVisibility, mutate: setLocalVisibility } = useSWR(
     `${chatId}-visibility`,
@@ -35,7 +35,7 @@ export function useChatVisibility({
     setLocalVisibility(updatedVisibilityType);
 
     mutate<Array<Chat>>(
-      `${process.env.NEXT_PUBLIC_BASE_PATH}/api/history`,
+      '/api/history',
       (history) => {
         return history
           ? history.map((chat) => {

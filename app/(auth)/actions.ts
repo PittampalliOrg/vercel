@@ -1,7 +1,9 @@
 'use server';
 
 import { z } from 'zod';
-import { dbActions } from '@/lib/db/queries';
+
+import { createUser, getUser } from '@/lib/db/queries';
+
 import { signIn } from './auth';
 
 const authFormSchema = z.object({
@@ -59,14 +61,12 @@ export const register = async (
       password: formData.get('password'),
     });
 
-    const user = await dbActions.getUser(validatedData.email);
+    const [user] = await getUser(validatedData.email);
 
-    if (user.length > 0) {
+    if (user) {
       return { status: 'user_exists' } as RegisterActionState;
     }
-
-    // Ensure user exists before inserting chat
-    await dbActions.createUser(validatedData.email, validatedData.password);
+    await createUser(validatedData.email, validatedData.password);
     await signIn('credentials', {
       email: validatedData.email,
       password: validatedData.password,

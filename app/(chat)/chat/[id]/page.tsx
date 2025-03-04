@@ -1,3 +1,4 @@
+import React from 'react';
 import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 
@@ -11,7 +12,7 @@ import { DEFAULT_CHAT_MODEL } from '@/lib/ai/models';
 export default async function Page(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   const { id } = params;
-  const chat = await dbActions.getChatById({ id });
+  const chat = await getChatById({ id });
 
   if (!chat) {
     notFound();
@@ -29,7 +30,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
     }
   }
 
-  const messagesFromDb = await dbActions.getMessagesByChatId({
+  const messagesFromDb = await getMessagesByChatId({
     id,
   });
 

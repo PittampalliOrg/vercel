@@ -8,12 +8,12 @@ import {
 import { auth } from '@/app/(auth)/auth';
 import { myProvider } from '@/lib/ai/models';
 import { systemPrompt } from '@/lib/ai/prompts';
-// import {
-//   deleteChatById,
-//   getChatById,
-//   saveChat,
-//   saveMessages,
-// } from '@/lib/db/queries';
+import {
+  deleteChatById,
+  getChatById,
+  saveChat,
+  saveMessages,
+} from '@/lib/db/queries';
 import {
   generateUUID,
   getMostRecentUserMessage,
@@ -25,7 +25,7 @@ import { createDocument } from '@/lib/ai/tools/create-document';
 import { updateDocument } from '@/lib/ai/tools/update-document';
 import { requestSuggestions } from '@/lib/ai/tools/request-suggestions';
 import { getWeather } from '@/lib/ai/tools/get-weather';
-import { dbActions } from '@/lib/db/queries';
+
 export const maxDuration = 60;
 
 export async function POST(request: Request) {
@@ -48,11 +48,11 @@ export async function POST(request: Request) {
     return new Response('No user message found', { status: 400 });
   }
 
-  const chat = await dbActions.getChatById({ id });
+  const chat = await getChatById({ id });
 
   if (!chat) {
     const title = await generateTitleFromUserMessage({ message: userMessage });
-    await dbActions.saveChat({ id, userId: session.user.id, title });
+    await saveChat({ id, userId: session.user.id, title });
   }
 
   await saveMessages({
@@ -109,7 +109,6 @@ export async function POST(request: Request) {
               console.error('Failed to save chat');
             }
           }
-          console.log('Finished processing', response);
         },
         experimental_telemetry: {
           isEnabled: true,
@@ -144,13 +143,13 @@ export async function DELETE(request: Request) {
   }
 
   try {
-    const chat = await dbActions.getChatById({ id });
+    const chat = await getChatById({ id });
 
     if (chat.userId !== session.user.id) {
       return new Response('Unauthorized', { status: 401 });
     }
 
-    await dbActions.deleteChatById({ id });
+    await deleteChatById({ id });
 
     return new Response('Chat deleted', { status: 200 });
   } catch (error) {

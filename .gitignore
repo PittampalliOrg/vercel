@@ -10,6 +10,12 @@ coverage
 
 # next.js
 .next/
+!.next/server
+!.next/server/app
+!.next/server/app/(chat)
+!.next/server/app/(chat)/api
+!.next/server/app/(chat)/api/chat
+!.next/server/app/(chat)/api/chat/route.js
 out/
 build
 

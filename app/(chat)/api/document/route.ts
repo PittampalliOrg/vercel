@@ -1,4 +1,3 @@
-// 'app/(chat)/api/document/route.ts'
 import { auth } from '@/app/(auth)/auth';
 import { ArtifactKind } from '@/components/artifact';
 import {
@@ -21,12 +20,7 @@ export async function GET(request: Request) {
     return new Response('Unauthorized', { status: 401 });
   }
 
-  const documents = await dbActions.getDocumentsById({ id });
-
-  // Check if documents is an array before destructuring
-  if (!Array.isArray(documents)) {
-    return new Response('Unexpected response format', { status: 500 });
-  }
+  const documents = await getDocumentsById({ id });
 
   const [document] = documents;
 
@@ -63,11 +57,11 @@ export async function POST(request: Request) {
     await request.json();
 
   if (session.user?.id) {
-    const document = await dbActions.saveDocument({
+    const document = await saveDocument({
       id,
       content,
       title,
-      kind: blockKind,
+      kind,
       userId: session.user.id,
     });
 
@@ -75,7 +69,6 @@ export async function POST(request: Request) {
   }
   return new Response('Unauthorized', { status: 401 });
 }
-
 
 export async function PATCH(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -93,12 +86,7 @@ export async function PATCH(request: Request) {
     return new Response('Unauthorized', { status: 401 });
   }
 
-  const documents = await dbActions.getDocumentsById({ id });
-
-  // Check if documents is an array before destructuring
-  if (!Array.isArray(documents)) {
-    return new Response('Unexpected response format', { status: 500 });
-  }
+  const documents = await getDocumentsById({ id });
 
   const [document] = documents;
 
@@ -106,7 +94,7 @@ export async function PATCH(request: Request) {
     return new Response('Unauthorized', { status: 401 });
   }
 
-  await dbActions.deleteDocumentsByIdAfterTimestamp({
+  await deleteDocumentsByIdAfterTimestamp({
     id,
     timestamp: new Date(timestamp),
   });

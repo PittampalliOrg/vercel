@@ -157,7 +157,7 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
     data: history,
     isLoading,
     mutate,
-  } = useSWR<Array<Chat>>(user ? `${process.env.NEXT_PUBLIC_BASE_PATH}/api/history` : null, fetcher, {
+  } = useSWR<Array<Chat>>(user ? '/api/history' : null, fetcher, {
     fallbackData: [],
   });
 
@@ -169,7 +169,7 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const router = useRouter();
   const handleDelete = async () => {
-    const deletePromise = fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/chat?id=${deleteId}`, {
+    const deletePromise = fetch(`/api/chat?id=${deleteId}`, {
       method: 'DELETE',
     });
 

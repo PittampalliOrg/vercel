@@ -49,7 +49,7 @@ export function Chat({
     sendExtraMessageFields: true,
     generateId: generateUUID,
     onFinish: () => {
-      mutate(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/history`);
+      mutate('/api/history');
     },
     onError: (error) => {
       toast.error('An error occured, please try again!');
@@ -57,7 +57,7 @@ export function Chat({
   });
 
   const { data: votes } = useSWR<Array<Vote>>(
-    `${process.env.NEXT_PUBLIC_BASE_PATH}/api/vote?chatId=${id}`,
+    `/api/vote?chatId=${id}`,
     fetcher,
   );
 

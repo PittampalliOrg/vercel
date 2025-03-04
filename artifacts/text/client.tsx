@@ -24,19 +24,17 @@ export const textArtifact = new Artifact<'text', TextArtifactMetadata>({
   initialize: async ({ documentId, setMetadata }) => {
     const suggestions = await getSuggestions({ documentId });
 
-    // Ensure that 'suggestions' is set as an array
     setMetadata({
-      suggestions: Array.isArray(suggestions) ? suggestions : [],  // Ensure it's an array
+      suggestions,
     });
   },
   onStreamPart: ({ streamPart, setMetadata, setArtifact }) => {
     if (streamPart.type === 'suggestion') {
       setMetadata((metadata) => {
-        // Ensure suggestions array is properly updated
         return {
           suggestions: [
-            ...metadata.suggestions, 
-            streamPart.content as Suggestion,  // type cast as Suggestion
+            ...metadata.suggestions,
+            streamPart.content as Suggestion,
           ],
         };
       });
@@ -108,7 +106,7 @@ export const textArtifact = new Artifact<'text', TextArtifactMetadata>({
       onClick: ({ handleVersionChange }) => {
         handleVersionChange('toggle');
       },
-      isDisabled: ({ currentVersionIndex }) => {
+      isDisabled: ({ currentVersionIndex, setMetadata }) => {
         if (currentVersionIndex === 0) {
           return true;
         }
@@ -178,4 +176,3 @@ export const textArtifact = new Artifact<'text', TextArtifactMetadata>({
     },
   ],
 });
-

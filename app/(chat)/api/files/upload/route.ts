@@ -3,7 +3,6 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { auth } from '@/app/(auth)/auth';
-import { dbActions } from '@/lib/db/queries';
 
 // Use Blob instead of File since File is not available in Node.js environment
 const FileSchema = z.object({

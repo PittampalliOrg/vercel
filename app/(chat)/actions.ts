@@ -31,17 +31,13 @@ export async function generateTitleFromUserMessage({
     prompt: JSON.stringify(message),
   });
 
-
-
   return title;
 }
 
 export async function deleteTrailingMessages({ id }: { id: string }) {
-  const messages = await dbActions.getMessageById({ id });
-  // Assuming at least one message exists
-  const message = messages[0];
+  const [message] = await getMessageById({ id });
 
-  await dbActions.deleteMessagesByChatIdAfterTimestamp({
+  await deleteMessagesByChatIdAfterTimestamp({
     chatId: message.chatId,
     timestamp: message.createdAt,
   });
@@ -54,5 +50,5 @@ export async function updateChatVisibility({
   chatId: string;
   visibility: VisibilityType;
 }) {
-  await dbActions.updateChatVisiblityById({ chatId, visibility });
+  await updateChatVisiblityById({ chatId, visibility });
 }

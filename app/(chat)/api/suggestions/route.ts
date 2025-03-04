@@ -1,6 +1,6 @@
 import { auth } from '@/app/(auth)/auth';
-// import { getSuggestionsByDocumentId } from '@/lib/db/queries';
-import { dbActions } from '@/lib/db/queries';
+import { getSuggestionsByDocumentId } from '@/lib/db/queries';
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const documentId = searchParams.get('documentId');
@@ -15,7 +15,7 @@ export async function GET(request: Request) {
     return new Response('Unauthorized', { status: 401 });
   }
 
-  const suggestions = await dbActions.getSuggestionsByDocumentId({
+  const suggestions = await getSuggestionsByDocumentId({
     documentId,
   });
 

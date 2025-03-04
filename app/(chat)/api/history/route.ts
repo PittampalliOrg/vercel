@@ -1,6 +1,5 @@
 import { auth } from '@/app/(auth)/auth';
-// import { getChatsByUserId } from '@/lib/db/queries';
-import { dbActions } from '@/lib/db/queries';
+import { getChatsByUserId } from '@/lib/db/queries';
 
 export async function GET() {
   const session = await auth();
@@ -10,6 +9,6 @@ export async function GET() {
   }
 
   // biome-ignore lint: Forbidden non-null assertion.
-  const chats = await dbActions.getChatsByUserId({ id: session.user.id! });
+  const chats = await getChatsByUserId({ id: session.user.id! });
   return Response.json(chats);
 }

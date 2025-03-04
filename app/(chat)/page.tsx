@@ -30,6 +30,7 @@ export default async function Page() {
   return (
     <>
       <Chat
+        key={id}
         id={id}
         initialMessages={[]}
         selectedChatModel={modelIdFromCookie.value}

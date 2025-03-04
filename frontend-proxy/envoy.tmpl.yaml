@@ -1,10 +1,11 @@
+# 'frontend-proxy/envoy.tmpl.yaml'
 # Copyright The OpenTelemetry Authors
 # SPDX-License-Identifier: Apache-2.0
 
-
 static_resources:
   listeners:
-    - address:
+    - name: example_listener_name      # <-- MATCHES layered_runtime setting
+      address:
         socket_address:
           address: 0.0.0.0
           port_value: ${ENVOY_PORT}
@@ -15,6 +16,16 @@ static_resources:
                 "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
                 codec_type: AUTO
                 stat_prefix: ingress_http
+
+                # Explicitly define internal address behavior
+                internal_address_config:
+                  unix_sockets: true
+                  cidr_ranges:
+                    - address_prefix: 192.168.0.0
+                      prefix_len: 16
+                    - address_prefix: 10.0.0.0
+                      prefix_len: 8
+
                 tracing:
                   spawn_upstream_span: true
                   provider:
@@ -44,7 +55,7 @@ static_resources:
                         - match: { prefix: "/jaeger" }
                           route: { cluster: jaeger }
                         - match: { prefix: "/grafana" }
-                          route: { cluster: grafana }                          
+                          route: { cluster: grafana }
                         - match: { prefix: "/" }
                           route: { cluster: frontend }
                 http_filters:
@@ -70,7 +81,6 @@ static_resources:
                             cluster_name: opentelemetry_collector_grpc
                         transport_api_version: "V3"
                       body:
-                        # yamllint disable-line rule:line-length
                         string_value: "[%START_TIME%] \"%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%\" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% \"%UPSTREAM_TRANSPORT_FAILURE_REASON%\" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% \"%REQ(X-FORWARDED-FOR)%\" \"%REQ(USER-AGENT)%\" \"%REQ(X-REQUEST-ID)%\" \"%REQ(:AUTHORITY)%\" \"%UPSTREAM_HOST%\" %UPSTREAM_CLUSTER% %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%\n"
                       resource_attributes:
                         values:
@@ -170,6 +180,7 @@ static_resources:
                     socket_address:
                       address: ${OTEL_COLLECTOR_HOST}
                       port_value: ${OTEL_COLLECTOR_PORT_GRPC}
+
     - name: opentelemetry_collector_http
       type: STRICT_DNS
       lb_policy: ROUND_ROBIN
@@ -182,6 +193,7 @@ static_resources:
                     socket_address:
                       address: ${OTEL_COLLECTOR_HOST}
                       port_value: ${OTEL_COLLECTOR_PORT_HTTP}
+
     - name: frontend
       type: STRICT_DNS
       lb_policy: ROUND_ROBIN
@@ -194,6 +206,7 @@ static_resources:
                     socket_address:
                       address: frontend
                       port_value: 3000
+
     - name: playground
       type: STRICT_DNS
       lb_policy: ROUND_ROBIN
@@ -205,7 +218,8 @@ static_resources:
                   address:
                     socket_address:
                       address: playground
-                      port_value: 3000        
+                      port_value: 3000
+
     - name: grafana
       type: STRICT_DNS
       lb_policy: ROUND_ROBIN
@@ -230,12 +244,14 @@ static_resources:
                   address:
                     socket_address:
                       address: ${JAEGER_HOST}
-                      port_value: ${JAEGER_PORT}                                 
+                      port_value: ${JAEGER_PORT}
+
 admin:
   address:
     socket_address:
       address: 0.0.0.0
       port_value: 10000
+
 layered_runtime:
   layers:
     - name: static_layer_0
@@ -243,5 +259,5 @@ layered_runtime:
         envoy:
           resource_limits:
             listener:
-              example_listener_name:
+              example_listener_name:        # <-- MUST match the listener name above
                 connection_limit: 10000

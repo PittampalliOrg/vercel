@@ -81,6 +81,13 @@ function PureMultimodalInput({
     }
   };
 
+  const resetHeight = () => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = '98px';
+    }
+  };
+
   const [localStorageInput, setLocalStorageInput] = useLocalStorage(
     'input',
     '',
@@ -119,6 +126,7 @@ function PureMultimodalInput({
 
     setAttachments([]);
     setLocalStorageInput('');
+    resetHeight();
 
     if (width && width > 768) {
       textareaRef.current?.focus();
@@ -137,7 +145,7 @@ function PureMultimodalInput({
     formData.append('file', file);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/files/upload`, {
+      const response = await fetch('/api/files/upload', {
         method: 'POST',
         body: formData,
       });

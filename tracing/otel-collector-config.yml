@@ -9,9 +9,9 @@ receivers:
           allowed_origins:
             - http://*
             - https://*
-  httpcheck/frontend-proxy:
+  httpcheck/frontend:
     targets:
-      - endpoint: http://frontend-proxy:${env:ENVOY_PORT}
+      - endpoint: http://frontend:3000
   docker_stats:
     endpoint: unix:///var/run/docker.sock
   filelog:
@@ -234,20 +234,20 @@ processors:
 
 connectors:
   spanmetrics:
-    # dimensions_cache_size: 1000
-    # metrics_flush_interval: 15s
+    dimensions_cache_size: 1000
+    metrics_flush_interval: 15s
 
 service:
   pipelines:
     traces:
       receivers: [otlp]
       processors: [ batch ]
-      exporters: [clickhouse, otlp/jaeger, debug, spanmetrics]
-    metrics:
-      receivers: [hostmetrics, docker_stats, httpcheck/frontend-proxy, otlp, prometheus, spanmetrics]
-      processors: [batch]
-      exporters: [clickhouse, otlphttp/prometheus]
+      exporters: [clickhouse, otlp/jaeger, debug]
+    # metrics:
+    #   receivers: [hostmetrics, docker_stats, httpcheck/frontend, otlp, prometheus, spanmetrics]
+    #   processors: [batch]
+    #   exporters: [clickhouse]
     logs:
       receivers: [otlp]
       processors: [ memory_limiter, resourcedetection/system, resource, batch ]
-      exporters: [clickhouse, debug]
+      exporters: [clickhouse]

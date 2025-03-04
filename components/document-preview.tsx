@@ -37,10 +37,10 @@ export function DocumentPreview({
 
   const { data: documents, isLoading: isDocumentsFetching } = useSWR<
     Array<Document>
-  >(result ? `${process.env.NEXT_PUBLIC_BASE_PATH}/api/document?id=${result.id}` : null, fetcher);
+  >(result ? `/api/document?id=${result.id}` : null, fetcher);
 
   const previewDocument = useMemo(() => documents?.[0], [documents]);
-  const hitboxRef = useRef<HTMLDivElement>(null);
+  const hitboxRef = useRef<HTMLDivElement>(null!);
 
   useEffect(() => {
     const boundingBox = hitboxRef.current?.getBoundingClientRect();

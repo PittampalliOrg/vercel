@@ -1,11 +1,8 @@
 import { DataStreamWriter, tool } from 'ai';
 import { Session } from 'next-auth';
 import { z } from 'zod';
-// import { getDocumentById, saveDocument } from '@/lib/db/queries';
+import { getDocumentById, saveDocument } from '@/lib/db/queries';
 import { documentHandlersByArtifactKind } from '@/lib/artifacts/server';
-
-import { dbActions } from '@/lib/db/queries';
-import { BlockKind } from '@/lib/db/queries';
 
 interface UpdateDocumentProps {
   session: Session;
@@ -22,7 +19,7 @@ export const updateDocument = ({ session, dataStream }: UpdateDocumentProps) =>
         .describe('The description of changes that need to be made'),
     }),
     execute: async ({ id, description }) => {
-      const document = await dbActions.getDocumentById({ id });
+      const document = await getDocumentById({ id });
 
       if (!document) {
         return {

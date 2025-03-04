@@ -14,9 +14,6 @@ import { chatModels } from '@/lib/ai/models';
 import { cn } from '@/lib/utils';
 
 import { CheckCircleFillIcon, ChevronDownIcon } from './icons';
-import { trace } from '@opentelemetry/api';
-
-const tracer = trace.getTracer('client-tracer');
 
 export function ModelSelector({
   selectedModelId,
@@ -24,7 +21,6 @@ export function ModelSelector({
 }: {
   selectedModelId: string;
 } & React.ComponentProps<typeof Button>) {
-
   const [open, setOpen] = useState(false);
   const [optimisticModelId, setOptimisticModelId] =
     useOptimistic(selectedModelId);

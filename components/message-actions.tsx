@@ -13,8 +13,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from './ui/tooltip';
+import { memo } from 'react';
+import equal from 'fast-deep-equal';
 
-export function MessageActions({
+export function PureMessageActions({
   chatId,
   message,
   vote,
@@ -72,7 +74,7 @@ export function MessageActions({
                   loading: 'Upvoting Response...',
                   success: () => {
                     mutate<Array<Vote>>(
-                      `${process.env.NEXT_PUBLIC_BASE_PATH}/api/vote?chatId=${chatId}`,
+                      `/api/vote?chatId=${chatId}`,
                       (currentVotes) => {
                         if (!currentVotes) return [];
 
@@ -124,7 +126,7 @@ export function MessageActions({
                   loading: 'Downvoting Response...',
                   success: () => {
                     mutate<Array<Vote>>(
-                      `${process.env.NEXT_PUBLIC_BASE_PATH}/api/vote?chatId=${chatId}`,
+                      `/api/vote?chatId=${chatId}`,
                       (currentVotes) => {
                         if (!currentVotes) return [];
 
@@ -159,3 +161,13 @@ export function MessageActions({
     </TooltipProvider>
   );
 }
+
+export const MessageActions = memo(
+  PureMessageActions,
+  (prevProps, nextProps) => {
+    if (!equal(prevProps.vote, nextProps.vote)) return false;
+    if (prevProps.isLoading !== nextProps.isLoading) return false;
+
+    return true;
+  },
+);

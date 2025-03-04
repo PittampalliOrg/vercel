@@ -20,7 +20,7 @@
       "runtimeExecutable": "${workspaceFolder}/node_modules/next/dist/bin/next",
       "runtimeArgs": [
         "${workspaceFolder}",
-        "dev",
+        "start",
         "--turbopack",
         "NODE_OPTIONS='--inspect'",
         "NEXT_OTEL_VERBOSE=1"

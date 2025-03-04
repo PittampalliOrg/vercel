@@ -1,11 +1,10 @@
 import { z } from 'zod';
 import { Session } from 'next-auth';
 import { DataStreamWriter, streamObject, tool } from 'ai';
-// import { getDocumentById, saveSuggestions } from '@/lib/db/queries';
+import { getDocumentById, saveSuggestions } from '@/lib/db/queries';
 import { Suggestion } from '@/lib/db/schema';
 import { generateUUID } from '@/lib/utils';
 import { myProvider } from '../models';
-import { dbActions } from '@/lib/db/queries';
 
 interface RequestSuggestionsProps {
   session: Session;
@@ -22,12 +21,9 @@ export const requestSuggestions = ({
       documentId: z
         .string()
         .describe('The ID of the document to request edits'),
-      createdAt: z
-        .string()
-        .describe('The creation timestamp of the document'),
     }),
-    execute: async ({ documentId, createdAt }) => {
-      const document = await dbActions.getDocumentById({ id: documentId });
+    execute: async ({ documentId }) => {
+      const document = await getDocumentById({ id: documentId });
 
       if (!document || !document.content) {
         return {
@@ -73,12 +69,12 @@ export const requestSuggestions = ({
       if (session.user?.id) {
         const userId = session.user.id;
 
-        await dbActions.saveSuggestions({
+        await saveSuggestions({
           suggestions: suggestions.map((suggestion) => ({
             ...suggestion,
             userId,
             createdAt: new Date(),
-            documentCreatedAt: new Date(createdAt),
+            documentCreatedAt: document.createdAt,
           })),
         });
       }

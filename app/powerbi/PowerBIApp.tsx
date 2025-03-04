@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createRef, Component } from "react";
+import React, { createRef, Component, JSX } from "react";
 import { MsalContext } from "@azure/msal-react";
 import { service, factories, models, IEmbedConfiguration } from "powerbi-client";
 import { EventMessage, EventType, AuthenticationResult } from "@azure/msal-browser";
