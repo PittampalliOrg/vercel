@@ -1,3 +1,4 @@
+import { withTraceAndLogging } from '@/lib/withTraceAndLogging';
 import { put } from '@vercel/blob';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
@@ -17,7 +18,7 @@ const FileSchema = z.object({
     }),
 });
 
-export async function POST(request: Request) {
+export const POST = withTraceAndLogging(async function POST(request: Request) {
   const session = await auth();
 
   if (!session) {
@@ -46,7 +47,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
 
-    // Get filename from formData since Blob doesn't have name property
+    // Get filename from formData since Blob doesn't have a name property
     const filename = (formData.get('file') as File).name;
     const fileBuffer = await file.arrayBuffer();
 
@@ -65,4 +66,4 @@ export async function POST(request: Request) {
       { status: 500 },
     );
   }
-}
+});

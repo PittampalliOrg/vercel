@@ -1,4 +1,15 @@
 import unTypiaNext from "@ryoppippi/unplugin-typia/next";
-
+ 
 /** @type {import('next').NextConfig} */
-export default unTypiaNext({})
+const config = {
+      productionBrowserSourceMaps: true
+};
+export default unTypiaNext(
+  config,
+  {
+    cache: true,
+    typia: {
+        functional: true,
+    }
+  }
+);

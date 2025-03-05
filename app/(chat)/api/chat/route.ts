@@ -25,10 +25,11 @@ import { createDocument } from '@/lib/ai/tools/create-document';
 import { updateDocument } from '@/lib/ai/tools/update-document';
 import { requestSuggestions } from '@/lib/ai/tools/request-suggestions';
 import { getWeather } from '@/lib/ai/tools/get-weather';
+import { withTraceAndLogging } from '@/lib/withTraceAndLogging';
 
 export const maxDuration = 60;
 
-export async function POST(request: Request) {
+export const POST = withTraceAndLogging(async function POST(request: Request) {
   const {
     id,
     messages,
@@ -126,9 +127,9 @@ export async function POST(request: Request) {
       return 'Oops, an error occured!';
     },
   });
-}
+});
 
-export async function DELETE(request: Request) {
+export const DELETE = withTraceAndLogging(async function DELETE(request: Request) {
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
 
@@ -157,4 +158,4 @@ export async function DELETE(request: Request) {
       status: 500,
     });
   }
-}
+});

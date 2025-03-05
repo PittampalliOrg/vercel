@@ -5,8 +5,9 @@ import {
   getDocumentsById,
   saveDocument,
 } from '@/lib/db/queries';
+import { withTraceAndLogging } from '@/lib/withTraceAndLogging';
 
-export async function GET(request: Request) {
+export const GET = withTraceAndLogging(async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
 
@@ -33,9 +34,9 @@ export async function GET(request: Request) {
   }
 
   return Response.json(documents, { status: 200 });
-}
+});
 
-export async function POST(request: Request) {
+export const POST = withTraceAndLogging(async function POST(request: Request) {
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
 
@@ -68,9 +69,9 @@ export async function POST(request: Request) {
     return Response.json(document, { status: 200 });
   }
   return new Response('Unauthorized', { status: 401 });
-}
+});
 
-export async function PATCH(request: Request) {
+export const PATCH = withTraceAndLogging(async function PATCH(request: Request) {
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
 
@@ -100,4 +101,4 @@ export async function PATCH(request: Request) {
   });
 
   return new Response('Deleted', { status: 200 });
-}
+});

@@ -1,7 +1,8 @@
+import { withTraceAndLogging } from '@/lib/withTraceAndLogging';
 import { auth } from '@/app/(auth)/auth';
 import { getSuggestionsByDocumentId } from '@/lib/db/queries';
 
-export async function GET(request: Request) {
+export const GET = withTraceAndLogging(async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const documentId = searchParams.get('documentId');
 
@@ -30,4 +31,4 @@ export async function GET(request: Request) {
   }
 
   return Response.json(suggestions, { status: 200 });
-}
+});
