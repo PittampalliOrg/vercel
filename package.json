@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "typia:generate": "typia generate --input ./lib/typia --output ./lib/generated",
     "dev": "next dev --turbo",
     "build": "next build -d",
     "start": "next start",
@@ -18,7 +17,10 @@
     "db:pull": "drizzle-kit pull",
     "db:check": "drizzle-kit check",
     "db:up": "drizzle-kit up",
-    "db:gen-types": "supabase gen types typescript --db-url postgres://postgres:postgres@db:5432/postgres > database.types.ts"
+    "db:gen-types": "supabase gen types typescript --db-url postgres://postgres:postgres@db:5432/postgres > database.types.ts",
+    "typia": "pnpm run typia:codegen && pnpm run typia:generate",
+    "typia:codegen": "node --experimental-strip-types ./lib/generator.ts",
+    "typia:generate": "typia generate --input ./lib/typia --output ./lib/generated"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^1.1.13",

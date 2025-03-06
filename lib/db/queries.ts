@@ -5,11 +5,6 @@ import { genSaltSync, hashSync } from 'bcrypt-ts';
 import { and, asc, desc, eq, gt, gte, inArray } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import typia from 'typia';
-import { trace, context, SpanStatusCode } from '@opentelemetry/api';
-
-// Import schemas from the dedicated typia file
-import { schemas } from '../generated/jsonschemas';
 
 import {
   user,
@@ -24,132 +19,123 @@ import {
 } from './schema';
 
 import { ArtifactKind } from '@/components/artifact';
+import { ValidateAndLog } from '@/lib/generated/schema-validators';
 
 const client = postgres(process.env.POSTGRES_URL!);
 const db = drizzle(client);
-
-const tracer = trace.getTracer('db-actions');
-
-/** Utility to get parameters & awaited returns without overshadowing built-in ReturnType */
-export type MethodParams<T extends (...args: any) => any> = Parameters<T>;
-export type MethodReturn<T extends (...args: any) => any> = Awaited<ReturnType<T>>;
-
-/**
- * Decorator that wraps methods with:
- * - Parameter & return validation (via `typia.is`)
- * - OpenTelemetry tracing (creates or continues a Span)
- * - Attaches the relevant schemas as trace attributes
- */
-function ValidateAndLog(target: any, methodName: string, descriptor: PropertyDescriptor) {
-  const originalMethod = descriptor.value;
-
-  descriptor.value = async function (...args: any[]) {
-    // Possibly continue an existing trace context
-    const activeCtx = context.active();
-    const span = tracer.startSpan(`DbActions.${methodName}`, undefined, activeCtx);
-
-    // Retrieve paramSchema & returnSchema from imported schemas
-    const { paramSchema, returnSchema } = schemas[methodName as keyof typeof schemas] || {};
-
-    try {
-      // Attach the generated schemas to the span for debugging
-      if (paramSchema) {
-        span.setAttribute(`schemas.${methodName}.param`, JSON.stringify(paramSchema));
-      }
-      if (returnSchema) {
-        span.setAttribute(`schemas.${methodName}.return`, JSON.stringify(returnSchema));
-      }
-
-      // Parameter validation
-      if (paramSchema) {
-        const paramValidation = typia.is(args);
-        span.addEvent('Parameter Validation', {
-          expected: JSON.stringify(paramSchema),
-          received: JSON.stringify(args),
-          validationPassed: paramValidation,
-        });
-      }
-
-      // Invoke the original method
-      const result = await originalMethod.apply(this, args);
-
-      // Return validation
-      if (returnSchema) {
-        const resultValidation = typia.is(result);
-        span.addEvent('Return Validation', {
-          expected: JSON.stringify(returnSchema),
-          received: JSON.stringify(result),
-          validationPassed: resultValidation,
-        });
-        span.setAttribute('return.result', JSON.stringify(result));
-      }
-
-      return result;
-    } catch (error: any) {
-      span.setStatus({ code: SpanStatusCode.ERROR, message: error?.message });
-      throw error;
-    } finally {
-      span.end();
-    }
-  };
-}
 
 /**
  * The DbActions class, each method decorated by @ValidateAndLog.
  */
 export class DbActions {
   @ValidateAndLog
-  async getUser(email: string): Promise<User[]> {
-    return db.select().from(user).where(eq(user.email, email));
+  async getUser(email: string): Promise<Array<User>> {
+    try {
+      return await db.select().from(user).where(eq(user.email, email));
+    } catch (error) {
+      console.error('Failed to get user from database');
+      throw error;
+    }
   }
-
+  
   @ValidateAndLog
   async createUser(email: string, password: string) {
-    const hash = hashSync(password, genSaltSync(10));
-    return db.insert(user).values({ email, password: hash });
+    const salt = genSaltSync(10);
+    const hash = hashSync(password, salt);
+  
+    try {
+      return await db.insert(user).values({ email, password: hash });
+    } catch (error) {
+      console.error('Failed to create user in database');
+      throw error;
+    }
   }
-
+  
   @ValidateAndLog
-  async saveChat({ id, userId, title }: { id: string; userId: string; title: string }) {
-    return db.insert(chat).values({ id, createdAt: new Date(), userId, title });
+  async saveChat({
+    id,
+    userId,
+    title,
+  }: {
+    id: string;
+    userId: string;
+    title: string;
+  }) {
+    try {
+      return await db.insert(chat).values({
+        id,
+        createdAt: new Date(),
+        userId,
+        title,
+      });
+    } catch (error) {
+      console.error('Failed to save chat in database');
+      throw error;
+    }
   }
-
+  
   @ValidateAndLog
   async deleteChatById({ id }: { id: string }) {
-    await db.delete(vote).where(eq(vote.chatId, id));
-    await db.delete(message).where(eq(message.chatId, id));
-    return db.delete(chat).where(eq(chat.id, id));
+    try {
+      await db.delete(vote).where(eq(vote.chatId, id));
+      await db.delete(message).where(eq(message.chatId, id));
+  
+      return await db.delete(chat).where(eq(chat.id, id));
+    } catch (error) {
+      console.error('Failed to delete chat by id from database');
+      throw error;
+    }
   }
-
+  
   @ValidateAndLog
   async getChatsByUserId({ id }: { id: string }) {
-    return db
-      .select()
-      .from(chat)
-      .where(eq(chat.userId, id))
-      .orderBy(desc(chat.createdAt));
+    try {
+      return await db
+        .select()
+        .from(chat)
+        .where(eq(chat.userId, id))
+        .orderBy(desc(chat.createdAt));
+    } catch (error) {
+      console.error('Failed to get chats by user from database');
+      throw error;
+    }
   }
-
+  
   @ValidateAndLog
   async getChatById({ id }: { id: string }) {
-    const [result] = await db.select().from(chat).where(eq(chat.id, id));
-    return result;
+    try {
+      const [selectedChat] = await db.select().from(chat).where(eq(chat.id, id));
+      return selectedChat;
+    } catch (error) {
+      console.error('Failed to get chat by id from database');
+      throw error;
+    }
   }
-
+  
   @ValidateAndLog
-  async saveMessages({ messages }: { messages: Message[] }) {
-    return db.insert(message).values(messages);
+  async saveMessages({ messages }: { messages: Array<Message> }) {
+    try {
+      return await db.insert(message).values(messages);
+    } catch (error) {
+      console.error('Failed to save messages in database', error);
+      throw error;
+    }
   }
-
+  
   @ValidateAndLog
   async getMessagesByChatId({ id }: { id: string }) {
-    return db
-      .select()
-      .from(message)
-      .where(eq(message.chatId, id))
-      .orderBy(asc(message.createdAt));
+    try {
+      return await db
+        .select()
+        .from(message)
+        .where(eq(message.chatId, id))
+        .orderBy(asc(message.createdAt));
+    } catch (error) {
+      console.error('Failed to get messages by chat id from database', error);
+      throw error;
+    }
   }
-
+  
   @ValidateAndLog
   async voteMessage({
     chatId,
@@ -160,21 +146,39 @@ export class DbActions {
     messageId: string;
     type: 'up' | 'down';
   }) {
-    const [existingVote] = await db.select().from(vote).where(eq(vote.messageId, messageId));
-    if (existingVote) {
-      return db
-        .update(vote)
-        .set({ isUpvoted: type === 'up' })
-        .where(and(eq(vote.messageId, messageId), eq(vote.chatId, chatId)));
+    try {
+      const [existingVote] = await db
+        .select()
+        .from(vote)
+        .where(and(eq(vote.messageId, messageId)));
+  
+      if (existingVote) {
+        return await db
+          .update(vote)
+          .set({ isUpvoted: type === 'up' })
+          .where(and(eq(vote.messageId, messageId), eq(vote.chatId, chatId)));
+      }
+      return await db.insert(vote).values({
+        chatId,
+        messageId,
+        isUpvoted: type === 'up',
+      });
+    } catch (error) {
+      console.error('Failed to upvote message in database', error);
+      throw error;
     }
-    return db.insert(vote).values({ chatId, messageId, isUpvoted: type === 'up' });
   }
-
+  
   @ValidateAndLog
   async getVotesByChatId({ id }: { id: string }) {
-    return db.select().from(vote).where(eq(vote.chatId, id));
+    try {
+      return await db.select().from(vote).where(eq(vote.chatId, id));
+    } catch (error) {
+      console.error('Failed to get votes by chat id from database', error);
+      throw error;
+    }
   }
-
+  
   @ValidateAndLog
   async saveDocument({
     id,
@@ -189,35 +193,53 @@ export class DbActions {
     content: string;
     userId: string;
   }) {
-    return db.insert(document).values({
-      id,
-      title,
-      kind,
-      content,
-      userId,
-      createdAt: new Date(),
-    });
+    try {
+      return await db.insert(document).values({
+        id,
+        title,
+        kind,
+        content,
+        userId,
+        createdAt: new Date(),
+      });
+    } catch (error) {
+      console.error('Failed to save document in database');
+      throw error;
+    }
   }
-
+  
   @ValidateAndLog
   async getDocumentsById({ id }: { id: string }) {
-    return db
-      .select()
-      .from(document)
-      .where(eq(document.id, id))
-      .orderBy(asc(document.createdAt));
+    try {
+      const documents = await db
+        .select()
+        .from(document)
+        .where(eq(document.id, id))
+        .orderBy(asc(document.createdAt));
+  
+      return documents;
+    } catch (error) {
+      console.error('Failed to get document by id from database');
+      throw error;
+    }
   }
-
+  
   @ValidateAndLog
   async getDocumentById({ id }: { id: string }) {
-    const [result] = await db
-      .select()
-      .from(document)
-      .where(eq(document.id, id))
-      .orderBy(desc(document.createdAt));
-    return result;
+    try {
+      const [selectedDocument] = await db
+        .select()
+        .from(document)
+        .where(eq(document.id, id))
+        .orderBy(desc(document.createdAt));
+  
+      return selectedDocument;
+    } catch (error) {
+      console.error('Failed to get document by id from database');
+      throw error;
+    }
   }
-
+  
   @ValidateAndLog
   async deleteDocumentsByIdAfterTimestamp({
     id,
@@ -226,29 +248,70 @@ export class DbActions {
     id: string;
     timestamp: Date;
   }) {
-    await db
-      .delete(suggestion)
-      .where(and(eq(suggestion.documentId, id), gt(suggestion.documentCreatedAt, timestamp)));
-    return db
-      .delete(document)
-      .where(and(eq(document.id, id), gt(document.createdAt, timestamp)));
+    try {
+      await db
+        .delete(suggestion)
+        .where(
+          and(
+            eq(suggestion.documentId, id),
+            gt(suggestion.documentCreatedAt, timestamp),
+          ),
+        );
+  
+      return await db
+        .delete(document)
+        .where(and(eq(document.id, id), gt(document.createdAt, timestamp)));
+    } catch (error) {
+      console.error(
+        'Failed to delete documents by id after timestamp from database',
+      );
+      throw error;
+    }
   }
-
+  
   @ValidateAndLog
-  async saveSuggestions({ suggestions }: { suggestions: Suggestion[] }) {
-    return db.insert(suggestion).values(suggestions);
+  async saveSuggestions({
+    suggestions,
+  }: {
+    suggestions: Array<Suggestion>;
+  }) {
+    try {
+      return await db.insert(suggestion).values(suggestions);
+    } catch (error) {
+      console.error('Failed to save suggestions in database');
+      throw error;
+    }
   }
-
+  
   @ValidateAndLog
-  async getSuggestionsByDocumentId({ documentId }: { documentId: string }) {
-    return db.select().from(suggestion).where(eq(suggestion.documentId, documentId));
+  async getSuggestionsByDocumentId({
+    documentId,
+  }: {
+    documentId: string;
+  }) {
+    try {
+      return await db
+        .select()
+        .from(suggestion)
+        .where(and(eq(suggestion.documentId, documentId)));
+    } catch (error) {
+      console.error(
+        'Failed to get suggestions by document version from database',
+      );
+      throw error;
+    }
   }
-
+  
   @ValidateAndLog
   async getMessageById({ id }: { id: string }) {
-    return db.select().from(message).where(eq(message.id, id));
+    try {
+      return await db.select().from(message).where(eq(message.id, id));
+    } catch (error) {
+      console.error('Failed to get message by id from database');
+      throw error;
+    }
   }
-
+  
   @ValidateAndLog
   async deleteMessagesByChatIdAfterTimestamp({
     chatId,
@@ -257,21 +320,37 @@ export class DbActions {
     chatId: string;
     timestamp: Date;
   }) {
-    const messages = await db
-      .select({ id: message.id })
-      .from(message)
-      .where(and(eq(message.chatId, chatId), gte(message.createdAt, timestamp)));
-    const messageIds = messages.map((m) => m.id);
-    if (messageIds.length > 0) {
-      await db
-        .delete(vote)
-        .where(and(eq(vote.chatId, chatId), inArray(vote.messageId, messageIds)));
-      return db
-        .delete(message)
-        .where(and(eq(message.chatId, chatId), inArray(message.id, messageIds)));
+    try {
+      const messagesToDelete = await db
+        .select({ id: message.id })
+        .from(message)
+        .where(
+          and(eq(message.chatId, chatId), gte(message.createdAt, timestamp)),
+        );
+  
+      const messageIds = messagesToDelete.map((message) => message.id);
+  
+      if (messageIds.length > 0) {
+        await db
+          .delete(vote)
+          .where(
+            and(eq(vote.chatId, chatId), inArray(vote.messageId, messageIds)),
+          );
+  
+        return await db
+          .delete(message)
+          .where(
+            and(eq(message.chatId, chatId), inArray(message.id, messageIds)),
+          );
+      }
+    } catch (error) {
+      console.error(
+        'Failed to delete messages by id after timestamp from database',
+      );
+      throw error;
     }
   }
-
+  
   @ValidateAndLog
   async updateChatVisiblityById({
     chatId,
@@ -280,14 +359,20 @@ export class DbActions {
     chatId: string;
     visibility: 'private' | 'public';
   }) {
-    return db.update(chat).set({ visibility }).where(eq(chat.id, chatId));
+    try {
+      return await db.update(chat).set({ visibility }).where(eq(chat.id, chatId));
+    } catch (error) {
+      console.error('Failed to update chat visibility in database');
+      throw error;
+    }
   }
+  
 }
 
 // Create a single instance to export
 export const actions = new DbActions();
 
-// Export individual methods for convenience
+// individual methods for convenience
 export const {
   getUser,
   createUser,
