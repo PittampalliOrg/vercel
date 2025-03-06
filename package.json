@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "typia:generate": "typia generate --input ./lib/typia --output ./lib/generated",
     "dev": "next dev --turbo",
     "build": "next build -d",
     "start": "next start",
@@ -17,8 +18,7 @@
     "db:pull": "drizzle-kit pull",
     "db:check": "drizzle-kit check",
     "db:up": "drizzle-kit up",
-    "db:gen-types": "supabase gen types typescript --db-url postgres://postgres:postgres@db:5432/postgres > database.types.ts",
-    "prepare": "ts-patch install"
+    "db:gen-types": "supabase gen types typescript --db-url postgres://postgres:postgres@db:5432/postgres > database.types.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^1.1.13",
@@ -72,6 +72,7 @@
     "@opentelemetry/instrumentation-xml-http-request": "^0.57.1",
     "@opentelemetry/opentelemetry-browser-detector": "^0.57.1",
     "@opentelemetry/otlp-exporter-base": "^0.57.2",
+    "@opentelemetry/plugin-react-load": "^0.31.1",
     "@opentelemetry/resource-detector-alibaba-cloud": "0.30.0",
     "@opentelemetry/resource-detector-aws": "1.11.0",
     "@opentelemetry/resource-detector-container": "0.6.0",
@@ -143,7 +144,9 @@
     "remark-gfm": "^4.0.0",
     "server-only": "^0.0.1",
     "sonner": "^1.7.4",
+    "source-map-js": "^1.2.1",
     "source-map-support": "^0.5.21",
+    "stack-trace": "1.0.0-pre2",
     "swr": "^2.2.5",
     "tailwind-merge": "^2.5.2",
     "tailwindcss-animate": "^1.0.7",

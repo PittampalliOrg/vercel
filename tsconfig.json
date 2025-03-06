@@ -24,9 +24,6 @@
     "plugins": [
       {
         "name": "next"
-      },
-      {
-        "transform": "typia/lib/transform"
       }
     ],
     "paths": {

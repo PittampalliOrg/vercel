@@ -5,33 +5,32 @@
       "name": "Next.js: debug server-side",
       "type": "node-terminal",
       "request": "launch",
-      "command": "npm run dev"
+      "command": "pnpm run start"
     },
     {
       "name": "Next.js: debug client-side",
       "type": "msedge",
       "request": "launch",
-      "url": "http://localhost:8080/frontend/",
+      "url": "http://localhost:8080"
     },
     {
       "name": "Next.js: debug full stack",
       "type": "node",
       "request": "launch",
-      "runtimeExecutable": "${workspaceFolder}/node_modules/next/dist/bin/next",
-      "runtimeArgs": [
-        "${workspaceFolder}",
-        "start",
-        "--turbopack",
-        "NODE_OPTIONS='--inspect'",
-        "NEXT_OTEL_VERBOSE=1"
-      ],
+      "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/next",
+      // "runtimeArgs": [
+      //   // "${workspaceFolder}",
+      //   // "start",
+      //   // "--turbopack",
+      //   // "NODE_OPTIONS='--inspect'",
+      //   // "NEXT_OTEL_VERBOSE=1"
+      // ],
       "skipFiles": ["<node_internals>/**", "**/node_modules/**", "**/server/**"],
       "serverReadyAction": {
         "action": "debugWithEdge",
         "killOnServerStop": true,
-        // Use a pattern that always matches and then set the URI to your fixed URL
-        "pattern": ".+",
-        "uriFormat": "http://localhost:8080/frontend/",
+        "pattern": "- Local:.+(https?://.+)",
+        "uriFormat": "%s",
         "webRoot": "${workspaceFolder}"
       },
       "showAsyncStacks": true
