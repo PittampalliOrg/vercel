@@ -22,11 +22,11 @@ import { Resource } from '@opentelemetry/resources';
 import { v4 as uuidv4 } from 'uuid';
 
 // Import our new Owner Stack patch
-import { initGlobalOwnerStackLogging } from './instrumentation-utils';
+// import { initGlobalOwnerStackLogging } from './instrumentation-utils';
 
 export function register() {
   // 1) Initialize the global patch for console.error => captureOwnerStack
-  initGlobalOwnerStackLogging();
+  // initGlobalOwnerStackLogging();
 
   // 2) Setup resource and providers
   const resource = new Resource({

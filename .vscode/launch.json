@@ -18,13 +18,13 @@
       "type": "node",
       "request": "launch",
       "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/next",
-      // "runtimeArgs": [
-      //   // "${workspaceFolder}",
-      //   // "start",
-      //   // "--turbopack",
-      //   // "NODE_OPTIONS='--inspect'",
-      //   // "NEXT_OTEL_VERBOSE=1"
-      // ],
+      "runtimeArgs": [
+        "${workspaceFolder}",
+        "dev",
+        "--turbopack",
+        "NODE_OPTIONS='--inspect'",
+        "NEXT_OTEL_VERBOSE=1"
+      ],
       "skipFiles": ["<node_internals>/**", "**/node_modules/**", "**/server/**"],
       "serverReadyAction": {
         "action": "debugWithEdge",

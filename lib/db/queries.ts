@@ -19,7 +19,7 @@ import {
 } from './schema';
 
 import { ArtifactKind } from '@/components/artifact';
-import { ValidateAndLog } from '@/lib/generated/schema-validators';
+import { ValidateAndLog } from '@/lib/generated/schema-validators-DbActions';
 
 const client = postgres(process.env.POSTGRES_URL!);
 const db = drizzle(client);

@@ -229,3 +229,15 @@ export function getDocumentTimestampByIndex(
 
   return documents[index].createdAt;
 }
+
+export function formatDuration(duration: number): string {
+  if (duration < 1000) {
+    return `${duration}ms`
+  } else if (duration < 60000) {
+    return `${(duration / 1000).toFixed(2)}s`
+  } else {
+    const minutes = Math.floor(duration / 60000)
+    const seconds = ((duration % 60000) / 1000).toFixed(2)
+    return `${minutes}m ${seconds}s`
+  }
+}

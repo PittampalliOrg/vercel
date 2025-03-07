@@ -48,57 +48,61 @@ function isProblematicParameterType(method: MethodDeclaration): boolean {
 }
 
 //
-// 2) Initialize ts-morph, parse queries.ts, find DbActions, gather methods
+// 2) Generate one “schema-validators-<ClassName>.ts” output for a single file.
 //
-const project = new Project({
-  tsConfigFilePath: './tsconfig.json',
-});
-const sourceFile = project.addSourceFileAtPath('./lib/db/queries.ts');
-const dbActionsClass = sourceFile.getClass('DbActions');
-if (!dbActionsClass) {
-  throw new Error('DbActions class not found in ./lib/db/queries.ts');
-}
+function generateSchemaValidatorsForFile(tsFilePath: string, outDir: string, project: Project) {
+  // Parse the file
+  const sourceFile = project.addSourceFileAtPath(tsFilePath);
 
-//
-// 3) Build a method list, plus param & return schema code snippet for each
-//
-const methodNames: string[] = [];
-const paramSchemasByMethod: Record<string, string> = {};
-const returnSchemasByMethod: Record<string, string> = {};
-
-for (const method of dbActionsClass.getMethods()) {
-  const methodName = method.getName();
-  if (methodName === 'constructor') continue;
-
-  methodNames.push(methodName);
-
-  // For param schemas
-  const paramBad = isProblematicParameterType(method);
-  if (paramBad) {
-    paramSchemasByMethod[methodName] = `undefined /* Problematic param */`;
-  } else {
-    // e.g. type Params_getUser = Parameters<DbActions["getUser"]>;
-    //      => typia.json.schemas<[Params_getUser], "3.1">()
-    paramSchemasByMethod[methodName] =
-      `typia.json.schemas<[Params_${methodName}], "3.1">()`;
+  // Find exactly one class in this file
+  const allClasses = sourceFile.getClasses();
+  if (allClasses.length === 0) {
+    throw new Error(`No classes found in file: ${tsFilePath}`);
+  }
+  if (allClasses.length > 1) {
+    throw new Error(`Multiple classes found in file: ${tsFilePath}. This script assumes exactly one class per file.`);
   }
 
-  // For return schemas
-  const returnBad = isProblematicReturnType(method);
-  if (returnBad) {
-    returnSchemasByMethod[methodName] = `undefined /* Problematic return */`;
-  } else {
-    // e.g. type Return_getUser = Awaited<ReturnType<DbActions["getUser"]>>;
-    //      => typia.json.schemas<[Return_getUser], "3.1">()
-    returnSchemasByMethod[methodName] =
-      `typia.json.schemas<[Return_${methodName}], "3.1">()`;
+  const targetClass = allClasses[0];
+  const className = targetClass.getName();
+  if (!className) {
+    throw new Error(`Unnamed class found in file: ${tsFilePath}`);
   }
-}
 
-//
-// 4) The ValidateAndLog snippet we want to inject into the final file.
-//
-const validateAndLogSnippet = `\
+  // Collect all method info
+  const methodNames: string[] = [];
+  const paramSchemasByMethod: Record<string, string> = {};
+  const returnSchemasByMethod: Record<string, string> = {};
+
+  for (const method of targetClass.getMethods()) {
+    const methodName = method.getName();
+    if (methodName === 'constructor') continue;
+
+    methodNames.push(methodName);
+
+    // Evaluate param schemas
+    const paramBad = isProblematicParameterType(method);
+    if (paramBad) {
+      paramSchemasByMethod[methodName] = `undefined /* Problematic param */`;
+    } else {
+      // e.g. => typia.json.schemas<[Params_${methodName}], "3.1">()
+      paramSchemasByMethod[methodName] =
+        `typia.json.schemas<[Params_${methodName}], "3.1">()`;
+    }
+
+    // Evaluate return schemas
+    const returnBad = isProblematicReturnType(method);
+    if (returnBad) {
+      returnSchemasByMethod[methodName] = `undefined /* Problematic return */`;
+    } else {
+      // e.g. => typia.json.schemas<[Return_${methodName}], "3.1">()
+      returnSchemasByMethod[methodName] =
+        `typia.json.schemas<[Return_${methodName}], "3.1">()`;
+    }
+  }
+
+  // Build the “ValidateAndLog” snippet
+  const validateAndLogSnippet = `\
 import { trace, context, SpanStatusCode } from '@opentelemetry/api';
 
 const tracer = trace.getTracer('db-actions');
@@ -115,7 +119,7 @@ export function ValidateAndLog(target: any, methodName: string, descriptor: Prop
   descriptor.value = async function (...args: any[]) {
     // Possibly continue an existing trace context
     const activeCtx = context.active();
-    const span = tracer.startSpan(\`DbActions.\${methodName}\`, undefined, activeCtx);
+    const span = tracer.startSpan(\`${className}.\${methodName}\`, undefined, activeCtx);
 
     // Retrieve paramSchema & returnSchema from imported schemas
     const { paramSchema, returnSchema } = schemas[methodName as keyof typeof schemas] || {};
@@ -164,54 +168,64 @@ export function ValidateAndLog(target: any, methodName: string, descriptor: Prop
 }
 `;
 
-//
-// 5) Build the type aliases and the methodReturnTypeMap / methodParamTypeMap code
-//
-let fileHeader = `import 'server-only';
+  //
+  // Build up the final code string
+  //
+
+  // 2a) Compute the relative import path for the original file
+  //     (Strip ".ts" from the end, handle Windows backslashes, etc.)
+  const outFile = path.resolve(outDir, `schema-validators-${className}.ts`);
+  const relativeImportPath = path
+    .relative(path.dirname(outFile), tsFilePath)
+    .replace(/\\/g, '/')  // handle Windows backslash
+    .replace(/\.ts$/, '');
+
+  // 2b) File header with “server-only”, typia, and dynamic import
+  let fileHeader = `import 'server-only';
 import typia from 'typia';
-import type { DbActions } from '../db/queries'; // type-only import
+import type { ${className} } from '${relativeImportPath}'; // type-only import
 `;
 
-// Type aliases for each method
-for (const m of methodNames) {
-  fileHeader += `\ntype Params_${m} = Parameters<DbActions["${m}"]>;`;
-  fileHeader += `\ntype Return_${m} = Awaited<ReturnType<DbActions["${m}"]>>;`;
-}
+  // 2c) Add type aliases for each method
+  for (const m of methodNames) {
+    fileHeader += `\ntype Params_${m} = Parameters<${className}["${m}"]>;`;
+    fileHeader += `\ntype Return_${m} = Awaited<ReturnType<${className}["${m}"]>>;`;
+  }
 
-function makeMapCode(
-  methods: string[],
-  snippetMap: Record<string, string>,
-  varName: string
-) {
-  return `
+  // 2d) Helper function to build method-Map code
+  function makeMapCode(
+    methods: string[],
+    snippetMap: Record<string, string>,
+    varName: string
+  ) {
+    return `
 const ${varName} = {
 ${methods.map((m) => `  '${m}': ${snippetMap[m]},`).join('\n')}
 } as const;`;
-}
+  }
 
-const methodReturnTypeMapCode = makeMapCode(methodNames, returnSchemasByMethod, 'methodReturnTypeMap');
-const methodParamTypeMapCode = makeMapCode(methodNames, paramSchemasByMethod, 'methodParamTypeMap');
+  const methodReturnTypeMapCode = makeMapCode(methodNames, returnSchemasByMethod, 'methodReturnTypeMap');
+  const methodParamTypeMapCode = makeMapCode(methodNames, paramSchemasByMethod, 'methodParamTypeMap');
 
-// The merged "schemas" object
-let schemasObjectCode = `export const schemas = {\n`;
-for (const m of methodNames) {
-  schemasObjectCode += `  ${m}: {
+  // 2e) The combined schemas object
+  let schemasObjectCode = `export const schemas = {\n`;
+  for (const m of methodNames) {
+    schemasObjectCode += `  ${m}: {
     paramSchema: methodParamTypeMap['${m}'],
     returnSchema: methodReturnTypeMap['${m}']
   },\n`;
-}
-schemasObjectCode += `} as const;`;
+  }
+  schemasObjectCode += `} as const;`;
 
-const finalExports = `
+  // 2f) Additional exports
+  const finalExports = `
 export const paramSchemas = Object.entries(methodParamTypeMap).map(([key, schema]) => ({ key, schema }));
 export const returnSchemas = Object.entries(methodReturnTypeMap).map(([key, schema]) => ({ key, schema }));
 export const validatorsByName = Object.keys(methodParamTypeMap);
 `;
 
-//
-// 6) Combine everything into final code
-//
-const finalCode = `\
+  // 2g) Combine everything
+  const finalCode = `\
 ${fileHeader}
 
 // ---------------- ValidateAndLog snippet ----------------
@@ -228,9 +242,33 @@ ${schemasObjectCode}
 ${finalExports}
 `;
 
+  // 2h) Write the file
+  fs.writeFileSync(outFile, finalCode, 'utf8');
+  console.log(`Generated schema-validators-${className}.ts successfully!`);
+}
+
 //
-// 7) Write out schema-validators.ts
+// 3) Example driver: generate for multiple input files
 //
-const outFile = path.resolve('./lib/typia/schema-validators.ts');
-fs.writeFileSync(outFile, finalCode, 'utf8');
-console.log('Generated schema-validators.ts successfully!');
+function main() {
+  // Initialize ts-morph with your tsconfig
+  const project = new Project({
+    tsConfigFilePath: './tsconfig.json',
+  });
+
+  // Suppose you want to generate for these files:
+  const inputFiles = [
+    './lib/db/queries.ts',        // single class: “DbActions”
+    './lib/api.ts',      // single class: “OtherDbClass”
+    // etc...
+  ];
+
+  // All outputs go in ./lib/typia
+  const outDir = './lib/typia';
+
+  for (const filePath of inputFiles) {
+    generateSchemaValidatorsForFile(filePath, outDir, project);
+  }
+}
+
+main();
