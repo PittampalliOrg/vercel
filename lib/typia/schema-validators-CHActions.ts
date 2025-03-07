@@ -1,13 +1,13 @@
 import 'server-only';
 import typia from 'typia';
-import type { CHActions } from '../api'; // type-only import
+import type { CHActions } from '../clickhouse'; // type-only import
 
-type Params_getTraces = Parameters<CHActions["getTraces"]>;
-type Return_getTraces = Awaited<ReturnType<CHActions["getTraces"]>>;
-type Params_getTraceDetail = Parameters<CHActions["getTraceDetail"]>;
-type Return_getTraceDetail = Awaited<ReturnType<CHActions["getTraceDetail"]>>;
-type Params_getFilterOptions = Parameters<CHActions["getFilterOptions"]>;
-type Return_getFilterOptions = Awaited<ReturnType<CHActions["getFilterOptions"]>>;
+type Params_fetchTraces = Parameters<CHActions["fetchTraces"]>;
+type Return_fetchTraces = Awaited<ReturnType<CHActions["fetchTraces"]>>;
+type Params_fetchTraceDetail = Parameters<CHActions["fetchTraceDetail"]>;
+type Return_fetchTraceDetail = Awaited<ReturnType<CHActions["fetchTraceDetail"]>>;
+type Params_fetchFilterOptions = Parameters<CHActions["fetchFilterOptions"]>;
+type Return_fetchFilterOptions = Awaited<ReturnType<CHActions["fetchFilterOptions"]>>;
 
 // ---------------- ValidateAndLog snippet ----------------
 import { trace, context, SpanStatusCode } from '@opentelemetry/api';
@@ -78,30 +78,30 @@ export function ValidateAndLog(target: any, methodName: string, descriptor: Prop
 // ---------------- Method Return / Param Maps -------------
 
 const methodReturnTypeMap = {
-  'getTraces': typia.json.schemas<[Return_getTraces], "3.1">(),
-  'getTraceDetail': typia.json.schemas<[Return_getTraceDetail], "3.1">(),
-  'getFilterOptions': typia.json.schemas<[Return_getFilterOptions], "3.1">(),
+  'fetchTraces': typia.json.schemas<[Return_fetchTraces], "3.1">(),
+  'fetchTraceDetail': typia.json.schemas<[Return_fetchTraceDetail], "3.1">(),
+  'fetchFilterOptions': typia.json.schemas<[Return_fetchFilterOptions], "3.1">(),
 } as const;
 
 const methodParamTypeMap = {
-  'getTraces': typia.json.schemas<[Params_getTraces], "3.1">(),
-  'getTraceDetail': typia.json.schemas<[Params_getTraceDetail], "3.1">(),
-  'getFilterOptions': typia.json.schemas<[Params_getFilterOptions], "3.1">(),
+  'fetchTraces': typia.json.schemas<[Params_fetchTraces], "3.1">(),
+  'fetchTraceDetail': typia.json.schemas<[Params_fetchTraceDetail], "3.1">(),
+  'fetchFilterOptions': typia.json.schemas<[Params_fetchFilterOptions], "3.1">(),
 } as const;
 
 // ---------------- schemas object merging both maps -------------
 export const schemas = {
-  getTraces: {
-    paramSchema: methodParamTypeMap['getTraces'],
-    returnSchema: methodReturnTypeMap['getTraces']
+  fetchTraces: {
+    paramSchema: methodParamTypeMap['fetchTraces'],
+    returnSchema: methodReturnTypeMap['fetchTraces']
   },
-  getTraceDetail: {
-    paramSchema: methodParamTypeMap['getTraceDetail'],
-    returnSchema: methodReturnTypeMap['getTraceDetail']
+  fetchTraceDetail: {
+    paramSchema: methodParamTypeMap['fetchTraceDetail'],
+    returnSchema: methodReturnTypeMap['fetchTraceDetail']
   },
-  getFilterOptions: {
-    paramSchema: methodParamTypeMap['getFilterOptions'],
-    returnSchema: methodReturnTypeMap['getFilterOptions']
+  fetchFilterOptions: {
+    paramSchema: methodParamTypeMap['fetchFilterOptions'],
+    returnSchema: methodReturnTypeMap['fetchFilterOptions']
   },
 } as const;
 

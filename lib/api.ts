@@ -1,6 +1,4 @@
-// Remove the direct ClickHouse client code and replace with fetch calls to our API routes
-
-import { ValidateAndLog } from "./generated/schema-validators-CHActions"
+// Client-side API functions that call our API routes
 
 interface GetTracesOptions {
   page: number
@@ -9,9 +7,7 @@ interface GetTracesOptions {
   filters?: Record<string, string>
 }
 
-export class CHActions {
-  @ValidateAndLog
-  async getTraces({ page, pageSize, sort, filters = {} }: GetTracesOptions) {
+export async function getTraces({ page, pageSize, sort, filters = {} }: GetTracesOptions) {
   try {
     // Build the query string
     const params = new URLSearchParams({
@@ -53,7 +49,7 @@ export class CHActions {
   }
 }
 
-  async getTraceDetail(traceId: string) {
+export async function getTraceDetail(traceId: string) {
   try {
     // Add a cache-busting parameter
     const params = new URLSearchParams({
@@ -80,8 +76,7 @@ export class CHActions {
   }
 }
 
-// Add the getFilterOptions function that was missing
-  async getFilterOptions(column: string): Promise<string[]> {
+export async function getFilterOptions(column: string): Promise<string[]> {
   try {
     // Add a cache-busting parameter
     const params = new URLSearchParams({
@@ -108,14 +103,4 @@ export class CHActions {
     return []
   }
 }
-}
 
-// Create a single instance to export
-export const actions = new CHActions();
-
-// individual methods for convenience
-export const {
-  getTraces,
-  getTraceDetail,
-  getFilterOptions,
-} = actions;

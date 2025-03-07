@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@clickhouse/client"
+import { fetchTraces } from "@/lib/clickhouse"
 
 // Define interfaces for the data types
 interface TraceSpan {
@@ -29,9 +30,15 @@ let clientInstance: ReturnType<typeof createClient> | null = null
 
 function getClient() {
   if (!clientInstance) {
-    clientInstance = createClient({
-      host: process.env.CLICKHOUSE_CLOUD_ENDPOINT!,
-      password: process.env.CLICKHOUSE_CLOUD_PASSWORD!,
+    // Check if environment variables are set
+    if (!process.env.CLICKHOUSE_LOCAL_ENDPOINT || !process.env.CLICKHOUSE_LOCAL_PASSWORD) {
+      throw new Error("ClickHouse environment variables are not set")
+    }
+
+    const client = createClient({
+      url: process.env.CLICKHOUSE_LOCAL_ENDPOINT,
+      username: process.env.CLICKHOUSE_LOCAL_USERNAME,
+      password: process.env.CLICKHOUSE_LOCAL_PASSWORD,
       request_timeout: 30000,
     })
   }
@@ -42,159 +49,61 @@ export async function GET(request: NextRequest) {
   // Get query parameters
   const searchParams = request.nextUrl.searchParams
   const page = Number(searchParams.get("page") || "1")
-  const pageSize = Number(searchParams.get("pageSize") || "10")
+  let pageSize = Number(searchParams.get("pageSize") || "10")
+
+  // Ensure pageSize doesn't exceed a reasonable limit
+  if (pageSize > 100) {
+    pageSize = 100
+  }
   const sort = searchParams.get("sort") || ""
 
   // Extract filters
   const filters: Record<string, string> = {}
   for (const [key, value] of searchParams.entries()) {
-    if (!["page", "pageSize", "sort"].includes(key)) {
+    if (!["page", "pageSize", "sort", "_t"].includes(key)) {
       filters[key] = value
     }
   }
 
   try {
-    const client = getClient()
-
-    // Build the SQL query for ClickHouse
-    let query = `
-      SELECT 
-        Timestamp,
-        TraceId,
-        SpanId,
-        ParentSpanId,
-        SpanName,
-        SpanKind,
-        ServiceName,
-        Duration,
-        StatusCode,
-        StatusMessage
-      FROM default.traces
-      WHERE 1=1
-    `
-
-    const queryParams: Record<string, any> = {}
-
-    // Add timestamp filters
-    if (filters.startDate) {
-      query += ` AND Timestamp >= {startDate:DateTime64(9)}`
-      queryParams.startDate = filters.startDate
+    // For debugging - return mock data if ClickHouse is not configured
+    if (!process.env.CLICKHOUSE_LOCAL_ENDPOINT || !process.env.CLICKHOUSE_LOCAL_PASSWORD) {
+      console.log("Using mock data because ClickHouse is not configured")
+      return NextResponse.json(
+        {
+          data: Array(10)
+            .fill(0)
+            .map((_, i) => ({
+              Timestamp: new Date().toISOString(),
+              TraceId: `trace-${i}`,
+              SpanId: `span-${i}`,
+              SpanName: `Span ${i}`,
+              SpanKind: "SERVER",
+              ServiceName: `service-${i % 3}`,
+              Duration: Math.floor(Math.random() * 1000),
+              StatusCode: i % 5 === 0 ? "ERROR" : "OK",
+              StatusMessage: "",
+            })),
+          count: 100,
+        },
+        {
+          headers: {
+            "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+            Pragma: "no-cache",
+            Expires: "0",
+          },
+        },
+      )
     }
 
-    if (filters.endDate) {
-      query += ` AND Timestamp <= {endDate:DateTime64(9)}`
-      queryParams.endDate = filters.endDate
-    }
-
-    // Add duration filters
-    if (filters.minDuration) {
-      query += ` AND Duration >= {minDuration:UInt64}`
-      queryParams.minDuration = Number.parseInt(filters.minDuration)
-    }
-
-    if (filters.maxDuration) {
-      query += ` AND Duration <= {maxDuration:UInt64}`
-      queryParams.maxDuration = Number.parseInt(filters.maxDuration)
-    }
-
-    // Add service name filter
-    if (filters.ServiceName) {
-      query += ` AND ServiceName = {serviceName:String}`
-      queryParams.serviceName = filters.ServiceName
-    }
-
-    // Add status code filter
-    if (filters.StatusCode) {
-      query += ` AND StatusCode = {statusCode:String}`
-      queryParams.statusCode = filters.StatusCode
-    }
-
-    // Add search filter
-    if (filters.search) {
-      query += ` AND (
-        SpanName ILIKE {searchTerm:String} OR 
-        ServiceName ILIKE {searchTerm:String} OR 
-        TraceId ILIKE {searchTerm:String}
-      )`
-      queryParams.searchTerm = `%${filters.search}%`
-    }
-
-    // Add sorting
-    if (sort) {
-      const [column, direction] = sort.split(":")
-      query += ` ORDER BY ${column} ${direction === "desc" ? "DESC" : "ASC"}`
-    } else {
-      query += ` ORDER BY Timestamp DESC`
-    }
-
-    // Add pagination
-    query += ` LIMIT ${pageSize} OFFSET ${(page - 1) * pageSize}`
-
-    // Count query for pagination
-    const countQuery = `
-      SELECT count() as total
-      FROM default.traces
-      WHERE 1=1
-    `
-
-    // Add the same filters to the count query
-    let fullCountQuery = countQuery
-    if (filters.startDate) {
-      fullCountQuery += ` AND Timestamp >= {startDate:DateTime64(9)}`
-    }
-
-    if (filters.endDate) {
-      fullCountQuery += ` AND Timestamp <= {endDate:DateTime64(9)}`
-    }
-
-    if (filters.minDuration) {
-      fullCountQuery += ` AND Duration >= {minDuration:UInt64}`
-    }
-
-    if (filters.maxDuration) {
-      fullCountQuery += ` AND Duration <= {maxDuration:UInt64}`
-    }
-
-    if (filters.ServiceName) {
-      fullCountQuery += ` AND ServiceName = {serviceName:String}`
-    }
-
-    if (filters.StatusCode) {
-      fullCountQuery += ` AND StatusCode = {statusCode:String}`
-    }
-
-    if (filters.search) {
-      fullCountQuery += ` AND (
-        SpanName ILIKE {searchTerm:String} OR 
-        ServiceName ILIKE {searchTerm:String} OR 
-        TraceId ILIKE {searchTerm:String}
-      )`
-    }
-
-    // Execute the main query
-    const result = await client.query({
-      query,
-      query_params: queryParams,
-      format: "JSONEachRow",
-    })
-
-    const traces = await result.json<TraceSpan>()
-
-    // Execute the count query
-    const countResult = await client.query({
-      query: fullCountQuery,
-      query_params: queryParams,
-      format: "JSONEachRow",
-    })
-
-    const countData = await countResult.json<CountResult>()
-    const totalCount = countData.length > 0 ? countData[0].total : 0
+    // Use the imported fetchTraces function from the class
+    const { data, count } = await fetchTraces({ page, pageSize, sort, filters })
 
     // Return the results
     return NextResponse.json(
       {
-        data: traces,
-        count: totalCount,
+        data,
+        count,
       },
       {
         headers: {
@@ -206,7 +115,15 @@ export async function GET(request: NextRequest) {
     )
   } catch (error) {
     console.error("Error querying ClickHouse:", error)
-    return NextResponse.json({ error: "Failed to fetch traces from ClickHouse" }, { status: 500 })
+
+    // Return a more detailed error message
+    return NextResponse.json(
+      {
+        error: "Failed to fetch traces from ClickHouse",
+        details: error instanceof Error ? error.message : String(error),
+      },
+      { status: 500 },
+    )
   }
 }
 

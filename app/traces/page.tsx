@@ -22,3 +22,6 @@ export default function TracesPage() {
   )
 }
 
+// Tell Next.js this is a dynamic route that should not be prerendered
+export const dynamic = "force-dynamic"
+

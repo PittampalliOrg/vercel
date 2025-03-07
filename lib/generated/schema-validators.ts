@@ -239,6 +239,9 @@ const methodReturnTypeMap = {
                 items: {
                     type: "object",
                     properties: {
+                        role: {
+                            type: "string"
+                        },
                         id: {
                             type: "string"
                         },
@@ -249,16 +252,13 @@ const methodReturnTypeMap = {
                         chatId: {
                             type: "string"
                         },
-                        role: {
-                            type: "string"
-                        },
                         content: {}
                     },
                     required: [
+                        "role",
                         "id",
                         "createdAt",
                         "chatId",
-                        "role",
                         "content"
                     ]
                 }
@@ -496,6 +496,9 @@ const methodReturnTypeMap = {
                 items: {
                     type: "object",
                     properties: {
+                        role: {
+                            type: "string"
+                        },
                         id: {
                             type: "string"
                         },
@@ -506,16 +509,13 @@ const methodReturnTypeMap = {
                         chatId: {
                             type: "string"
                         },
-                        role: {
-                            type: "string"
-                        },
                         content: {}
                     },
                     required: [
+                        "role",
                         "id",
                         "createdAt",
                         "chatId",
-                        "role",
                         "content"
                     ]
                 }
@@ -688,6 +688,9 @@ const methodParamTypeMap = {
                                 items: {
                                     type: "object",
                                     properties: {
+                                        role: {
+                                            type: "string"
+                                        },
                                         id: {
                                             type: "string"
                                         },
@@ -698,16 +701,13 @@ const methodParamTypeMap = {
                                         chatId: {
                                             type: "string"
                                         },
-                                        role: {
-                                            type: "string"
-                                        },
                                         content: {}
                                     },
                                     required: [
+                                        "role",
                                         "id",
                                         "createdAt",
                                         "chatId",
-                                        "role",
                                         "content"
                                     ]
                                 }

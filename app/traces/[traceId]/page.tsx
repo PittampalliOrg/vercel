@@ -5,15 +5,12 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft } from "lucide-react"
 
-interface TraceDetailPageProps {
-  params: Promise<{
-    traceId: string
-  }>
-}
-
-export default async function TraceDetailPage({ params }: TraceDetailPageProps) {
-  // Await the params Promise to get the actual values
-  const { traceId } = await params
+export default async function TraceDetailPage({
+  params,
+}: {
+  params: Promise<{ traceId: string }>
+}) {
+  const traceId = (await params).traceId
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -38,4 +35,7 @@ export default async function TraceDetailPage({ params }: TraceDetailPageProps) 
     </div>
   )
 }
+
+// Tell Next.js this is a dynamic route that should not be prerendered
+export const dynamic = "force-dynamic"
 

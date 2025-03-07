@@ -11,7 +11,7 @@ receivers:
             - https://*
   httpcheck/frontend:
     targets:
-      - endpoint: http://frontend:3000
+      - endpoint: http://frontend-proxy:${env:ENVOY_PORT}
   docker_stats:
     endpoint: unix:///var/run/docker.sock
   filelog:
@@ -165,27 +165,13 @@ exporters:
     endpoint: "https://s1202625.eu-nbg-2.betterstackdata.com"
     headers:
       Authorization: "Bearer zYyRMpCtN1ipLRpJQQKDeW16"
-  azuredataexplorer:
-    cluster_uri: "https://azdexplorer.northcentralus.kusto.windows.net"
-    application_id: "11d953d9-3ed7-4f8c-92d0-a6c311dba3f1"
-    application_key: "${env:AZURE_STORAGE_EXPLORER_KEY}"
-    tenant_id: "0c4da9c5-40ea-4e7d-9c7a-e7308d4f8e38"
-    db_name: "db"
-    metrics_table_name: "metrics"
-    logs_table_name: "logs"
-    traces_table_name: "traces"
-    ingestion_type : "managed"
-  kafka:
-    brokers:
-      - localhost:9092
-    protocol_version: 2.0.0
   file/no_rotation:
     path: ./logs/logs.json
   clickhouse:
-    endpoint: ${env:CLICKHOUSE_LOCAL_ENDPOINT}
+    endpoint: tcp://clickhouse:9000
     # ttl: 72h
-    traces_table_name: traces
-    logs_table_name: logs
+    traces_table_name: otel_traces
+    logs_table_name: otel_logs
     create_schema: true
     timeout: 5s
     database: default
@@ -196,8 +182,8 @@ exporters:
       initial_interval: 5s
       max_interval: 30s
       max_elapsed_time: 300s
-    username: "default"
-    password: ${env:CLICKHOUSE_LOCAL_PASSWORD}
+    username: "username"
+    password: "password"
   # azureblobexporter:
   #   url: "https://otelstorage2312.blob.core.windows.net/"
   #   container:
@@ -216,7 +202,7 @@ processors:
         statements:
           - set(attributes["test"], instrumentation_scope.name)
   batch:
-    send_batch_size: 100000
+    send_batch_size: 5000
     timeout: 5s
   memory_limiter:
     check_interval: 2s
@@ -231,19 +217,6 @@ processors:
       - key: service.name
         value: "serviceName"
         action: upsert
-extensions:
-  jaeger_storage:
-    backends:
-      some_trace_storage:
-    metric_backends:
-      some_metrics_storage:
-        prometheus:
-          endpoint: http://prometheus:9090
-  jaeger_query:
-    traces: some_trace_storage
-    metrics_storage: some_metrics_storage
-
-
 
 connectors:
   spanmetrics:
@@ -255,12 +228,12 @@ service:
     traces:
       receivers: [otlp]
       processors: [ batch ]
-      exporters: [otlp/jaeger, debug, spanmetrics, clickhouse]
-    metrics:
-      receivers: [hostmetrics, docker_stats, httpcheck/frontend, otlp, prometheus, spanmetrics]
-      processors: [batch]
-      exporters: [prometheus, clickhouse]
-    logs:
-      receivers: [otlp]
-      processors: [ memory_limiter, resourcedetection/system, resource, batch ]
-      exporters: [clickhouse]
+      exporters: [otlp/jaeger, clickhouse, debug]
+    # metrics:
+    #   receivers: [otlp, spanmetrics]
+    #   processors: [batch]
+    #   exporters: [clickhouse]
+    # logs:
+    #   receivers: [otlp]
+    #   processors: [ memory_limiter, resourcedetection/system, resource, batch ]
+    #   exporters: [clickhouse]

@@ -1,13 +1,11 @@
-// For format details, see https://aka.ms/devcontainer.json. For config options, see the
-// README at: https://github.com/devcontainers/templates/tree/main/src/docker-existing-docker-compose
 {
 	"name": "api",
 	"dockerComposeFile": ["../../docker-compose.yml"],
 	"service": "api",
 	"workspaceFolder": "/workspace",
-	"runServices": ["api", "api_dapr", "db", "dab", "dab_dapr", "otel-collector", "jaeger", "prometheus", "zipkin", "mongo"],
-	"shutdownAction": "none",
-	 "forwardPorts": [8080],
+	// "runServices": ["frontend", "frontend_dapr"],
+	// "shutdownAction": "none",
+	// "forwardPorts": [3000, 3002, 16686],
 	"remoteEnv": {
 		"LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}"
 	},
@@ -37,7 +35,8 @@
 			"mtxr.sqltools-driver-pg",
 			"ms-azuretools.vscode-azure-github-copilot",
 			"mikeedjones.copy-file-to-chat",
-			"ms-python.python"
+			"ms-python.python",
+			"ultram4rine.sqltools-clickhouse-driver"
 		],
 	     "settings": {
 	             "sqltools.connections": [
@@ -61,10 +60,10 @@
 	                             "askForPassword": true
 	                     }
 	             ]
-	//        "terminal.integrated.cwd": "/workspace/ai-chatbot"
 	     }
 	  }
-	},
+	}
+	,
 	"mounts": [
         "source=profile,target=/root,type=volume",
         "target=/root/.vscode-server,type=volume"
@@ -74,17 +73,5 @@
 		"packages": ["iputils-ping"]
 	}
 	},
-	// "features": {
-	// 	"ghcr.io/azure/azure-dev/azd:0": {"version": "latest"},
-	// 	"ghcr.io/devcontainers/features/azure-cli": {"version": "latest"},
-	// 	"ghcr.io/devcontainers-extra/features/gh-cli:1": {"version": "latest"},
-	// 	"ghcr.io/devcontainers/features/docker-in-docker:2": {"version": "latest"},
-	// 	"ghcr.io/devcontainers/features/python": {"version": "latest"},
-	// 	"ghcr.io/devcontainers/features/github-cli": {"version": "latest"},
-	// 	"ghcr.io/devcontainers/features/dotnet": {"version": "latest"}
-	//   },
-	// Ensure Dapr is running on opening the container
-	"postCreateCommand": "dapr uninstall --all && dapr init -s",
-	// Set `remoteUser` to `root` to connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
 	"remoteUser": "node"
 }

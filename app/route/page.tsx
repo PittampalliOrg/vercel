@@ -1,8 +1,10 @@
 import { createClient } from '@clickhouse/client'
 
 const client = createClient({
-  host: process.env.CLICKHOUSE_CLOUD_ENDPOINT,
-  password: process.env.CLICKHOUSE_CLOUD_PASSWORD,
+  url: process.env.CLICKHOUSE_LOCAL_ENDPOINT,
+  username: process.env.CLICKHOUSE_LOCAL_USERNAME,
+  password: process.env.CLICKHOUSE_LOCAL_PASSWORD,
+  request_timeout: 30000,
 })
 
 

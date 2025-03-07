@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@clickhouse/client"
+import { fetchTraceDetail } from "@/lib/clickhouse"
 
 // Define interfaces for the data types
 interface TraceSpan {
@@ -44,139 +45,91 @@ let clientInstance: ReturnType<typeof createClient> | null = null
 
 function getClient() {
   if (!clientInstance) {
-    clientInstance = createClient({
-      host: process.env.CLICKHOUSE_CLOUD_ENDPOINT!,
-      password: process.env.CLICKHOUSE_CLOUD_PASSWORD!,
+    // Check if environment variables are set
+    if (!process.env.CLICKHOUSE_LOCAL_ENDPOINT || !process.env.CLICKHOUSE_LOCAL_PASSWORD) {
+      throw new Error("ClickHouse environment variables are not set")
+    }
+
+    const client = createClient({
+      url: process.env.CLICKHOUSE_LOCAL_ENDPOINT,
+      username: process.env.CLICKHOUSE_LOCAL_USERNAME,
+      password: process.env.CLICKHOUSE_LOCAL_PASSWORD,
       request_timeout: 30000,
     })
   }
   return clientInstance
 }
 
-export async function GET(request: NextRequest, { params }: { params: { traceId: string } }) {
-  const traceId = params.traceId
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ traceId: string }> }
+) {
+  const traceId = (await params).traceId
 
   try {
-    const client = getClient()
+    // For debugging - return mock data if ClickHouse is not configured
+    if (!process.env.CLICKHOUSE_LOCAL_ENDPOINT || !process.env.CLICKHOUSE_LOCAL_PASSWORD) {
+      console.log("Using mock data because ClickHouse is not configured")
 
-    // Get the root span for this trace
-    const rootSpanQuery = `
-      SELECT 
-        Timestamp,
-        TraceId,
-        SpanId,
-        SpanName,
-        SpanKind,
-        ServiceName,
-        Duration,
-        StatusCode,
-        StatusMessage,
-        ResourceAttributes,
-        SpanAttributes
-      FROM default.traces
-      WHERE TraceId = {traceId:String} AND (ParentSpanId = '' OR ParentSpanId IS NULL)
-      LIMIT 1
-    `
+      const now = Date.now()
+      const mockSpans = Array(5)
+        .fill(0)
+        .map((_, i) => ({
+          spanId: `span-${i}`,
+          parentSpanId: i > 0 ? `span-${i - 1}` : undefined,
+          name: `Span ${i}`,
+          kind: "SERVER",
+          serviceName: `service-${i % 3}`,
+          startTime: i * 100,
+          duration: Math.floor(Math.random() * 1000),
+          status: i % 5 === 0 ? "ERROR" : "OK",
+          attributes: {},
+        }))
 
-    const rootSpanResult = await client.query({
-      query: rootSpanQuery,
-      query_params: { traceId },
-      format: "JSONEachRow",
-    })
-
-    const rootSpanData = await rootSpanResult.json<TraceSpan>()
-
-    if (!rootSpanData.length) {
-      return NextResponse.json({ error: `Trace with ID ${traceId} not found` }, { status: 404 })
-    }
-
-    const rootSpan = rootSpanData[0]
-
-    // Get all spans for this trace
-    const spansQuery = `
-      SELECT 
-        Timestamp,
-        TraceId,
-        SpanId,
-        ParentSpanId,
-        SpanName,
-        SpanKind,
-        ServiceName,
-        Duration,
-        StatusCode,
-        StatusMessage,
-        SpanAttributes,
-        Events.Timestamp as EventTimestamps,
-        Events.Name as EventNames,
-        Events.Attributes as EventAttributes
-      FROM default.traces
-      WHERE TraceId = {traceId:String}
-      ORDER BY Timestamp ASC
-    `
-
-    const spansResult = await client.query({
-      query: spansQuery,
-      query_params: { traceId },
-      format: "JSONEachRow",
-    })
-
-    const spansData = await spansResult.json<TraceSpan>()
-
-    // Process events from the spans
-    const events: TraceEvent[] = []
-    for (const span of spansData) {
-      if (span.EventTimestamps && span.EventNames) {
-        for (let i = 0; i < span.EventTimestamps.length; i++) {
-          events.push({
-            name: span.EventNames[i],
-            timestamp: span.EventTimestamps[i],
-            attributes: span.EventAttributes?.[i] || {},
-            spanId: span.SpanId,
-          })
-        }
-      }
-    }
-
-    // Calculate the start time (earliest timestamp)
-    const startTime = Math.min(...spansData.map((span) => new Date(span.Timestamp).getTime()))
-
-    // Process spans for timeline view
-    const spans: ProcessedSpan[] = spansData.map((span) => ({
-      spanId: span.SpanId,
-      parentSpanId: span.ParentSpanId,
-      name: span.SpanName,
-      kind: span.SpanKind,
-      serviceName: span.ServiceName,
-      startTime: new Date(span.Timestamp).getTime() - startTime, // Relative to trace start
-      duration: span.Duration,
-      status: span.StatusCode,
-      attributes: span.SpanAttributes || {},
-    }))
-
-    return NextResponse.json(
-      {
-        traceId,
-        timestamp: rootSpan.Timestamp,
-        duration: rootSpan.Duration,
-        serviceName: rootSpan.ServiceName,
-        status: rootSpan.StatusCode,
-        resourceAttributes: rootSpan.ResourceAttributes || {},
-        spanAttributes: rootSpan.SpanAttributes || {},
-        events,
-        spans,
-        startTime,
-      },
-      {
-        headers: {
-          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
-          Pragma: "no-cache",
-          Expires: "0",
+      return NextResponse.json(
+        {
+          traceId,
+          timestamp: new Date().toISOString(),
+          duration: 1500,
+          serviceName: "mock-service",
+          status: "OK",
+          resourceAttributes: {},
+          spanAttributes: {},
+          events: [],
+          spans: mockSpans,
+          startTime: now,
         },
+        {
+          headers: {
+            "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+            Pragma: "no-cache",
+            Expires: "0",
+          },
+        },
+      )
+    }
+
+    // Use the imported fetchTraceDetail function from the class
+    const traceDetail = await fetchTraceDetail(traceId)
+
+    return NextResponse.json(traceDetail, {
+      headers: {
+        "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+        Pragma: "no-cache",
+        Expires: "0",
       },
-    )
+    })
   } catch (error) {
     console.error("Error querying ClickHouse for trace details:", error)
-    return NextResponse.json({ error: "Failed to fetch trace details from ClickHouse" }, { status: 500 })
+
+    // Return a more detailed error message
+    return NextResponse.json(
+      {
+        error: "Failed to fetch trace details from ClickHouse",
+        details: error instanceof Error ? error.message : String(error),
+      },
+      { status: 500 },
+    )
   }
 }
 

@@ -1,12 +1,12 @@
-
+import 'server-only';
 import typia from 'typia';
-import type { CHActions } from "../api";
-type Params_getTraces = Parameters<CHActions["getTraces"]>;
-type Return_getTraces = Awaited<ReturnType<CHActions["getTraces"]>>;
-type Params_getTraceDetail = Parameters<CHActions["getTraceDetail"]>;
-type Return_getTraceDetail = Awaited<ReturnType<CHActions["getTraceDetail"]>>;
-type Params_getFilterOptions = Parameters<CHActions["getFilterOptions"]>;
-type Return_getFilterOptions = Awaited<ReturnType<CHActions["getFilterOptions"]>>;
+import type { CHActions } from "../clickhouse";
+type Params_fetchTraces = Parameters<CHActions["fetchTraces"]>;
+type Return_fetchTraces = Awaited<ReturnType<CHActions["fetchTraces"]>>;
+type Params_fetchTraceDetail = Parameters<CHActions["fetchTraceDetail"]>;
+type Return_fetchTraceDetail = Awaited<ReturnType<CHActions["fetchTraceDetail"]>>;
+type Params_fetchFilterOptions = Parameters<CHActions["fetchFilterOptions"]>;
+type Return_fetchFilterOptions = Awaited<ReturnType<CHActions["fetchFilterOptions"]>>;
 // ---------------- ValidateAndLog snippet ----------------
 import { trace, context, SpanStatusCode } from '@opentelemetry/api';
 const tracer = trace.getTracer('db-actions');
@@ -66,36 +66,264 @@ export function ValidateAndLog(target: any, methodName: string, descriptor: Prop
 }
 // ---------------- Method Return / Param Maps -------------
 const methodReturnTypeMap = {
-    'getTraces': {
+    'fetchTraces': {
         version: "3.1",
         components: {
-            schemas: {}
+            schemas: {
+                TracesResult: {
+                    type: "object",
+                    properties: {
+                        data: {
+                            type: "array",
+                            items: {
+                                $ref: "#/components/schemas/TraceSpan"
+                            }
+                        },
+                        count: {
+                            type: "number"
+                        }
+                    },
+                    required: [
+                        "data",
+                        "count"
+                    ]
+                },
+                TraceSpan: {
+                    type: "object",
+                    properties: {
+                        Timestamp: {
+                            type: "string"
+                        },
+                        TraceId: {
+                            type: "string"
+                        },
+                        SpanId: {
+                            type: "string"
+                        },
+                        ParentSpanId: {
+                            type: "string"
+                        },
+                        SpanName: {
+                            type: "string"
+                        },
+                        SpanKind: {
+                            type: "string"
+                        },
+                        ServiceName: {
+                            type: "string"
+                        },
+                        Duration: {
+                            type: "number"
+                        },
+                        StatusCode: {
+                            type: "string"
+                        },
+                        StatusMessage: {
+                            type: "string"
+                        },
+                        ResourceAttributes: {
+                            $ref: "#/components/schemas/Recordstringany"
+                        },
+                        SpanAttributes: {
+                            $ref: "#/components/schemas/Recordstringany"
+                        },
+                        EventTimestamps: {
+                            type: "array",
+                            items: {
+                                type: "string"
+                            }
+                        },
+                        EventNames: {
+                            type: "array",
+                            items: {
+                                type: "string"
+                            }
+                        },
+                        EventAttributes: {
+                            type: "array",
+                            items: {
+                                $ref: "#/components/schemas/Recordstringany"
+                            }
+                        }
+                    },
+                    required: [
+                        "Timestamp",
+                        "TraceId",
+                        "SpanId",
+                        "SpanName",
+                        "SpanKind",
+                        "ServiceName",
+                        "Duration",
+                        "StatusCode",
+                        "StatusMessage"
+                    ]
+                },
+                Recordstringany: {
+                    type: "object",
+                    properties: {},
+                    required: [],
+                    description: "Construct a type with a set of properties K of type T",
+                    additionalProperties: {}
+                }
+            }
         },
         schemas: [
-            {}
+            {
+                $ref: "#/components/schemas/TracesResult"
+            }
         ]
     } as import("typia").IJsonSchemaCollection<"3.1">,
-    'getTraceDetail': {
+    'fetchTraceDetail': {
         version: "3.1",
         components: {
-            schemas: {}
+            schemas: {
+                Recordstringany: {
+                    type: "object",
+                    properties: {},
+                    required: [],
+                    description: "Construct a type with a set of properties K of type T",
+                    additionalProperties: {}
+                },
+                TraceEvent: {
+                    type: "object",
+                    properties: {
+                        name: {
+                            type: "string"
+                        },
+                        timestamp: {
+                            type: "string"
+                        },
+                        attributes: {
+                            $ref: "#/components/schemas/Recordstringany"
+                        },
+                        spanId: {
+                            type: "string"
+                        }
+                    },
+                    required: [
+                        "name",
+                        "timestamp",
+                        "attributes",
+                        "spanId"
+                    ]
+                },
+                ProcessedSpan: {
+                    type: "object",
+                    properties: {
+                        spanId: {
+                            type: "string"
+                        },
+                        parentSpanId: {
+                            type: "string"
+                        },
+                        name: {
+                            type: "string"
+                        },
+                        kind: {
+                            type: "string"
+                        },
+                        serviceName: {
+                            type: "string"
+                        },
+                        startTime: {
+                            type: "number"
+                        },
+                        duration: {
+                            type: "number"
+                        },
+                        status: {
+                            type: "string"
+                        },
+                        attributes: {
+                            $ref: "#/components/schemas/Recordstringany"
+                        }
+                    },
+                    required: [
+                        "spanId",
+                        "name",
+                        "kind",
+                        "serviceName",
+                        "startTime",
+                        "duration",
+                        "status",
+                        "attributes"
+                    ]
+                }
+            }
         },
         schemas: [
-            {}
+            {
+                type: "object",
+                properties: {
+                    traceId: {
+                        type: "string"
+                    },
+                    timestamp: {
+                        type: "string"
+                    },
+                    duration: {
+                        type: "number"
+                    },
+                    serviceName: {
+                        type: "string"
+                    },
+                    status: {
+                        type: "string"
+                    },
+                    resourceAttributes: {
+                        $ref: "#/components/schemas/Recordstringany"
+                    },
+                    spanAttributes: {
+                        $ref: "#/components/schemas/Recordstringany"
+                    },
+                    events: {
+                        type: "array",
+                        items: {
+                            $ref: "#/components/schemas/TraceEvent"
+                        }
+                    },
+                    spans: {
+                        type: "array",
+                        items: {
+                            $ref: "#/components/schemas/ProcessedSpan"
+                        }
+                    },
+                    startTime: {
+                        type: "number"
+                    }
+                },
+                required: [
+                    "traceId",
+                    "timestamp",
+                    "duration",
+                    "serviceName",
+                    "status",
+                    "resourceAttributes",
+                    "spanAttributes",
+                    "events",
+                    "spans",
+                    "startTime"
+                ]
+            }
         ]
     } as import("typia").IJsonSchemaCollection<"3.1">,
-    'getFilterOptions': {
+    'fetchFilterOptions': {
         version: "3.1",
         components: {
             schemas: {}
         },
         schemas: [
-            {}
+            {
+                type: "array",
+                items: {
+                    type: "string"
+                }
+            }
         ]
     } as import("typia").IJsonSchemaCollection<"3.1">,
 } as const;
 const methodParamTypeMap = {
-    'getTraces': {
+    'fetchTraces': {
         version: "3.1",
         components: {
             schemas: {
@@ -143,7 +371,7 @@ const methodParamTypeMap = {
             }
         ]
     } as import("typia").IJsonSchemaCollection<"3.1">,
-    'getTraceDetail': {
+    'fetchTraceDetail': {
         version: "3.1",
         components: {
             schemas: {}
@@ -160,7 +388,7 @@ const methodParamTypeMap = {
             }
         ]
     } as import("typia").IJsonSchemaCollection<"3.1">,
-    'getFilterOptions': {
+    'fetchFilterOptions': {
         version: "3.1",
         components: {
             schemas: {}
@@ -180,17 +408,17 @@ const methodParamTypeMap = {
 } as const;
 // ---------------- schemas object merging both maps -------------
 export const schemas = {
-    getTraces: {
-        paramSchema: methodParamTypeMap['getTraces'],
-        returnSchema: methodReturnTypeMap['getTraces']
+    fetchTraces: {
+        paramSchema: methodParamTypeMap['fetchTraces'],
+        returnSchema: methodReturnTypeMap['fetchTraces']
     },
-    getTraceDetail: {
-        paramSchema: methodParamTypeMap['getTraceDetail'],
-        returnSchema: methodReturnTypeMap['getTraceDetail']
+    fetchTraceDetail: {
+        paramSchema: methodParamTypeMap['fetchTraceDetail'],
+        returnSchema: methodReturnTypeMap['fetchTraceDetail']
     },
-    getFilterOptions: {
-        paramSchema: methodParamTypeMap['getFilterOptions'],
-        returnSchema: methodReturnTypeMap['getFilterOptions']
+    fetchFilterOptions: {
+        paramSchema: methodParamTypeMap['fetchFilterOptions'],
+        returnSchema: methodReturnTypeMap['fetchFilterOptions']
     },
 } as const;
 // ---------------- Additional Exports -----------------------

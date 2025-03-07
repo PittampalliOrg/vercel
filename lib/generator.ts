@@ -259,7 +259,7 @@ function main() {
   // Suppose you want to generate for these files:
   const inputFiles = [
     './lib/db/queries.ts',        // single class: “DbActions”
-    './lib/api.ts',      // single class: “OtherDbClass”
+    './lib/clickhouse.ts',      // single class: “OtherDbClass”
     // etc...
   ];
 

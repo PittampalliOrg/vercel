@@ -107,26 +107,26 @@ services:
     depends_on:
       - playground
 
-  # api:
-  #   container_name: api
-  #   image: next-js
-  #   ports:
-  #     - "8080:8080"
-  #   volumes:
-  #     - /var/run/docker.sock:/var/run/docker-host.sock 
-  #     - ../mastering-observability-with-opentelemetry-4515650:/workspace:cached    
+  api:
+    container_name: api
+    image: next-js
+    expose:
+    - "3000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker-host.sock 
+      - ../baselime-nextjs-template:/workspace:cached    
 
-  # api_dapr:
-  #   container_name: api_dapr
-  #   image: "daprio/daprd"
+  api_dapr:
+    container_name: api_dapr
+    image: "daprio/daprd"
 
-  #   command: ["./daprd", "--app-id", "api", "-app-port", "8080", "--resources-path", "/dapr", "--config", "/dapr/config.yaml", "--enable-api-logging", "--log-level", "debug", "--app-channel-address", "api"]
-  #   volumes:
-  #     - "./dapr:/dapr"
+    command: ["./daprd", "--app-id", "api", "-app-port", "8080", "--resources-path", "/dapr", "--config", "/dapr/config.yaml", "--enable-api-logging", "--log-level", "debug", "--app-channel-address", "api"]
+    volumes:
+      - "./dapr:/dapr"
 
-  #   depends_on:
-  #     - api
-  #     - db    
+    depends_on:
+      - api
+      - db    
 
   dab:
     container_name: dab
@@ -251,18 +251,22 @@ services:
       GF_INSTALL_PLUGINS: grafana-clickhouse-datasource,vertamedia-clickhouse-datasource
       GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS: vertamedia-clickhouse-datasource
     ports:
-      - "${GRAFANA_PORT}"
+      - "3005:3000"
 
-  # clickhouse:
-  #   image: clickhouse/clickhouse-server:latest
-  #   ports:
-  #     - "9000:9000"
-  #     - "8123:8123"
-  #   environment:
-  #     CLICKHOUSE_DB: otel
-  #     CLICKHOUSE_USER: user
-  #     CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
-  #     CLICKHOUSE_PASSWORD: password
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    container_name: clickhouse
+    ports:
+      - "9000:9000"
+      - "8123:8123"
+    environment:
+      # CLICKHOUSE_SKIP_USER_SETUP: 1
+      CLICKHOUSE_DB: default
+      CLICKHOUSE_USER: username
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1 
+      CLICKHOUSE_PASSWORD: password
+    volumes:
+      - ./clickhouse/example/default_ddl:/docker-entrypoint-initdb.d/
 
   # OpenTelemetry Collector
   otel-collector:
@@ -302,11 +306,13 @@ services:
       - OTEL_COLLECTOR_PORT_HTTP
       - TRACELOOP_API_KEY
       - AZURE_STORAGE_EXPLORER_KEY
-      - CLICKHOUSE_CLOUD_ENDPOINT
-      - CLICKHOUSE_CLOUD_PASSWORD
+      # - CLICKHOUSE_CLOUD_ENDPOINT
+      # - CLICKHOUSE_CLOUD_PASSWORD
+      # - CLICKHOUSE_LOCAL_ENDPOINT
+      # - CLICKHOUSE_LOCAL_PASSWORD
 
   prometheus:
-    image: ${PROMETHEUS_IMAGE}
+    image: quay.io/prometheus/prometheus:v2.47.2
     container_name: prometheus
     command:
       - --web.console.templates=/etc/prometheus/consoles
@@ -316,17 +322,18 @@ services:
       - --storage.tsdb.path=/prometheus
       - --web.enable-lifecycle
       - --web.route-prefix=/
-      - --web.enable-otlp-receiver
       - --enable-feature=exemplar-storage
+      - --enable-feature=otlp-write-receiver
+      - --web.enable-remote-write-receiver
     volumes:
-      - ./tracing/prometheus-config.yaml:/etc/prometheus/prometheus-config.yaml
+      - prometheus_data:/usr/share/prometheus/data
+      - ./src/prometheus/prometheus-config.yaml:/etc/prometheus/prometheus-config.yaml
     deploy:
       resources:
         limits:
-          memory: 300M
-    restart: unless-stopped
+          memory: 500M
     ports:
-      - "${PROMETHEUS_PORT}:${PROMETHEUS_PORT}"
+      - "${PROMETHEUS_SERVICE_PORT}:${PROMETHEUS_SERVICE_PORT}"
     logging: *logging
 
   # OpenSearch

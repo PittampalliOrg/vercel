@@ -1,0 +1,13 @@
+// Create a tsconfig.dts.json file specifically for dts-bundle-generator
+{
+    "extends": "../../tsconfig.json",
+    "compilerOptions": {
+      "skipLibCheck": true,
+      "noEmit": true,
+      "emitDeclarationOnly": false,
+      "declaration": false,
+      "isolatedModules": true
+    },
+    "include": ["app/**/*.ts", "app/**/*.tsx", "lib/**/*.ts", "lib/**/*.tsx"],
+    "exclude": ["node_modules"]
+  }
