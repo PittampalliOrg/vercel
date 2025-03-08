@@ -1,6 +1,6 @@
 import "server-only"
 
-import { createClient } from "@clickhouse/client"
+import { createClient, ClickHouseLogLevel } from "@clickhouse/client"
 import { ValidateAndLog } from "./generated/schema-validators-CHActions"
 
 // Define interfaces for the data types
@@ -57,12 +57,84 @@ export interface TracesResult {
   count: number
 }
 
-const client = createClient({
+import type {
+  Logger as CHLogger,
+  LogParams,
+  ErrorLogParams,
+  WarnLogParams
+} from '@clickhouse/client';
+import { context, trace } from '@opentelemetry/api'; // for reading active span
+import { logger } from './logger'; // your Winston + OTel logger
+
+/**
+ * Helper that attaches current span context as metadata.
+ */
+function logWithSpanContext(
+  level: 'debug' | 'info' | 'warn' | 'error',
+  module: string,
+  message: string,
+  args?: Record<string, unknown>,
+  err?: Error
+) {
+  // Read the currently active Span
+  const span = trace.getSpan(context.active());
+  const spanContext = span?.spanContext();
+
+  // Merge the current OpenTelemetry span context into the log metadata
+  logger.log({
+    level,
+    message: `[${module}] ${message}`,
+    // Winston allows passing additional metadata here
+    // The OpenTelemetry Winston transport will pick it up
+    // and send it to the collector.
+    meta: {
+      traceId: spanContext?.traceId,
+      spanId: spanContext?.spanId,
+      isRemote: spanContext?.isRemote,
+      ...args,
+      err,
+    },
+  });
+}
+
+/**
+ * Custom ClickHouse Logger that delegates to Winston.
+ */
+class ClickHouseOTelLogger implements CHLogger {
+  trace({ module, message, args }: LogParams): void {
+    // Winston doesn't have 'trace' by default; map to 'debug'
+    logWithSpanContext('debug', module, message, args);
+  }
+
+  debug({ module, message, args }: LogParams): void {
+    logWithSpanContext('debug', module, message, args);
+  }
+
+  info({ module, message, args }: LogParams): void {
+    logWithSpanContext('info', module, message, args);
+  }
+
+  warn({ module, message, args, err }: WarnLogParams): void {
+    logWithSpanContext('warn', module, message, args, err);
+  }
+
+  error({ module, message, args, err }: ErrorLogParams): void {
+    logWithSpanContext('error', module, message, args, err);
+  }
+}
+
+export const clickhouseClient = createClient({
   url: process.env.CLICKHOUSE_LOCAL_ENDPOINT,
   username: process.env.CLICKHOUSE_LOCAL_USERNAME,
   password: process.env.CLICKHOUSE_LOCAL_PASSWORD,
   request_timeout: 30000,
-})
+  log: {
+    LoggerClass: ClickHouseOTelLogger,
+    // Adjust level depending on the verbosity you want
+    level: ClickHouseLogLevel.DEBUG,
+  },
+});
+
 
 export class CHActions {
     @ValidateAndLog
@@ -190,7 +262,7 @@ export class CHActions {
     
       try {
         // Execute the main query
-        const result = await client.query({
+        const result = await clickhouseClient.query({
           query,
           query_params: queryParams,
           format: "JSONEachRow",
@@ -200,7 +272,7 @@ export class CHActions {
         const traces = await result.json<TraceSpan>()
     
         // Execute the count query
-        const countResult = await client.query({
+        const countResult = await clickhouseClient.query({
           query: fullCountQuery,
           query_params: queryParams,
           format: "JSONEachRow",
@@ -242,7 +314,7 @@ export class CHActions {
           LIMIT 1
         `
     
-        const rootSpanResult = await client.query({
+        const rootSpanResult = await clickhouseClient.query({
           query: rootSpanQuery,
           query_params: { traceId },
           format: "JSONEachRow",
@@ -280,7 +352,7 @@ export class CHActions {
           LIMIT 1000
         `
     
-        const spansResult = await client.query({
+        const spansResult = await clickhouseClient.query({
           query: spansQuery,
           query_params: { traceId },
           format: "JSONEachRow",
@@ -351,7 +423,7 @@ export class CHActions {
           LIMIT 100
         `
     
-        const result = await client.query({
+        const result = await clickhouseClient.query({
           query,
           format: "JSONEachRow",
         })

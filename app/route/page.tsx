@@ -1,16 +1,14 @@
-import { createClient } from '@clickhouse/client'
+import { clickhouseClient } from "@/lib/clickhouse"
 
-const client = createClient({
-  url: process.env.CLICKHOUSE_LOCAL_ENDPOINT,
-  username: process.env.CLICKHOUSE_LOCAL_USERNAME,
-  password: process.env.CLICKHOUSE_LOCAL_PASSWORD,
-  request_timeout: 30000,
-})
-
+let query = `
+SELECT *
+FROM otel_logs
+WHERE Timestamp >= now() - INTERVAL 15 MINUTE
+`
 
 export default async function Page() {
-    const data = await client.query({
-        query: 'SELECT * FROM logs LIMIT 10',
+    const data = await clickhouseClient.query({
+        query: query,
         format: 'JSONEachRow',
       })
       console.log(data)

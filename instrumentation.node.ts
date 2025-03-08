@@ -8,6 +8,7 @@ import { Resource } from '@opentelemetry/resources';
 import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
 import { PgInstrumentation } from '@opentelemetry/instrumentation-pg';
 import { UndiciInstrumentation } from '@opentelemetry/instrumentation-undici';
+import { WinstonInstrumentation } from '@opentelemetry/instrumentation-winston';
 import { envDetectorSync, processDetectorSync, hostDetectorSync } from '@opentelemetry/resources';
 import * as traceloop from '@traceloop/node-server-sdk';
 import { logger } from "@/lib/logger"
@@ -38,6 +39,7 @@ const sdk = new NodeSDK({
   }),
   traceExporter,
   metricReader,
+  logRecordProcessors: [new BatchLogRecordProcessor(logRecordExporter)],
   instrumentations: [
     getNodeAutoInstrumentations({
       '@opentelemetry/instrumentation-fs': { enabled: false },
@@ -46,13 +48,19 @@ const sdk = new NodeSDK({
       enhancedDatabaseReporting: true,
       addSqlCommenterCommentToQueries: true,
     }),
-    new UndiciInstrumentation()
+    new UndiciInstrumentation(),
+    new WinstonInstrumentation(),
   ],
 
 });
 
 // Start the SDK
 sdk.start();
+
+import '@/lib/clickhouse';  // IMPORTANT: Actually load the custom client so it's ready
+import { BatchLogRecordProcessor } from '@opentelemetry/sdk-logs';
+
+logger.info('Frontend instrumentation started');
 
 // Traceloop optional: if you have special config
 // traceloop.initialize({
