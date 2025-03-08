@@ -1,7 +1,7 @@
 import { Suspense } from "react"
-import { LogsTableSkeleton } from "@/components/logs/logs-table-skeleton";
-import { LogsFilters } from "@/components/logs/logs-filters";
-import { LogsTableWrapper } from "@/components/logs/logs-table-wrapper";
+import { LogsTableSkeleton } from "@/components/logs/logs-table-skeleton"
+import { LogsFilters } from "@/components/logs/logs-filters"
+import { LogsTableWrapper } from "@/components/logs/logs-table-wrapper"
 
 export default function LogsPage() {
   return (

@@ -1,15 +1,37 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Card, CardContent } from "@/components/ui/card"
+import { FileTextIcon } from "lucide-react"
 
 export function LogsTableSkeleton() {
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <div className="h-9 w-[250px] bg-muted rounded animate-pulse" />
-          <div className="h-9 w-[120px] bg-muted rounded animate-pulse" />
-          <div className="h-9 w-[100px] bg-muted rounded animate-pulse" />
+      <div className="grid gap-4 md:grid-cols-4">
+        <div className="md:col-span-1">
+          <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="bg-primary/10 p-2 rounded-full">
+                  <FileTextIcon className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium text-muted-foreground">Total Logs</h3>
+                  <div className="h-7 w-24 bg-muted animate-pulse rounded-md mt-1"></div>
+                </div>
+              </div>
+              <div className="h-6 w-24 bg-muted animate-pulse rounded-md"></div>
+            </CardContent>
+          </Card>
         </div>
-        <div className="h-9 w-[100px] bg-muted rounded animate-pulse" />
+        <div className="md:col-span-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <div className="h-9 w-[250px] bg-muted rounded animate-pulse" />
+              <div className="h-9 w-[120px] bg-muted rounded animate-pulse" />
+              <div className="h-9 w-[100px] bg-muted rounded animate-pulse" />
+            </div>
+            <div className="h-9 w-[100px] bg-muted rounded animate-pulse" />
+          </div>
+        </div>
       </div>
 
       <div className="rounded-md border">

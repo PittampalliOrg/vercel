@@ -23,6 +23,7 @@ import { useLogs } from "@/hooks/use-logs"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { LogsCountDisplay } from "./logs-count-display"
 
 export function LogsTable() {
   const searchParams = useSearchParams()
@@ -33,15 +34,12 @@ export function LogsTable() {
   const pageSize = Number(searchParams.get("pageSize") || "10")
   const sort = searchParams.get("sort") || ""
 
-  // Extract time range
   // Extract lookback parameter
   const lookback = searchParams.get("lookback") || "1h"
 
   // Extract other filters
   const filters = Object.fromEntries(
-    Array.from(searchParams.entries()).filter(
-      ([key]) => !["page", "pageSize", "sort", "startTime", "endTime"].includes(key),
-    ),
+    Array.from(searchParams.entries()).filter(([key]) => !["page", "pageSize", "sort", "lookback"].includes(key)),
   )
 
   const { logs, totalCount, isLoading, error } = useLogs({
@@ -170,7 +168,15 @@ export function LogsTable() {
 
   return (
     <div className="space-y-4">
-      <LogsTableToolbar table={table} />
+      <div className="grid gap-4 md:grid-cols-4">
+        <div className="md:col-span-1">
+          <LogsCountDisplay count={totalCount} isLoading={isLoading} />
+        </div>
+        <div className="md:col-span-3">
+          <LogsTableToolbar table={table} />
+        </div>
+      </div>
+
       <div className="rounded-md border">
         <Table>
           <TableHeader>
