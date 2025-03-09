@@ -113,7 +113,7 @@ export function PureMessageActions({
               variant="outline"
               disabled={vote && !vote.isUpvoted}
               onClick={async () => {
-                const downvote = fetch('/api/vote', {
+                const downvote = fetch(`/frontend/api/vote`, {
                   method: 'PATCH',
                   body: JSON.stringify({
                     chatId,

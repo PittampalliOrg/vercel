@@ -2,6 +2,7 @@
  
 /** @type {import('next').NextConfig} */
 const config = {
+  basePath: "/frontend",
   images: {
     remotePatterns: [
       {

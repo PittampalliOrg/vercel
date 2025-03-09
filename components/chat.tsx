@@ -43,6 +43,7 @@ export function Chat({
     reload,
   } = useChat({
     id,
+    api: '/frontend/api/chat',
     body: { id, selectedChatModel: selectedChatModel },
     initialMessages,
     experimental_throttle: 100,

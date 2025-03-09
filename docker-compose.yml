@@ -1,3 +1,4 @@
+# docker-compose.yml
 x-default-logging: &logging
   driver: "json-file"
   options:
@@ -17,48 +18,97 @@ volumes:
   opensearch-data:
   prometheus_data:
 
-
 services:
 
-  frontend-proxy:
-    image: ${IMAGE_NAME}:${DEMO_VERSION}-frontend-proxy
-    container_name: frontend-proxy
-    build:
-      context: ./frontend-proxy
-      dockerfile: Dockerfile
-    deploy:
-      resources:
-        limits:
-          memory: 65M
-    restart: unless-stopped
+  ########################################
+  # 1) Envoy front-proxy
+  ########################################
+
+  traefik:
+    image: "traefik:v3.3"
+    container_name: "traefik"
+    command:
+      - "--log.level=DEBUG"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=true"
+      - "--entryPoints.web.address=:80"
+      - "--tracing.otlp.http=true"
+      - "--tracing.otlp.http.endpoint=http://otel-collector:4318/v1/traces"
+      - "--experimental.otlpLogs=true"
+      - "--log.otlp.http.endpoint=http://otel-collector:4318/v1/logs"
+      - "--accesslog.fields.names.StartUTC=drop"
+      - "--metrics.otlp.http.endpoint=http://otel-collector:4318/v1/metrics"
     ports:
-      - "${ENVOY_PORT}:${ENVOY_PORT}"
-      - 10000:10000
+      - "80:80"
+      - "8080:8080"
     environment:
-      - FRONTEND_PORT
-      - FRONTEND_HOST
-      - LOCUST_WEB_HOST
-      - LOCUST_WEB_PORT
-      - GRAFANA_PORT
-      - GRAFANA_HOST
-      - JAEGER_PORT
-      - JAEGER_HOST
-      - OTEL_COLLECTOR_HOST
-      - IMAGE_PROVIDER_HOST
-      - IMAGE_PROVIDER_PORT
-      - OTEL_COLLECTOR_PORT_GRPC
-      - OTEL_COLLECTOR_PORT_HTTP
-      - OTEL_RESOURCE_ATTRIBUTES
-      - OTEL_SERVICE_NAME=frontend-proxy
-      - ENVOY_PORT
-      - FLAGD_HOST
-      - FLAGD_PORT
-      - FLAGD_UI_HOST
-      - FLAGD_UI_PORT
-    depends_on:
-      frontend:
-        condition: service_started
-    dns_search: ""
+      - TZ=America/New_York
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+
+  app:
+    image: "traefik/whoami"
+    container_name: "simple-service"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.app.rule=(Host(`localhost`) && PathPrefix(`/app`))"
+
+  # frontend-proxy:
+  #   image: ${IMAGE_NAME}:${DEMO_VERSION}-frontend-proxy
+  #   container_name: frontend-proxy
+  #   build:
+  #     context: ./frontend-proxy
+  #     dockerfile: Dockerfile
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         memory: 65M
+  #   restart: unless-stopped
+
+  #   # *** Revised to listen on 8080 externally → 8080 in container
+  #   ports:
+  #     - "8080:8080"
+  #     - "10000:10000"  # Admin port
+  #   environment:
+  #     # You can still set these if they're used in envoy.tmpl.yaml, but usually set ENVOY_PORT=8080
+  #     - ENVOY_PORT=8080
+  #     # Keep or remove any other env vars if needed:
+  #     - FRONTEND_PORT
+  #     - FRONTEND_HOST
+  #     - LOCUST_WEB_HOST
+  #     - LOCUST_WEB_PORT
+  #     - GRAFANA_PORT
+  #     - GRAFANA_HOST
+  #     - JAEGER_PORT
+  #     - JAEGER_HOST
+  #     - OTEL_COLLECTOR_HOST
+  #     - IMAGE_PROVIDER_HOST
+  #     - IMAGE_PROVIDER_PORT
+  #     - OTEL_COLLECTOR_PORT_GRPC
+  #     - OTEL_COLLECTOR_PORT_HTTP
+  #     - OTEL_RESOURCE_ATTRIBUTES
+  #     - OTEL_SERVICE_NAME=frontend-proxy
+  #     - FLAGD_HOST
+  #     - FLAGD_PORT
+  #     - FLAGD_UI_HOST
+  #     - FLAGD_UI_PORT
+
+    # # *** Ensure Envoy waits for the Next.js services:
+    # depends_on:
+    #   frontend:
+    #     condition: service_started
+    #   tanstack:
+    #     condition: service_started
+    #   # If you re-enable playground, you can add:
+    #   # playground:
+    #   #   condition: service_started
+
+    # dns_search: ""
+
+  ########################################
+  # 2) Next.js "frontend"
+  ########################################
   frontend:
     container_name: frontend
     image: next-js
@@ -67,97 +117,90 @@ services:
       - ./.next:/app/.next
       - ./public:/app/public
     environment:
+      # If you still rely on a /frontend prefix in your code, keep it:
       - NEXT_PUBLIC_BASE_PATH=/frontend
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
-    command: sleep infinity 
-    expose:
-    - "3000"
-
-  frontend_dapr:
-    container_name: frontend_dapr
-    image: "daprio/daprd"
-    command: ["./daprd", "-app-id", "frontend", "-app-port", "3000", "-resources-path", "/dapr", "-config", "/dapr/config.yaml", "-enable-api-logging", "-log-level", "debug", "--app-channel-address", "frontend"]
-    volumes:
-      - "./dapr:/dapr"
-
-    depends_on:
-      - frontend
-      - db    
-
-  playground:
-    build:
-      dockerfile: ../next-app-router-playground/.docker/app/Dockerfile.app
-      context: ../next-app-router-playground/
-    volumes:
-      - ../next-app-router-playground:/workspace:cached
-    environment:
-      - NEXT_PUBLIC_BASE_PATH=/playground  # Correctly commented out
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
-    command: sleep infinity
+    command: sleep infinity  # For dev usage; Next.js won't auto-run
     expose:
       - "3000"
-
-  playground_dapr:
-    container_name: playground_dapr
-    image: "daprio/daprd"
-    command: ["./daprd", "-app-id", "playground", "-app-port", "3000", "-resources-path", "/dapr", "-config", "/dapr/config.yaml", "-enable-api-logging", "-log-level", "debug", "--app-channel-address", "playground"]
-    volumes:
-      - "./dapr:/dapr"
-
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=(Host(`localhost`) && PathPrefix(`/frontend`))"
+      # - "traefik.http.routers.frontend-api.rule=(Host(`app.localhost`) && PathPrefix(`/api/chat`))"
+      # - "traefik.http.routers.frontend-api.service=frontend"
+      # - "traefik.http.services.frontend.loadbalancer.server.port=3000"
     depends_on:
-      - playground
+      - traefik
 
-  api:
-    container_name: api
+  # frontend_dapr:
+  #   container_name: frontend_dapr
+  #   image: "daprio/daprd"
+  #   command: ["./daprd", "-app-id", "frontend", "-app-port", "3000",
+  #             "-resources-path", "/dapr", "-config", "/dapr/config.yaml",
+  #             "-enable-api-logging", "-log-level", "debug",
+  #             "--app-channel-address", "frontend"]
+  #   volumes:
+  #     - "./dapr:/dapr"
+  #   depends_on:
+  #     - frontend
+  #     - db
+
+  ########################################
+  # 3) Next.js "tanstack"
+  ########################################
+  tanstack:
+    container_name: tanstack
     image: next-js
-    expose:
-    - "3000"
     volumes:
-      - /var/run/docker.sock:/var/run/docker-host.sock 
-      - ../baselime-nextjs-template:/workspace:cached    
-
-  api_dapr:
-    container_name: api_dapr
-    image: "daprio/daprd"
-
-    command: ["./daprd", "--app-id", "api", "-app-port", "8080", "--resources-path", "/dapr", "--config", "/dapr/config.yaml", "--enable-api-logging", "--log-level", "debug", "--app-channel-address", "api"]
-    volumes:
-      - "./dapr:/dapr"
-
-    depends_on:
-      - api
-      - db    
-
-  dab:
-    container_name: dab
-    image: mcr.microsoft.com/azure-databases/data-api-builder
-    volumes:
-      - type: bind
-        source: ./dab-config.json
-        target: /App/dab-config.json
-        read_only: true
-    ports:
-      - "5000:5000"
-      
+      - ../tanstack:/workspace:cached
     environment:
-      SQL_CONN_STRING: "Host=db;Port=5432;Database=postgres;User ID=postgres;Password=postgres;"
-      DAB_ENVIRONMENT: Development
-
-    command: ["dab", "start", "-c", "./App/dab-config.json"]
+      # If you do NOT need a path prefix, remove or comment out:
+      - NEXT_PUBLIC_BASE_PATH=/tanstack
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+    command: sleep infinity  # Again for dev usage
+    expose:
+      - "3000"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.tanstack.rule=(Host(`localhost`) && PathPrefix(`/tanstack`))"
+      # - "traefik.http.routers.frontend.entrypoints=web"  
     depends_on:
-      - db
-    
+      - traefik
 
-  dab_dapr:
-    container_name: dab_dapr
-    image: "daprio/daprd:edge"
-    command: ["./daprd", "-app-id", "dab", "-app-port", "5000", "-resources-path", "/dapr", "-config", "/dapr/config.yaml", "-enable-api-logging", "--log-level", "debug", "--app-channel-address", "dab"]
-    volumes:
-      - "./dapr:/dapr"
+  ########################################
+  # 4) Example "api" Next.js (already existing)
+  ########################################
+  # api:
+  #   container_name: api
+  #   image: next-js
+  #   expose:
+  #     - "3000"
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker-host.sock
+  #     - ../shadcn-table:/workspace:cached
+  #   labels:
+  #     - "traefik.enable=true"
+  #     - "traefik.http.routers.api.rule=(Host(`app.localhost`) && PathPrefix(`/api`))"
+  #     # - "traefik.http.routers.frontend.entrypoints=web"  
+  #   depends_on:
+  #     - traefik
 
-    depends_on:
-      - dab    
+  # api_dapr:
+  #   container_name: api_dapr
+  #   image: "daprio/daprd"
+  #   command: ["./daprd", "--app-id", "api", "-app-port", "8080",
+  #             "--resources-path", "/dapr", "--config", "/dapr/config.yaml",
+  #             "--enable-api-logging", "--log-level", "debug",
+  #             "--app-channel-address", "api"]
+  #   volumes:
+  #     - "./dapr:/dapr"
+  #   depends_on:
+  #     - api
+  #     - db
 
+  ########################################
+  # 5) DB & Misc
+  ########################################
   db:
     container_name: db
     image: pgvector/pgvector:pg17
@@ -169,17 +212,8 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_DB: postgres
     ports:
-      - "5432:5432"    
+      - "5432:5432"
 
-    # # ------------------------------------------------------------------
-    # # The command below:
-    # #  1) Starts otelcol-contrib in the background
-    # #  2) "exec postgres -c config_file=/etc/postgresql.conf" is the
-    # #     main/foreground process for the container.
-    # # ------------------------------------------------------------------
-    # command: >
-    #   bash -c "otelcol-contrib --config=/etc/otelcol-config.yml &
-    #            exec postgres -c config_file=/etc/postgresql.conf"
   rest:
     container_name: rest
     image: postgrest/postgrest
@@ -211,10 +245,7 @@ services:
     environment:
       API_URL: http://localhost:3011/
 
-  # ********************
-  # Telemetry Components
-  # ********************
-  # Jaeger
+  # 6) Jaeger, Grafana, ClickHouse, etc.
   jaeger:
     image: ${JAEGERTRACING_IMAGE}
     container_name: jaeger
@@ -230,18 +261,16 @@ services:
           memory: 400M
     restart: unless-stopped
     ports:
-      - "${JAEGER_PORT}:${JAEGER_PORT}"         # Jaeger UI
+      - "${JAEGER_PORT}:${JAEGER_PORT}"
       - "${OTEL_COLLECTOR_PORT_GRPC}"
     environment:
       - METRICS_STORAGE_TYPE=prometheus
+      - "traefik.enable=true"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.jaeger.rule=(Host(`localhost`) && PathPrefix(`/jaeger`))"
     logging: *logging
-  # loki:
-  #   image: grafana/loki:main
-  #   ports:
-  #     - "3100:3100"
-  #   volumes:
-  #     - ./loki-fundamentals/loki-config.yaml:/etc/loki/local-config.yaml
-  #   command: -config.file=/etc/loki/local-config.yaml
+
   grafana:
     image: grafana/grafana:latest
     volumes:
@@ -250,6 +279,9 @@ services:
     environment:
       GF_INSTALL_PLUGINS: grafana-clickhouse-datasource,vertamedia-clickhouse-datasource
       GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS: vertamedia-clickhouse-datasource
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=(Host(`localhost`) && PathPrefix(`/grafana`))"
     ports:
       - "3005:3000"
 
@@ -260,15 +292,13 @@ services:
       - "9000:9000"
       - "8123:8123"
     environment:
-      # CLICKHOUSE_SKIP_USER_SETUP: 1
       CLICKHOUSE_DB: default
       CLICKHOUSE_USER: username
-      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1 
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
       CLICKHOUSE_PASSWORD: password
     volumes:
       - ./clickhouse/example/default_ddl:/docker-entrypoint-initdb.d/
 
-  # OpenTelemetry Collector
   otel-collector:
     image: ${COLLECTOR_CONTRIB_IMAGE}
     container_name: otel-collector
@@ -289,14 +319,12 @@ services:
     ports:
       - "${OTEL_COLLECTOR_PORT_GRPC}:${OTEL_COLLECTOR_PORT_GRPC}"
       - "${OTEL_COLLECTOR_PORT_HTTP}:${OTEL_COLLECTOR_PORT_HTTP}"
-      - "13133:13133" # health check port
-      - "9464" # Prometheus exporter
-      - "8889" # metrics endpoint
+      - "13133:13133"
+      - "9464"  # Prometheus exporter
+      - "8889"  # metrics endpoint
     depends_on:
       jaeger:
         condition: service_started
-      # opensearch:
-      #   condition: service_healthy
     logging: *logging
     environment:
       - ENVOY_PORT
@@ -306,10 +334,6 @@ services:
       - OTEL_COLLECTOR_PORT_HTTP
       - TRACELOOP_API_KEY
       - AZURE_STORAGE_EXPLORER_KEY
-      # - CLICKHOUSE_CLOUD_ENDPOINT
-      # - CLICKHOUSE_CLOUD_PASSWORD
-      # - CLICKHOUSE_LOCAL_ENDPOINT
-      # - CLICKHOUSE_LOCAL_PASSWORD
 
   prometheus:
     image: quay.io/prometheus/prometheus:v2.47.2
@@ -335,74 +359,3 @@ services:
     ports:
       - "${PROMETHEUS_SERVICE_PORT}:${PROMETHEUS_SERVICE_PORT}"
     logging: *logging
-
-  # OpenSearch
-  # opensearch:
-  #   image: opensearchproject/opensearch:latest
-  #   container_name: opensearch
-  #   deploy:
-  #     resources:
-  #       limits:
-  #         memory: 1.1G
-  #   restart: unless-stopped
-  #   environment:
-  #     - cluster.name=opensearch-cluster # Name the cluster
-  #     - node.name=opensearch # Name the node that will run in this container
-  #     - discovery.seed_hosts=opensearch # Nodes to look for when discovering the cluster
-  #     - cluster.initial_cluster_manager_nodes=opensearch # Nodes eligibile to serve as cluster manager
-  #     - bootstrap.memory_lock=true # Disable JVM heap memory swapping
-  #     - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m" # Set min and max JVM heap sizes to at least 50% of system RAM
-  #     - "DISABLE_INSTALL_DEMO_CONFIG=true" # Prevents execution of bundled demo script which installs demo certificates and security configurations to OpenSearch
-  #     - "DISABLE_SECURITY_PLUGIN=true" # Disables Security plugin
-  #   ulimits:
-  #     memlock:
-  #       soft: -1
-  #       hard: -1
-  #     nofile:
-  #       soft: 65536
-  #       hard: 65536
-  #   volumes:
-  #     - opensearch-data:/usr/share/opensearch/data # Creates volume called opensearch-data1 and mounts it to the container
-  #   ports:
-  #     - "9200:9200"
-  #   healthcheck:
-  #     test: curl -s http://localhost:9200/_cluster/health | grep -E '"status":"(green|yellow)"'
-  #     start_period: 10s
-  #     interval: 5s
-  #     timeout: 10s
-  #     retries: 10
-  #   logging: *logging
-  # opensearch-dashboards:
-  #   image: opensearchproject/opensearch-dashboards:latest # Make sure the version of opensearch-dashboards matches the version of opensearch installed on other nodes
-  #   container_name: opensearch-dashboards
-  #   ports:
-  #     - 5601:5601 # Map host port 5601 to container port 5601
-  #   expose:
-  #     - "5601" # Expose port 5601 for web access to OpenSearch Dashboards
-  #   volumes:
-  #     - ./src/dashboards/config/opensearch_dashboards.yml:/usr/share/opensearch-dashboards/config/opensearch_dashboards.yml
-  #   environment:
-  #     - 'OPENSEARCH_HOSTS=["http://opensearch:9200"]'
-  #     - "DISABLE_SECURITY_DASHBOARDS_PLUGIN=true" # disables security dashboards plugin in OpenSearch Dashboards
-  # data-prepper:
-    # platform: linux/amd64
-    # image: opensearchproject/data-prepper:latest
-    # container_name: dataprepper
-    # volumes:
-    #   - /data/service-map/
-    #   - ./src/dataprepper/templates/ss4o_metrics.json:/usr/share/data-prepper/templates/ss4o_metrics.json
-    #   - ./src/dataprepper/templates/ss4o_logs.json:/usr/share/data-prepper/templates/ss4o_logs.json
-    #   - ./src/dataprepper/templates/ss4o_traces.json:/usr/share/data-prepper/templates/ss4o_traces.json
-    #   - ./src/dataprepper/pipelines.yaml:/usr/share/data-prepper/pipelines/pipelines.yaml
-    #   - ./src/dataprepper/data-prepper-config.yaml:/usr/share/data-prepper/config/data-prepper-config.yaml
-    # ports:
-    #   - "21890:21890"
-    #   - "21891:21891"
-    #   - "21892:21892"
-    # expose:
-    #   - "21890"
-    #   - "21891"
-    #   - "21892"
-    # logging: *logging
-    # depends_on:
-    #   - opensearch-dashboards

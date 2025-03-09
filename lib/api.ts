@@ -57,7 +57,7 @@ export async function getTraceDetail(traceId: string) {
     })
 
     // Make the request to our API route
-    const response = await fetch(`/api/traces/${traceId}?${params.toString()}`, {
+    const response = await fetch(`/frontend/api/traces/${traceId}?${params.toString()}`, {
       method: "GET",
       headers: {
         "Cache-Control": "no-cache",
@@ -85,7 +85,7 @@ export async function getFilterOptions(column: string): Promise<string[]> {
     })
 
     // Make the request to our API route
-    const response = await fetch(`/api/filters?${params.toString()}`, {
+    const response = await fetch(`/frontend/api/filters?${params.toString()}`, {
       method: "GET",
       headers: {
         "Cache-Control": "no-cache",

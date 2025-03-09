@@ -21,7 +21,8 @@ interface ApplicationError extends Error {
 }
 
 export const fetcher = async (url: string) => {
-  const res = await fetch(url);
+  console.log('fetcher:  ', url);
+  const res = await fetch(`/frontend${url}`);
 
   if (!res.ok) {
     const error = new Error(

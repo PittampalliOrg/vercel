@@ -3,7 +3,7 @@
 	"dockerComposeFile": ["../../docker-compose.yml"],
 	"service": "frontend",
 	"workspaceFolder": "/workspace",
-	// "runServices": ["frontend", "frontend_dapr"],
+	// "runServices": ["frontend"],
 	// "shutdownAction": "none",
 	// "forwardPorts": [3000, 3002, 16686],
 	"remoteEnv": {
