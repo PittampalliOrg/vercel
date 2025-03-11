@@ -54,58 +54,6 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.app.rule=(Host(`localhost`) && PathPrefix(`/app`))"
 
-  # frontend-proxy:
-  #   image: ${IMAGE_NAME}:${DEMO_VERSION}-frontend-proxy
-  #   container_name: frontend-proxy
-  #   build:
-  #     context: ./frontend-proxy
-  #     dockerfile: Dockerfile
-  #   deploy:
-  #     resources:
-  #       limits:
-  #         memory: 65M
-  #   restart: unless-stopped
-
-  #   # *** Revised to listen on 8080 externally → 8080 in container
-  #   ports:
-  #     - "8080:8080"
-  #     - "10000:10000"  # Admin port
-  #   environment:
-  #     # You can still set these if they're used in envoy.tmpl.yaml, but usually set ENVOY_PORT=8080
-  #     - ENVOY_PORT=8080
-  #     # Keep or remove any other env vars if needed:
-  #     - FRONTEND_PORT
-  #     - FRONTEND_HOST
-  #     - LOCUST_WEB_HOST
-  #     - LOCUST_WEB_PORT
-  #     - GRAFANA_PORT
-  #     - GRAFANA_HOST
-  #     - JAEGER_PORT
-  #     - JAEGER_HOST
-  #     - OTEL_COLLECTOR_HOST
-  #     - IMAGE_PROVIDER_HOST
-  #     - IMAGE_PROVIDER_PORT
-  #     - OTEL_COLLECTOR_PORT_GRPC
-  #     - OTEL_COLLECTOR_PORT_HTTP
-  #     - OTEL_RESOURCE_ATTRIBUTES
-  #     - OTEL_SERVICE_NAME=frontend-proxy
-  #     - FLAGD_HOST
-  #     - FLAGD_PORT
-  #     - FLAGD_UI_HOST
-  #     - FLAGD_UI_PORT
-
-    # # *** Ensure Envoy waits for the Next.js services:
-    # depends_on:
-    #   frontend:
-    #     condition: service_started
-    #   tanstack:
-    #     condition: service_started
-    #   # If you re-enable playground, you can add:
-    #   # playground:
-    #   #   condition: service_started
-
-    # dns_search: ""
-
   ########################################
   # 2) Next.js "frontend"
   ########################################
@@ -163,6 +111,25 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.tanstack.rule=(Host(`localhost`) && PathPrefix(`/tanstack`))"
+      # - "traefik.http.routers.frontend.entrypoints=web"  
+    depends_on:
+      - traefik
+
+  shadcn-ui:
+    container_name: shadcn-ui
+    image: next-js
+    volumes:
+      - ../shadcn-table:/workspace:cached
+    environment:
+      # If you do NOT need a path prefix, remove or comment out:
+      - NEXT_PUBLIC_BASE_PATH=/shadcn-ui
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+    command: sleep infinity  # Again for dev usage
+    expose:
+      - "3000"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.shadcn-ui.rule=(Host(`localhost`) && PathPrefix(`/shadcn-ui`))"
       # - "traefik.http.routers.frontend.entrypoints=web"  
     depends_on:
       - traefik
@@ -274,8 +241,8 @@ services:
   grafana:
     image: grafana/grafana:latest
     volumes:
-      - ./tracing/grafana.ini:/etc/grafana/grafana.ini
-      - ./tracing/datasource.yaml:/etc/grafana/provisioning/datasources/datasource.yaml
+      - ./config/grafana/grafana.ini:/etc/grafana/grafana.ini
+      - ./config/grafana/provisioning/:/etc/grafana/provisioning/
     environment:
       GF_INSTALL_PLUGINS: grafana-clickhouse-datasource,vertamedia-clickhouse-datasource
       GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS: vertamedia-clickhouse-datasource
@@ -283,7 +250,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.grafana.rule=(Host(`localhost`) && PathPrefix(`/grafana`))"
     ports:
-      - "3005:3000"
+      - "3000"
 
   clickhouse:
     image: clickhouse/clickhouse-server:latest
@@ -297,7 +264,7 @@ services:
       CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
       CLICKHOUSE_PASSWORD: password
     volumes:
-      - ./clickhouse/example/default_ddl:/docker-entrypoint-initdb.d/
+      - ./config/clickhouse/example/default_ddl:/docker-entrypoint-initdb.d/
 
   otel-collector:
     image: ${COLLECTOR_CONTRIB_IMAGE}
@@ -313,8 +280,8 @@ services:
       - ${HOST_FILESYSTEM}:/hostfs:ro
       - ${DOCKER_SOCK}:/var/run/docker.sock:ro
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
-      - ./tracing/otel-collector-config.yml:/etc/otelcol-config.yml
-      - ./tracing/otelcol-config-extras.yml:/etc/otelcol-config-extras.yml
+      - ./config/otel-collector/otel-collector-config.yml:/etc/otelcol-config.yml
+      - ./config/otel-collector/otelcol-config-extras.yml:/etc/otelcol-config-extras.yml
       - ./logs:/logs
     ports:
       - "${OTEL_COLLECTOR_PORT_GRPC}:${OTEL_COLLECTOR_PORT_GRPC}"
@@ -336,7 +303,7 @@ services:
       - AZURE_STORAGE_EXPLORER_KEY
 
   prometheus:
-    image: quay.io/prometheus/prometheus:v2.47.2
+    image: ${PROMETHEUS_IMAGE}
     container_name: prometheus
     command:
       - --web.console.templates=/etc/prometheus/consoles
@@ -346,16 +313,26 @@ services:
       - --storage.tsdb.path=/prometheus
       - --web.enable-lifecycle
       - --web.route-prefix=/
+      - --web.enable-otlp-receiver
       - --enable-feature=exemplar-storage
-      - --enable-feature=otlp-write-receiver
-      - --web.enable-remote-write-receiver
     volumes:
-      - prometheus_data:/usr/share/prometheus/data
-      - ./src/prometheus/prometheus-config.yaml:/etc/prometheus/prometheus-config.yaml
+      - ./config/prometheus/prometheus-config.yaml:/etc/prometheus/prometheus-config.yaml
     deploy:
       resources:
         limits:
-          memory: 500M
+          memory: 300M
+    restart: unless-stopped
     ports:
-      - "${PROMETHEUS_SERVICE_PORT}:${PROMETHEUS_SERVICE_PORT}"
+      - "${PROMETHEUS_PORT}:${PROMETHEUS_PORT}"
     logging: *logging
+
+  grizzly:
+    image: grafana/grizzly:latest
+    environment:
+    - GRAFANA_URL=${GRAFANA_URL}
+    - GRAFANA_TOKEN=${GRAFANA_TOKEN}
+    volumes :
+    - ./config/grizzly:/src
+    command: watch /src /src/main.jsonnet
+    depends_on:
+      - grafana

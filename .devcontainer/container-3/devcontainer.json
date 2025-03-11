@@ -1,10 +1,10 @@
 {
-	"name": "api",
+	"name": "shadcn-ui",
 	"dockerComposeFile": ["../../docker-compose.yml"],
-	"service": "api",
+	"service": "shadcn-ui",
 	"workspaceFolder": "/workspace",
-	// "runServices": ["frontend", "frontend_dapr"],
-	// "shutdownAction": "none",
+	"runServices": ["shadcn-ui"],
+	"shutdownAction": "none",
 	// "forwardPorts": [3000, 3002, 16686],
 	"remoteEnv": {
 		"LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}"

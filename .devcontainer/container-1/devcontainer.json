@@ -3,11 +3,12 @@
 	"dockerComposeFile": ["../../docker-compose.yml"],
 	"service": "frontend",
 	"workspaceFolder": "/workspace",
-	// "runServices": ["frontend"],
-	// "shutdownAction": "none",
+	"runServices": ["frontend"],
+	"shutdownAction": "none",
 	// "forwardPorts": [3000, 3002, 16686],
 	"remoteEnv": {
-		"LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}"
+		"LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}",
+  		"PATH": "${containerEnv:PATH}:/home/node/go/bin"
 	},
 	"customizations": {
 	  "vscode": {
@@ -36,7 +37,8 @@
 			"ms-azuretools.vscode-azure-github-copilot",
 			"mikeedjones.copy-file-to-chat",
 			"ms-python.python",
-			"ultram4rine.sqltools-clickhouse-driver"
+			"ultram4rine.sqltools-clickhouse-driver",
+			"Grafana.vscode-jsonnet"
 		],
 	     "settings": {
 	             "sqltools.connections": [
@@ -71,7 +73,9 @@
 	"features": {
 	"ghcr.io/devcontainers-extra/features/apt-packages": {
 		"packages": ["iputils-ping"]
-	}
 	},
+	"ghcr.io/devcontainers/features/go:1": {}
+	},
+	"postCreateCommand": "go install github.com/google/go-jsonnet/cmd/jsonnet@latest && go install -a github.com/jsonnet-bundler/jsonnet-bundler/cmd/jb@latest",
 	"remoteUser": "node"
 }

@@ -58,3 +58,4 @@ logs/error.log
 logs/**
 psql_logs/**
 tracing/otel-collector-config.yml
+config/grizzly/vendor

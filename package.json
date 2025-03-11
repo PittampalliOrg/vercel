@@ -20,7 +20,8 @@
     "db:gen-types": "supabase gen types typescript --db-url postgres://postgres:postgres@db:5432/postgres > database.types.ts",
     "typia": "pnpm run typia:codegen && pnpm run typia:generate",
     "typia:codegen": "node --experimental-strip-types ./lib/generator.ts",
-    "typia:generate": "typia generate --input ./lib/typia --output ./lib/generated"
+    "typia:generate": "typia generate --input ./lib/typia --output ./lib/generated",
+    "generate-dashboard": "jsonnet --jpath config/grizzly/vendor config/grizzly/main.jsonnet -o config/grafana/provisioning/dashboards/demo/output.json"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^1.1.13",

@@ -9,9 +9,9 @@ receivers:
           allowed_origins:
             - http://*
             - https://*
-  httpcheck/frontend:
+  httpcheck/traefik:
     targets:
-      - endpoint: http://frontend-proxy:${env:ENVOY_PORT}
+      - endpoint: http://traefik:8080
   docker_stats:
     endpoint: unix:///var/run/docker.sock
   filelog:
@@ -195,45 +195,45 @@ exporters:
   #     connection_string: "DefaultEndpointsProtocol=https;AccountName=otelstorage2312;AccountKey=${env:AZURE_OTEL_STORAGE_ACCOUNT_KEY};EndpointSuffix=core.windows.net"
 
 processors:
+  batch:
+  memory_limiter:
+    check_interval: 5s
+    limit_percentage: 80
+    spike_limit_percentage: 25
   transform:
     error_mode: ignore
-    log_statements:
-      - context: log
+    trace_statements:
+      - context: span
         statements:
-          - set(attributes["test"], instrumentation_scope.name)
-  batch:
-    send_batch_size: 5000
-    timeout: 5s
-  memory_limiter:
-    check_interval: 2s
-    limit_mib: 1800
-    spike_limit_mib: 500
-  resourcedetection/system:
-    detectors: [ "system" ]
-    system:
-      hostname_sources: [ "os" ]
-  resource:
-    attributes:
-      - key: service.name
-        value: "serviceName"
-        action: upsert
+          # could be removed when https://github.com/vercel/next.js/pull/64852 is fixed upstream
+          # - replace_pattern(name, "\\?.*", "")
+          # - replace_match(name, "GET /api/products/*", "GET /api/products/{productId}")
 
 connectors:
   spanmetrics:
-    dimensions_cache_size: 1000
-    metrics_flush_interval: 15s
 
 service:
   pipelines:
     traces:
       receivers: [otlp]
-      processors: [ batch ]
-      exporters: [otlp/jaeger, clickhouse, debug]
-    # metrics:
-    #   receivers: [otlp, spanmetrics]
-    #   processors: [batch]
-    #   exporters: [clickhouse]
+      processors: [memory_limiter, transform, batch]
+      exporters: [otlp/jaeger, clickhouse, spanmetrics]
+    metrics:
+      receivers: [hostmetrics, docker_stats, httpcheck/traefik, otlp, spanmetrics]
+      processors: [memory_limiter, batch]
+      exporters: [otlphttp/prometheus, debug]
     logs:
       receivers: [otlp]
-      processors: [ memory_limiter, resourcedetection/system, resource, batch ]
+      processors: [memory_limiter, batch]
       exporters: [clickhouse, debug]
+  telemetry:
+    metrics:
+      level: detailed
+      readers:
+        - periodic:
+            interval: 10000
+            timeout: 5000
+            exporter:
+              otlp:
+                protocol: grpc
+                endpoint: ${env:OTEL_COLLECTOR_HOST}:${env:OTEL_COLLECTOR_PORT_GRPC}

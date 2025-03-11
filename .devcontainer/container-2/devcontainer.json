@@ -7,8 +7,8 @@
 	],
 	"service": "tanstack",
 	"workspaceFolder": "/workspace",
-	// "runServices": ["tanstack"],
-	// "shutdownAction": "none",
+	"runServices": ["tanstack"],
+	"shutdownAction": "none",
 	"remoteEnv": {
 		"LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}"
 	},
