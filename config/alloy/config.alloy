@@ -1,0 +1,22 @@
+otelcol.receiver.otlp "otlp_receiver" {
+  grpc {
+    endpoint = "alloy:4317"
+  }
+  http {
+    endpoint = "alloy:4318"
+  }
+
+  output {
+    traces = [otelcol.exporter.otlp.grafanacloud.input,]
+  }
+}
+
+otelcol.exporter.otlp "grafanacloud" {
+  client {
+    endpoint = "tempo:3200"
+    tls {
+			insecure = true
+		}
+  }
+}
+

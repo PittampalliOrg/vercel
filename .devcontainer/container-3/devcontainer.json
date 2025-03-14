@@ -1,9 +1,9 @@
 {
-	"name": "shadcn-ui",
+	"name": "plugin",
 	"dockerComposeFile": ["../../docker-compose.yml"],
-	"service": "shadcn-ui",
+	"service": "plugin",
 	"workspaceFolder": "/workspace",
-	"runServices": ["shadcn-ui"],
+	"runServices": ["plugin", "grafana"],
 	"shutdownAction": "none",
 	// "forwardPorts": [3000, 3002, 16686],
 	"remoteEnv": {
@@ -69,9 +69,11 @@
         "target=/root/.vscode-server,type=volume"
     ],
 	"features": {
-	"ghcr.io/devcontainers-extra/features/apt-packages": {
-		"packages": ["iputils-ping"]
-	}
-	},
-	"remoteUser": "node"
+		"ghcr.io/devcontainers-extra/features/apt-packages": {
+			"packages": ["iputils-ping"]
+		},
+		"ghcr.io/devcontainers/features/go:1": {}
+		},
+		"postCreateCommand": "go install github.com/google/go-jsonnet/cmd/jsonnet@latest && go install -a github.com/jsonnet-bundler/jsonnet-bundler/cmd/jb@latest && go install github.com/magefile/mage@latest && cd /workspace/pittampalli-otel-app",
+		"remoteUser": "node"
 }

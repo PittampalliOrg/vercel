@@ -5,16 +5,6 @@
       {
         "driver": "PostgreSQL",
         "name": "PostgreSQL",
-        "server": "db",
-        "port": 5432,
-        "database": "postgres",
-        "username": "postgres",
-        "password": "postgres",
-        "askForPassword": false
-      },
-      {
-        "driver": "PostgreSQL",
-        "name": "PostgreSQL",
         "server": "vinodvm.postgres.database.azure.com",
         "port": 5432,
         "database": "postgres",
@@ -33,6 +23,16 @@
         "username": "user",
         "driver": "ClickHouse",
         "name": "clickhouse"
+      },
+      {
+        "previewLimit": 50,
+        "server": "localhost",
+        "port": 5432,
+        "driver": "PostgreSQL",
+        "name": "PostgreSQL",
+        "database": "postgres",
+        "username": "postgres",
+        "password": "postgres"
       }
     ]
   }

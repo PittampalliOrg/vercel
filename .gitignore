@@ -46,7 +46,6 @@ clients/dist/
 dapr/secrets.json
 **.go
 
-src
 tracing/otelcol-contrib
 tracing/grafana-collector-config.yml
 xh.tar.gz

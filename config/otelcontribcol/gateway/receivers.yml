@@ -1,0 +1,21 @@
+receivers:
+  otlp/gateway:
+    protocols:
+      http:
+        endpoint: "0.0.0.0:4318"
+        cors:
+          allowed_origins:
+            - "http://localhost"
+            - https://*
+      grpc:
+        endpoint: "0.0.0.0:4317"
+  postgresql:
+    endpoint: db:5432
+    transport: tcp
+    username: postgres
+    password: postgres
+    databases:
+      - postgres
+    collection_interval: 10s
+    tls:
+      insecure: true

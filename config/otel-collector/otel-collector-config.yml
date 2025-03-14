@@ -105,51 +105,18 @@ exporters:
     endpoint: "http://prometheus:9090/api/v1/otlp"
     tls:
       insecure: true
+  otlphttp/mimir:
+    endpoint: "http://mimir:9009"
+    tls:
+      insecure: true
   otlphttp/loki:
-    endpoint: "http://loki:3100/otlp"
+    endpoint: "http://loki:3100"
     tls:
       insecure: true
   otlphttp/tempo:
-    endpoint: "http://tempo:3200"
+    endpoint: "http://tempo:4317"
     tls:
       insecure: true
-  opensearch/traces:
-    http:
-      endpoint: http://opensearch:9200
-      tls:
-        insecure: true
-    timeout:
-    retry_on_failure:
-      enabled: true
-      initial_interval: 100000000
-      randomization_factor: 0.5
-    dataset: traces
-  opensearch/logs:
-    http:
-      endpoint: http://opensearch:9200
-      tls:
-        insecure: true
-    timeout:
-    retry_on_failure:
-      enabled: true
-      initial_interval: 100000000
-      randomization_factor: 0.5
-    dataset: logs
-  otlp/traces:
-    endpoint: "data-prepper:21890"
-    tls:
-      insecure: true
-      insecure_skip_verify: true
-  otlp/metrics:
-    endpoint: "data-prepper:21891"
-    tls:
-      insecure: true
-      insecure_skip_verify: true
-  otlp/logs:
-    endpoint: "data-prepper:21892"
-    tls:
-      insecure: true
-      insecure_skip_verify: true
   prometheusremotewrite:
     endpoint: "http://prometheus:9090/api/v1/write"
     resource_to_telemetry_conversion:
@@ -184,15 +151,6 @@ exporters:
       max_elapsed_time: 300s
     username: "username"
     password: "password"
-  # azureblobexporter:
-  #   url: "https://otelstorage2312.blob.core.windows.net/"
-  #   container:
-  #     logs: "logs"
-  #     metrics: "metrics"
-  #     traces: "traces"
-  #   auth:
-  #     type: "connection_string"
-  #     connection_string: "DefaultEndpointsProtocol=https;AccountName=otelstorage2312;AccountKey=${env:AZURE_OTEL_STORAGE_ACCOUNT_KEY};EndpointSuffix=core.windows.net"
 
 processors:
   batch:
@@ -205,10 +163,7 @@ processors:
     trace_statements:
       - context: span
         statements:
-          # could be removed when https://github.com/vercel/next.js/pull/64852 is fixed upstream
-          # - replace_pattern(name, "\\?.*", "")
-          # - replace_match(name, "GET /api/products/*", "GET /api/products/{productId}")
-
+        
 connectors:
   spanmetrics:
 
@@ -217,15 +172,15 @@ service:
     traces:
       receivers: [otlp]
       processors: [memory_limiter, transform, batch]
-      exporters: [otlp/jaeger, clickhouse, spanmetrics]
+      exporters: [otlphttp/tempo, spanmetrics]
     metrics:
       receivers: [hostmetrics, docker_stats, httpcheck/traefik, otlp, spanmetrics]
       processors: [memory_limiter, batch]
-      exporters: [otlphttp/prometheus, debug]
+      exporters: [otlphttp/mimir, debug]
     logs:
       receivers: [otlp]
       processors: [memory_limiter, batch]
-      exporters: [clickhouse, debug]
+      exporters: [otlphttp/loki, debug]
   telemetry:
     metrics:
       level: detailed

@@ -7,16 +7,16 @@ x-default-logging: &logging
     tag: "{{.Name}}"
 
 networks:
-  default:
-    name: opentelemetry
-    driver: bridge
-    external: true
-    attachable: true
+  shared-network:
+    name: shared-network
 
 volumes:
   postgres-data:
-  opensearch-data:
-  prometheus_data:
+
+# include:
+#    - path: ../grafana-plugin/pittampalli-otel-app/docker-compose.yaml
+#      project_directory: ../grafana-plugin/pittampalli-otel-app
+    #  env_file: ../another/.env
 
 services:
 
@@ -46,6 +46,8 @@ services:
       - TZ=America/New_York
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    networks:
+      - shared-network
 
   app:
     image: "traefik/whoami"
@@ -53,6 +55,8 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.app.rule=(Host(`localhost`) && PathPrefix(`/app`))"
+    networks:
+      - shared-network
 
   ########################################
   # 2) Next.js "frontend"
@@ -79,178 +83,59 @@ services:
       # - "traefik.http.services.frontend.loadbalancer.server.port=3000"
     depends_on:
       - traefik
+    networks:
+      - shared-network
 
-  # frontend_dapr:
-  #   container_name: frontend_dapr
-  #   image: "daprio/daprd"
-  #   command: ["./daprd", "-app-id", "frontend", "-app-port", "3000",
-  #             "-resources-path", "/dapr", "-config", "/dapr/config.yaml",
-  #             "-enable-api-logging", "-log-level", "debug",
-  #             "--app-channel-address", "frontend"]
-  #   volumes:
-  #     - "./dapr:/dapr"
-  #   depends_on:
-  #     - frontend
-  #     - db
-
-  ########################################
-  # 3) Next.js "tanstack"
-  ########################################
-  tanstack:
-    container_name: tanstack
-    image: next-js
-    volumes:
-      - ../tanstack:/workspace:cached
-    environment:
-      # If you do NOT need a path prefix, remove or comment out:
-      - NEXT_PUBLIC_BASE_PATH=/tanstack
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
-    command: sleep infinity  # Again for dev usage
-    expose:
-      - "3000"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.tanstack.rule=(Host(`localhost`) && PathPrefix(`/tanstack`))"
-      # - "traefik.http.routers.frontend.entrypoints=web"  
-    depends_on:
-      - traefik
-
-  shadcn-ui:
-    container_name: shadcn-ui
-    image: next-js
-    volumes:
-      - ../shadcn-table:/workspace:cached
-    environment:
-      # If you do NOT need a path prefix, remove or comment out:
-      - NEXT_PUBLIC_BASE_PATH=/shadcn-ui
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
-    command: sleep infinity  # Again for dev usage
-    expose:
-      - "3000"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.shadcn-ui.rule=(Host(`localhost`) && PathPrefix(`/shadcn-ui`))"
-      # - "traefik.http.routers.frontend.entrypoints=web"  
-    depends_on:
-      - traefik
-
-  ########################################
-  # 4) Example "api" Next.js (already existing)
-  ########################################
-  # api:
-  #   container_name: api
-  #   image: next-js
-  #   expose:
-  #     - "3000"
-  #   volumes:
-  #     - /var/run/docker.sock:/var/run/docker-host.sock
-  #     - ../shadcn-table:/workspace:cached
-  #   labels:
-  #     - "traefik.enable=true"
-  #     - "traefik.http.routers.api.rule=(Host(`app.localhost`) && PathPrefix(`/api`))"
-  #     # - "traefik.http.routers.frontend.entrypoints=web"  
-  #   depends_on:
-  #     - traefik
-
-  # api_dapr:
-  #   container_name: api_dapr
-  #   image: "daprio/daprd"
-  #   command: ["./daprd", "--app-id", "api", "-app-port", "8080",
-  #             "--resources-path", "/dapr", "--config", "/dapr/config.yaml",
-  #             "--enable-api-logging", "--log-level", "debug",
-  #             "--app-channel-address", "api"]
-  #   volumes:
-  #     - "./dapr:/dapr"
-  #   depends_on:
-  #     - api
-  #     - db
-
-  ########################################
-  # 5) DB & Misc
-  ########################################
   db:
     container_name: db
     image: pgvector/pgvector:pg17
     restart: unless-stopped
     volumes:
       - postgres-data:/var/lib/postgresql/data
+      - ./src/lib/db/migrations:/docker-entrypoint-initdb.d:ro
     environment:
       POSTGRES_PASSWORD: postgres
       POSTGRES_USER: postgres
       POSTGRES_DB: postgres
     ports:
       - "5432:5432"
+    networks:
+      - shared-network
 
-  rest:
-    container_name: rest
-    image: postgrest/postgrest
-    ports:
-      - "3011:3000"
-    restart: unless-stopped
-    depends_on:
-      - db
-    environment:
-      PGRST_DB_URI: postgres://postgres:${POSTGRESQL_PASSWORD}@${POSTGRESQL_HOST}:${POSTGRESQL_PORT}/${POSTGRESQL_DB}
-      PGRST_OPENAPI_SERVER_PROXY_URI: http://127.0.0.1:3011
-      PGRST_DB_SCHEMAS: ${PGRST_DB_SCHEMAS}
-      PGRST_DB_ANON_ROLE: anon
-      PGRST_JWT_SECRET: ${JWT_SECRET}
-      PGRST_DB_USE_LEGACY_GUCS: "false"
-      PGRST_APP_SETTINGS_JWT_SECRET: ${JWT_SECRET}
-      PGRST_APP_SETTINGS_JWT_EXP: ${JWT_EXPIRY}
-    command:
-      [
-        "postgrest"
-      ]
+  # rest:
+  #   container_name: rest
+  #   image: postgrest/postgrest
+  #   ports:
+  #     - "3011:3000"
+  #   restart: unless-stopped
+  #   depends_on:
+  #     - db
+  #   environment:
+  #     PGRST_DB_URI: postgres://postgres:${POSTGRESQL_PASSWORD}@${POSTGRESQL_HOST}:${POSTGRESQL_PORT}/${POSTGRESQL_DB}
+  #     PGRST_OPENAPI_SERVER_PROXY_URI: http://127.0.0.1:3011
+  #     PGRST_DB_SCHEMAS: ${PGRST_DB_SCHEMAS}
+  #     PGRST_DB_ANON_ROLE: anon
+  #     PGRST_JWT_SECRET: ${JWT_SECRET}
+  #     PGRST_DB_USE_LEGACY_GUCS: "false"
+  #     PGRST_APP_SETTINGS_JWT_SECRET: ${JWT_SECRET}
+  #     PGRST_APP_SETTINGS_JWT_EXP: ${JWT_EXPIRY}
+  #   command:
+  #     [
+  #       "postgrest"
+  #     ]
+  #   networks:
+  #     - shared-network
 
-  swagger:
-    image: swaggerapi/swagger-ui
-    ports:
-      - "8081:8080"
-    expose:
-      - "8081"
-    environment:
-      API_URL: http://localhost:3011/
-
-  # 6) Jaeger, Grafana, ClickHouse, etc.
-  jaeger:
-    image: ${JAEGERTRACING_IMAGE}
-    container_name: jaeger
-    command:
-      - "--memory.max-traces=5000"
-      - "--query.base-path=/jaeger/ui"
-      - "--prometheus.server-url=http://${PROMETHEUS_ADDR}"
-      - "--prometheus.query.normalize-calls=true"
-      - "--prometheus.query.normalize-duration=true"
-    deploy:
-      resources:
-        limits:
-          memory: 400M
-    restart: unless-stopped
-    ports:
-      - "${JAEGER_PORT}:${JAEGER_PORT}"
-      - "${OTEL_COLLECTOR_PORT_GRPC}"
-    environment:
-      - METRICS_STORAGE_TYPE=prometheus
-      - "traefik.enable=true"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.jaeger.rule=(Host(`localhost`) && PathPrefix(`/jaeger`))"
-    logging: *logging
-
-  grafana:
-    image: grafana/grafana:latest
-    volumes:
-      - ./config/grafana/grafana.ini:/etc/grafana/grafana.ini
-      - ./config/grafana/provisioning/:/etc/grafana/provisioning/
-    environment:
-      GF_INSTALL_PLUGINS: grafana-clickhouse-datasource,vertamedia-clickhouse-datasource
-      GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS: vertamedia-clickhouse-datasource
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.grafana.rule=(Host(`localhost`) && PathPrefix(`/grafana`))"
-    ports:
-      - "3000"
+  # swagger:
+  #   image: swaggerapi/swagger-ui
+  #   ports:
+  #     - "8081:8080"
+  #   expose:
+  #     - "8081"
+  #   environment:
+  #     API_URL: http://localhost:3011/
+  #   networks:
+  #     - shared-network
 
   clickhouse:
     image: clickhouse/clickhouse-server:latest
@@ -265,74 +150,136 @@ services:
       CLICKHOUSE_PASSWORD: password
     volumes:
       - ./config/clickhouse/example/default_ddl:/docker-entrypoint-initdb.d/
+    networks:
+      - shared-network
+
+  # grizzly:
+  #   image: grafana/grizzly:latest
+  #   environment:
+  #   - GRAFANA_URL=${GRAFANA_URL}
+  #   - GRAFANA_TOKEN=${GRAFANA_TOKEN}
+  #   volumes :
+  #   - ./config/grafana:/src/grafana
+  #   - ../grafana-plugin/pittampalli-otel-app/src/dashboards:/src/dashboards
+  #   command: watch /src /src/dashboards/output.json
+  #   depends_on:
+  #     - grafana
+  #   networks:
+  #     - shared-network
+  jaeger:
+    image: "${JAEGERTRACING_IMAGE}"  # Or "jaegertracing/all-in-one:1.43.0"
+    container_name: "jaeger"
+    # In all-in-one, the same process runs query + collector + OTLP
+    command:
+      - "--memory.max-traces=5000"
+      - "--query.base-path=/jaeger/ui"
+      - "--prometheus.server-url=http://mimir:9009"
+      - "--prometheus.query.normalize-calls=true"
+      - "--prometheus.query.normalize-duration=true"
+    deploy:
+      resources:
+        limits:
+          memory: 400M
+    restart: unless-stopped
+    ports:
+      # Publish the OTLP/gRPC port so the collector can talk from outside or inside
+      - "4317"
+      # Publish the UI so you can access it in the browser or Traefik
+      - "16686:16686"
+    environment:
+      - METRICS_STORAGE_TYPE=prometheus
+    labels:
+      - "traefik.enable=true"
+
+      # Route the Jaeger UI through Traefik at /jaeger -> 16686
+      - "traefik.http.routers.jaeger.rule=(Host(`localhost`) && PathPrefix(`/jaeger`))"
+      - "traefik.http.routers.jaeger.service=jaeger-ui"
+      - "traefik.http.services.jaeger-ui.loadbalancer.server.port=16686"
+
+    networks:
+      - shared-network
 
   otel-collector:
-    image: ${COLLECTOR_CONTRIB_IMAGE}
-    container_name: otel-collector
-    deploy:
-      resources:
-        limits:
-          memory: 200M
-    restart: unless-stopped
-    command: [ "--config=/etc/otelcol-config.yml", "--config=/etc/otelcol-config-extras.yml" ]
-    user: 0:0
+    image: otel/opentelemetry-collector-contrib:${OTEL_CONTRIB_COL}
+    command: "--config /etc/otelcol-contrib/exporters.yml --config /etc/otelcol-contrib/extensions.yml --config /etc/otelcol-contrib/receivers.yml --config /etc/otelcol-contrib/pipeline.agent.yml --config /etc/otelcol-contrib/pipeline.logs.yml --config /etc/otelcol-contrib/pipeline.traces.yml"
     volumes:
-      - ${HOST_FILESYSTEM}:/hostfs:ro
-      - ${DOCKER_SOCK}:/var/run/docker.sock:ro
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
-      - ./config/otel-collector/otel-collector-config.yml:/etc/otelcol-config.yml
-      - ./config/otel-collector/otelcol-config-extras.yml:/etc/otelcol-config-extras.yml
-      - ./logs:/logs
-    ports:
-      - "${OTEL_COLLECTOR_PORT_GRPC}:${OTEL_COLLECTOR_PORT_GRPC}"
-      - "${OTEL_COLLECTOR_PORT_HTTP}:${OTEL_COLLECTOR_PORT_HTTP}"
-      - "13133:13133"
-      - "9464"  # Prometheus exporter
-      - "8889"  # metrics endpoint
+      - ./config/otelcontribcol/gateway/:/etc/otelcol-contrib/:ro
+    networks:
+      - shared-network
     depends_on:
-      jaeger:
-        condition: service_started
-    logging: *logging
-    environment:
-      - ENVOY_PORT
-      - HOST_FILESYSTEM=""
-      - OTEL_COLLECTOR_HOST
-      - OTEL_COLLECTOR_PORT_GRPC
-      - OTEL_COLLECTOR_PORT_HTTP
-      - TRACELOOP_API_KEY
-      - AZURE_STORAGE_EXPLORER_KEY
+      - mimir
+      - loki
+      - otelcontribcol-traces-loadbalancer
+    ports:
+      - "4318:4318" 
+      - "4317:4317" 
+    # extra_hosts:
+    #   - 'host.docker.internal:host-gateway'
 
-  prometheus:
-    image: ${PROMETHEUS_IMAGE}
-    container_name: prometheus
-    command:
-      - --web.console.templates=/etc/prometheus/consoles
-      - --web.console.libraries=/etc/prometheus/console_libraries
-      - --storage.tsdb.retention.time=1h
-      - --config.file=/etc/prometheus/prometheus-config.yaml
-      - --storage.tsdb.path=/prometheus
-      - --web.enable-lifecycle
-      - --web.route-prefix=/
-      - --web.enable-otlp-receiver
-      - --enable-feature=exemplar-storage
+  otelcontribcol-traces-loadbalancer:
+    image: otel/opentelemetry-collector-contrib:${OTEL_CONTRIB_COL}
+    command: "--config /etc/otelcol-contrib/exporters.yml --config /etc/otelcol-contrib/extensions.yml --config /etc/otelcol-contrib/pipeline.agent.yml --config /etc/otelcol-contrib/pipeline.traces.yml"
     volumes:
-      - ./config/prometheus/prometheus-config.yaml:/etc/prometheus/prometheus-config.yaml
-    deploy:
-      resources:
-        limits:
-          memory: 300M
-    restart: unless-stopped
-    ports:
-      - "${PROMETHEUS_PORT}:${PROMETHEUS_PORT}"
-    logging: *logging
-
-  grizzly:
-    image: grafana/grizzly:latest
-    environment:
-    - GRAFANA_URL=${GRAFANA_URL}
-    - GRAFANA_TOKEN=${GRAFANA_TOKEN}
-    volumes :
-    - ./config/grizzly:/src
-    command: watch /src /src/main.jsonnet
+      - ./config/otelcontribcol/traces-loadbalancer/:/etc/otelcol-contrib/:ro
+    networks:
+      - shared-network
     depends_on:
-      - grafana
+      - mimir
+      - otelcontribcol-traces-collector
+  otelcontribcol-traces-collector:
+    image: otel/opentelemetry-collector-contrib:${OTEL_CONTRIB_COL}
+    command: "--config /etc/otelcol-contrib/exporters.yml --config /etc/otelcol-contrib/extensions.yml --config /etc/otelcol-contrib/pipeline.agent.yml --config /etc/otelcol-contrib/pipeline.traces.yml"
+    volumes:
+      - ./config/otelcontribcol/traces-collector/:/etc/otelcol-contrib/:ro
+    networks:
+      - shared-network
+    depends_on:
+      - mimir
+      - tempo
+    deploy:
+      replicas: 2
+
+
+  loki:
+    image: grafana/loki:3.0.0
+    command: -config.file=/etc/loki/local-config.yaml -validation.reject-old-samples=false -query-scheduler.max-outstanding-requests-per-tenant=2048 -querier.max-outstanding-requests-per-tenant=2048
+    volumes:
+      - ./config/loki/:/etc/loki/:ro
+    networks:
+      - shared-network
+
+  mimir:
+    image: grafana/mimir:2.11.0
+    volumes:
+      - ./config/mimir/mimir.yaml:/etc/mimir.yaml
+    command: --config.file=/etc/mimir.yaml -distributor.otel-metric-suffixes-enabled # otel_metric_suffixes_enabled: https://grafana.com/docs/enterprise-metrics/latest/config/reference/#limits
+    networks:
+      - shared-network
+
+  tempo:
+    image: grafana/tempo:2.3.1
+    volumes:
+      - ./config/tempo/tempo-local.yaml:/etc/tempo.yaml:ro
+    command: [ "-config.file=/etc/tempo.yaml" ]
+    networks:
+      - shared-network
+
+  grafana:
+    image: grafana/grafana-oss:10.4.1
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+    expose:
+      - "3000"
+    networks:
+      - shared-network
+    volumes:
+      - ./config/grafana/grafana.ini:/etc/grafana/grafana.ini:ro
+      - ./config/grafana/provisioning/:/etc/grafana/provisioning/:ro
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=(Host(`localhost`) && PathPrefix(`/grafana`))"
+    depends_on:
+      - mimir
+      - loki
+      - tempo
