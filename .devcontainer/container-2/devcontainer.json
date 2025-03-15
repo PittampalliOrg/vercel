@@ -1,103 +1,81 @@
-// For format details, see https://aka.ms/devcontainer.json. For config options, see the
-// README at: https://github.com/devcontainers/templates/tree/main/src/docker-existing-docker-compose
 {
-	"name": "tanstack",
-	"dockerComposeFile": [
-		"../../docker-compose.yml"
-	],
-	"service": "tanstack",
+	"name": "playground",
+	"dockerComposeFile": ["../../docker-compose.yml"],
+	"service": "playground",
 	"workspaceFolder": "/workspace",
-	"runServices": ["tanstack"],
+	"runServices": ["playground"],
 	"shutdownAction": "none",
+	// "forwardPorts": [3000, 3002, 16686],
 	"remoteEnv": {
-		"LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}"
+		"LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}",
+  		"PATH": "${containerEnv:PATH}:/home/node/go/bin"
 	},
 	"customizations": {
-		"vscode": {
-			"extensions": [
-				"vscode.typescript-language-features",
-				"GitHub.copilot",
-				"denoland.vscode-deno",
-				"Supabase.vscode-supabase-extension",
-				"ms-azuretools.vscode-docker",
-				"dbaeumer.vscode-eslint",
-				"Postman.postman-for-vscode",
-				"ms-edgedevtools.vscode-edge-devtools",
-				"tamasfe.even-better-toml",
-				"eamodio.gitlens",
-				"ms-playwright.playwright",
-				"ms-toolsai.jupyter",
-				"ms-graph.kiota",
-				"ms-vscode.azure-account",
-				"mutantdino.resourcemonitor",
-				"github.vscode-github-actions",
-				"bradlc.vscode-tailwindcss",
-				"ms-vscode.vscode-typescript-next",
-				"ms-azuretools.vscode-dapr",
-				"mtxr.sqltools",
-				"mtxr.sqltools-driver-pg",
-				"ms-azuretools.vscode-azure-github-copilot",
-				"mikeedjones.copy-file-to-chat",
-				"ms-python.python"
-			],
-			"settings": {
-				"sqltools.connections": [
-					{
-						"driver": "PostgreSQL",
-						"name": "Rag",
-						"server": "db",
-						"port": 5432,
-						"database": "rag",
-						"username": "postgres",
-						"password": "postgres",
-						"askForPassword": false
-					},
-					{
-						"driver": "PostgreSQL",
-						"name": "PostgreSQL",
-						"server": "db",
-						"port": 5432,
-						"database": "postgres",
-						"username": "postgres",
-						"password": "postgres",
-						"askForPassword": false
-					},
-					{
-						"driver": "PostgreSQL",
-						"name": "PostgreSQL",
-						"server": "vinodvm.postgres.database.azure.com",
-						"port": 5432,
-						"database": "postgres",
-						"username": "vpittamp",
-						"askForPassword": true
-					}
-				]
-				//        "terminal.integrated.cwd": "/workspace/ai-chatbot"
-			}
-		}
-	},
+	  "vscode": {
+	     "extensions": [
+			"vscode.typescript-language-features",
+			"GitHub.copilot",
+			"denoland.vscode-deno",
+			"Supabase.vscode-supabase-extension",
+			"ms-azuretools.vscode-docker",
+			"dbaeumer.vscode-eslint",
+			"Postman.postman-for-vscode",
+			"ms-edgedevtools.vscode-edge-devtools",
+			"tamasfe.even-better-toml",
+			"eamodio.gitlens",
+			"ms-playwright.playwright",
+			"ms-toolsai.jupyter",
+			"ms-graph.kiota",
+			"ms-vscode.azure-account",
+			"mutantdino.resourcemonitor",
+			"github.vscode-github-actions",
+			"bradlc.vscode-tailwindcss",
+			"ms-vscode.vscode-typescript-next",
+			"ms-azuretools.vscode-dapr",
+			"mtxr.sqltools",
+			"mtxr.sqltools-driver-pg",
+			"ms-azuretools.vscode-azure-github-copilot",
+			"mikeedjones.copy-file-to-chat",
+			"ms-python.python",
+			"ultram4rine.sqltools-clickhouse-driver",
+			"Grafana.vscode-jsonnet"
+		],
+	     "settings": {
+	             "sqltools.connections": [
+	                     {
+	                             "driver": "PostgreSQL",
+	                             "name": "PostgreSQL",
+	                             "server": "db",
+	                             "port": 5432,
+	                             "database": "postgres",
+	                             "username": "postgres",
+	                             "password": "postgres",
+	                             "askForPassword": false
+	                     },
+	                     {
+	                             "driver": "PostgreSQL",
+	                             "name": "PostgreSQL",
+	                             "server": "vinodvm.postgres.database.azure.com",
+	                             "port": 5432,
+	                             "database": "postgres",
+	                             "username": "vpittamp",
+	                             "askForPassword": true
+	                     }
+	             ]
+	     }
+	  }
+	}
+	,
 	"mounts": [
-		"source=profile,target=/root,type=volume",
-		"target=/root/.vscode-server,type=volume"
-	],
-	"features": {
-		"ghcr.io/devcontainers-extra/features/apt-packages": {
-			"packages": [
-				"iputils-ping"
-			]
-		}
-	},
+        "source=profile,target=/root,type=volume",
+        "target=/root/.vscode-server,type=volume"
+    ],
 	// "features": {
-	// 	"ghcr.io/azure/azure-dev/azd:0": {"version": "latest"},
-	// 	"ghcr.io/devcontainers/features/azure-cli": {"version": "latest"},
-	// 	"ghcr.io/devcontainers-extra/features/gh-cli:1": {"version": "latest"},
-	// 	"ghcr.io/devcontainers/features/docker-in-docker:2": {"version": "latest"},
-	// 	"ghcr.io/devcontainers/features/python": {"version": "latest"},
-	// 	"ghcr.io/devcontainers/features/github-cli": {"version": "latest"},
-	// 	"ghcr.io/devcontainers/features/dotnet": {"version": "latest"}
-	//   },
-	// Ensure Dapr is running on opening the container
-	"postCreateCommand": "dapr uninstall --all && dapr init -s",
-	// Set `remoteUser` to `root` to connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
+	// "ghcr.io/devcontainers-extra/features/apt-packages": {
+	// 	"packages": ["iputils-ping"]
+	// },
+	// "ghcr.io/devcontainers/features/go:1": {}
+	// },
+	// "postCreateCommand": "go install github.com/google/go-jsonnet/cmd/jsonnet@latest && go install -a github.com/jsonnet-bundler/jsonnet-bundler/cmd/jb@latest && ",
 	"remoteUser": "node"
 }

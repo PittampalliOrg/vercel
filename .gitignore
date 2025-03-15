@@ -58,3 +58,4 @@ logs/**
 psql_logs/**
 tracing/otel-collector-config.yml
 config/grizzly/vendor
+alloy-1.7.4-1.amd64.deb

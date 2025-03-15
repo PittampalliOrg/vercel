@@ -2,20 +2,14 @@ receivers:
   otlp/gateway:
     protocols:
       http:
-        endpoint: "0.0.0.0:4318"
+        include_metadata: true
         cors:
           allowed_origins:
-            - "http://localhost"
+            - http://localhost
             - https://*
-      grpc:
-        endpoint: "0.0.0.0:4317"
-  postgresql:
-    endpoint: db:5432
-    transport: tcp
-    username: postgres
-    password: postgres
-    databases:
-      - postgres
-    collection_interval: 10s
-    tls:
-      insecure: true
+          allowed_headers:
+            - "Content-Type"
+            - "X-Api-Key"
+            - "X-Faro-Session-Id"
+          max_age: 7200
+        endpoint: "0.0.0.0:4318"

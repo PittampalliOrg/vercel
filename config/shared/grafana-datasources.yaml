@@ -30,4 +30,25 @@ datasources:
       datasourceUid: prometheus
     streamingEnabled:
       search: true
+- name: Loki
+  type: loki
+  uid: loki
+  access: proxy
+  url: http://loki:3100
+  jsonData:
+    derivedFields:
+      - datasourceUid: tempo
+        matcherType: label
+        matcherRegex: trace_id
+        name: TraceID
+        url: '$${__value.raw}'
+- name: Mimir
+  type: prometheus
+  uid: mimir
+  access: proxy
+  orgId: 1
+  url: http://mimir:9009/prometheus
+  basicAuth: false
+  isDefault: true
+  editable: falsev
 

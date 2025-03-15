@@ -14,7 +14,9 @@ const config: NextConfig = {
     ],
   },
   productionBrowserSourceMaps: true,
-
+  experimental: {
+    nodeMiddleware: true,
+  },
 };
 
 export default config;
