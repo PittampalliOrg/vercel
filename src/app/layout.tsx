@@ -3,8 +3,8 @@ import { Toaster } from 'sonner';
 import { ThemeProvider } from '@/components/theme-provider';
 import './globals.css';
 import { trace } from '@opentelemetry/api';
-import { TelemetryProvider } from "@/components/telemetry-provider";
-
+// import { TelemetryProvider } from "@/components/telemetry-provider";
+import FrontendObservability from "@/components/frontend-observability"
 // Define metadata with a function to get active span at request time
 export async function generateMetadata(): Promise<Metadata> {
   const activeSpan = trace.getActiveSpan();
@@ -53,17 +53,8 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  console.log('Client instrumentation started.');
-  
   return (
-    <html
-      lang="en"
-      // `next-themes` injects an extra classname to the body element to avoid
-      // visual flicker before hydration. Hence the `suppressHydrationWarning`
-      // prop is necessary to avoid the React hydration mismatch warning.
-      // https://github.com/pacocoursey/next-themes?tab=readme-ov-file#with-app
-      suppressHydrationWarning
-    >
+    <html lang="en" suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{
@@ -72,7 +63,7 @@ export default async function RootLayout({
         />
       </head>
       <body className="antialiased">
-        <TelemetryProvider>
+        <FrontendObservability />
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -82,7 +73,6 @@ export default async function RootLayout({
           <Toaster position="top-center" />
           {children}
         </ThemeProvider>
-        </TelemetryProvider>
       </body>
     </html>
   );

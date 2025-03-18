@@ -1,23 +1,26 @@
+---
 apiVersion: 1
 
-# https://github.com/grafana/grafana/blob/1ea7dc92508ca51dfb29f54883a2a487f6441395/packages/grafana-o11y-ds-frontend/src/TraceToLogs/TraceToLogsSettings.tsx#L31
-# https://grafana.com/docs/grafana/latest/datasources/tempo/configure-tempo-data-source/#custom-query-variables
 datasources:
   - name: Tempo
     type: tempo
-    uid: tempo
     access: proxy
+    orgId: 1
     url: http://tempo:3200
+    basicAuth: false
+    isDefault: true
+    version: 1
+    editable: false
+    apiVersion: 1
+    uid: tempo
     jsonData:
-      tracesToLogsV2:
-        datasourceUid: 'loki'
-        customQuery: true
-        query: '{$${__tags}} | trace_id="$${__trace.traceId}" | span_id="$${__span.spanId}"'
+      httpMethod: GET
       serviceMap:
-        datasourceUid: 'mimir'
-      search:
-        hide: false
-      nodeGraph:
-        enabled: true
-      lokiSearch:
-        datasourceUid: 'loki'
+        datasourceUid: prometheus
+      tracesToProfiles:
+        customQuery: false
+        datasourceUid: "pyroscope"
+        profileTypeId: "process_cpu:cpu:nanoseconds:cpu:nanoseconds"
+        tags:
+          - key: "host.name"
+            value: "hostname"

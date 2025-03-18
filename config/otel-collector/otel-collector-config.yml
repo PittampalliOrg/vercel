@@ -4,6 +4,7 @@ receivers:
       grpc:
         endpoint: otel-collector:4317
       http:
+        endpoint: otel-collector:4318
         include_metadata: true
         cors:
           allowed_origins:
@@ -14,7 +15,6 @@ receivers:
             - "X-Api-Key"
             - "X-Faro-Session-Id"
           max_age: 7200
-        endpoint: "0.0.0.0:4318"
   httpcheck/traefik:
     targets:
       - endpoint: http://traefik:8080
@@ -98,6 +98,10 @@ exporters:
     endpoint: tempo:4317
     tls:
       insecure: true
+  otlp/pyroscope:
+    endpoint: "http://pyroscope:4040"
+    tls:
+      insecure: true
   prometheusremotewrite:
     endpoint: "http://prometheus:9090/api/v1/write"
     resource_to_telemetry_conversion:
@@ -105,14 +109,6 @@ exporters:
     timeout: 60s
     tls:
       insecure_skip_verify: true
-  otlphttp/traceloop:
-    endpoint: "https://api.traceloop.com" 
-    headers:
-      "Authorization": "Bearer ${env:TRACELOOP_API_KEY}"
-  otlphttp/betterstack:
-    endpoint: "https://s1202625.eu-nbg-2.betterstackdata.com"
-    headers:
-      Authorization: "Bearer zYyRMpCtN1ipLRpJQQKDeW16"
   file/no_rotation:
     path: ./logs/logs.json
   clickhouse:
@@ -135,10 +131,6 @@ exporters:
 
 processors:
   batch:
-  memory_limiter:
-    check_interval: 5s
-    limit_percentage: 80
-    spike_limit_percentage: 25
   batch/traces-collector:
   attributes/traces-collector:
     actions:
@@ -169,16 +161,19 @@ service:
   pipelines:
     traces:
       receivers: [otlp]
-      processors: [memory_limiter, transform, batch]
+      processors: [transform, batch]
       exporters: [otlp/tempo]
     metrics/traces-collector:
-      receivers: [prometheus/traces-collector, hostmetrics/traces-collector]
+      receivers: [otlp, hostmetrics/traces-collector]
       processors: [attributes/traces-collector, resourcedetection/system, transform, batch/traces-collector]
       exporters: [otlphttp/traces-collector/mimir]
     logs:
       receivers: [otlp]
-      processors: [memory_limiter, batch]
+      processors: [batch]
       exporters: [otlphttp/loki, debug]
+    profiles:
+      receivers: [otlp]
+      exporters: [otlp/pyroscope]
   telemetry:
     metrics:
       level: detailed

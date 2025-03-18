@@ -8,5 +8,5 @@ datasources:
   orgId: 1
   url: http://mimir:9009/prometheus
   basicAuth: false
-  isDefault: true
+  isDefault: false
   editable: false

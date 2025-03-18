@@ -1,28 +1,17 @@
 version: "3.8"
 
-x-default-logging: &logging
-  driver: "json-file"
-  options:
-    max-size: "5m"
-    max-file: "2"
-    tag: "{{.Name}}"
-
 networks:
   shared-network:
     name: shared-network
 
 volumes:
   postgres-data:
-  prometheus_data: 
+  prometheus_data:
 
 services:
-
-  ########################################
-  # 1) Proxy/Traefik
-  ########################################
   traefik:
     image: "traefik:v3.3"
-    container_name: "traefik"
+    # no container_name set here
     command:
       - "--log.level=DEBUG"
       - "--api.insecure=true"
@@ -33,21 +22,18 @@ services:
       - "--tracing.otlp.http.endpoint=http://otel-collector:4318/v1/traces"
       - "--experimental.otlpLogs=true"
       - "--log.otlp.http.endpoint=http://otel-collector:4318/v1/logs"
-      - "--accesslog.fields.names.StartUTC=drop"
       - "--metrics.otlp.http.endpoint=http://otel-collector:4318/v1/metrics"
     ports:
       - "80:80"
       - "8080:8080"
-    environment:
-      - TZ=America/New_York
-    volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock:ro"
     networks:
       - shared-network
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
 
   app:
     image: "traefik/whoami"
-    container_name: "simple-service"
+    # no container_name
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.app.rule=(Host(`localhost`) && PathPrefix(`/app`))"
@@ -55,8 +41,8 @@ services:
       - shared-network
 
   frontend:
-    container_name: frontend
-    image: next-js
+    image: "next-js"
+    # no container_name
     volumes:
       - .:/workspace:cached
       - ./.next:/app/.next
@@ -70,20 +56,21 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.frontend.rule=(Host(`localhost`) && PathPrefix(`/frontend`))"
-    depends_on:
-      - traefik
     networks:
       - shared-network
+    depends_on:
+      - traefik
 
   playground:
-    container_name: playground
-    image: next-js
+    image: "next-js"
+    # no container_name
     volumes:
       - ../next-app-router-playground:/workspace:cached
     environment:
       - NEXT_PUBLIC_BASE_PATH=/playground
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
-    command: sleep infinity
+    networks:
+      - shared-network
     expose:
       - "3000"
     labels:
@@ -91,27 +78,67 @@ services:
       - "traefik.http.routers.playground.rule=(Host(`localhost`) && PathPrefix(`/playground`))"
     depends_on:
       - traefik
-    networks:
-      - shared-network
 
   db:
-    container_name: db
     image: pgvector/pgvector:pg17
+    # no container_name
     restart: unless-stopped
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./src/lib/db/migrations:/docker-entrypoint-initdb.d:ro
     environment:
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_USER: postgres
-      POSTGRES_DB: postgres
-    ports:
-      - "5432:5432"
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=postgres
     networks:
       - shared-network
+    ports:
+      - "5432:5432"
+
+  # Alloy: remove the `profiles` line so it always starts
+  alloy:
+    image: grafana/alloy:latest
+    restart: on-failure
+    volumes:
+      - ./config/alloy:/etc/alloy
+    environment:
+      - REMOTE_WRITE_HOST=mimir:9009
+      - LOKI_HOST=loki:3100
+      - TEMPO_HOST=tempo:4317
+      - PYROSCOPE_HOST=pyroscope:4040
+    depends_on:
+      - mimir
+      - loki
+      - tempo
+      - pyroscope
+    command:
+      - run
+      - /etc/alloy/config.alloy
+      - --storage.path=/var/lib/alloy/data
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --stability.level=experimental
+    networks:
+      - shared-network
+    ports:
+      - "12345:12345"
+
+  pyroscope:
+    image: grafana/pyroscope:latest
+    # no container_name
+    environment:
+      - JAEGER_AGENT_HOST=tempo
+      - JAEGER_SAMPLER_TYPE=const
+      - JAEGER_SAMPLER_PARAM=1
+    command: [ "-config.file=/etc/pyroscope.yml" ]
+    volumes:
+      - ./config/pyroscope/pyroscope.yml:/etc/pyroscope.yml
+    networks:
+      - shared-network
+    ports:
+      - "4040:4040"
 
   init:
-    image: &tempoImage grafana/tempo:latest
+    image: grafana/tempo:latest
     user: root
     entrypoint:
       - "chown"
@@ -123,55 +150,48 @@ services:
       - shared-network
 
   tempo:
-    image: *tempoImage
+    image: grafana/tempo:latest
+    # no container_name
     command: [ "-config.file=/etc/tempo.yaml" ]
-    container_name: tempo
     volumes:
       - ./config/shared/tempo.yaml:/etc/tempo.yaml:ro
       - ./tempo-data:/var/tempo
-    # We only map 3200. We do NOT map 4317:4317 to the host to avoid conflict.
-    ports:
-      - "3200:3200"
     depends_on:
       - init
     networks:
       - shared-network
-
-  otel-collector:
-    image: ${COLLECTOR_CONTRIB_IMAGE}
-    container_name: otel-collector
-    deploy:
-      resources:
-        limits:
-          memory: 200M
-    restart: unless-stopped
-    command: [ "--config=/etc/otelcol-config.yml", "--config=/etc/otelcol-config-extras.yml" ]
-    user: 0:0
-    volumes:
-      - ${HOST_FILESYSTEM}:/hostfs:ro
-      - ${DOCKER_SOCK}:/var/run/docker.sock:ro
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
-      - ./config/otel-collector/otel-collector-config.yml:/etc/otelcol-config.yml
-      - ./config/otel-collector/otelcol-config-extras.yml:/etc/otelcol-config-extras.yml
-      - ./logs:/logs
-    # Publish 4317:4317 for gRPC, 4318 for HTTP, etc
     ports:
-      - "${OTEL_COLLECTOR_PORT_GRPC}:${OTEL_COLLECTOR_PORT_GRPC}"
-      - "${OTEL_COLLECTOR_PORT_HTTP}:${OTEL_COLLECTOR_PORT_HTTP}"
-      - "13133:13133"
-      - "9464"
-      - "8889"
-    logging: *logging
-    environment:
-      - ENVOY_PORT
-      - HOST_FILESYSTEM=""
-      - OTEL_COLLECTOR_HOST
-      - OTEL_COLLECTOR_PORT_GRPC
-      - OTEL_COLLECTOR_PORT_HTTP
-      - TRACELOOP_API_KEY
-      - AZURE_STORAGE_EXPLORER_KEY
-    networks:
-      - shared-network
+      - "3200:3200"
+      - "4317:4317"
+
+  # otel-collector:
+  #   image: otel/opentelemetry-collector-contrib:0.114.0
+  #   # no container_name
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         memory: 200M
+  #   restart: unless-stopped
+  #   command: 
+  #     - "--config=/etc/otelcol-config.yml"
+  #     - "--config=/etc/otelcol-config-extras.yml"
+  #     - "--feature-gates=service.profilesSupport"
+  #   user: 0:0
+  #   volumes:
+  #     - ${HOST_FILESYSTEM}:/hostfs:ro
+  #     - ${DOCKER_SOCK}:/var/run/docker.sock:ro
+  #     - /var/lib/docker/containers:/var/lib/docker/containers:ro
+  #     - ./config/otel-collector/otel-collector-config.yml:/etc/otelcol-config.yml
+  #     - ./config/otel-collector/otelcol-config-extras.yml:/etc/otelcol-config-extras.yml
+  #     - ./logs:/logs
+  #   networks:
+  #     - shared-network
+  #   ports:
+  #     - "${OTEL_COLLECTOR_PORT_GRPC}:${OTEL_COLLECTOR_PORT_GRPC}"
+  #     - "${OTEL_COLLECTOR_PORT_HTTP}:${OTEL_COLLECTOR_PORT_HTTP}"
+  #     - "13133:13133"
+  #     - "9464"
+  #     - "8889"
 
   prometheus:
     image: prom/prometheus:latest
@@ -182,13 +202,13 @@ services:
       - --enable-feature=native-histograms
     volumes:
       - ./config/shared/prometheus.yaml:/etc/prometheus.yaml
-    ports:
-      - "9090:9090"
     networks:
       - shared-network
+    ports:
+      - "9090:9090"
 
   grafana:
-    image: grafana/grafana:11.0.0
+    image: grafana/grafana:latest
     volumes:
       - ./config/grafana/grafana.ini:/etc/grafana/grafana.ini:ro
       - ./config/grafana/provisioning/:/etc/grafana/provisioning/:ro
@@ -196,29 +216,44 @@ services:
       - GF_AUTH_ANONYMOUS_ENABLED=true
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
       - GF_AUTH_DISABLE_LOGIN_FORM=true
-      - GF_FEATURE_TOGGLES_ENABLE=traceqlEditor
+      - GF_FEATURE_TOGGLES_ENABLE=traceqlEditor traceToProfiles tracesEmbeddedFlameGraph
+      - GF_INSTALL_PLUGINS=grafana-pyroscope-app
+      - GF_INSTALL_PLUGINS=grafana-lokiexplore-app
+      - GF_INSTALL_PLUGINS=grafana-metricsdrilldown-app
+      - GF_INSTALL_PLUGINS=https://storage.googleapis.com/integration-artifacts/grafana-exploretraces-app/grafana-exploretraces-app-latest.zip;grafana-traces-app
+    networks:
+      - shared-network
+    ports:
+      - "3000:3000"
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.grafana.rule=(Host(`localhost`) && PathPrefix(`/grafana`))"
-    expose:
-      - "3000"
-    networks:
-      - shared-network
     depends_on:
       - mimir
       - loki
       - tempo
+
   mimir:
-    image: grafana/mimir:2.11.0
+    image: grafana/mimir:latest
     volumes:
       - ./config/mimir/mimir.yaml:/etc/mimir.yaml
-    command: --config.file=/etc/mimir.yaml -distributor.otel-metric-suffixes-enabled
+    command:
+      - --config.file=/etc/mimir.yaml
+      - -distributor.otel-metric-suffixes-enabled
     networks:
       - shared-network
+    ports:
+      - "9009:9009"
+
   loki:
-    image: grafana/loki:3.0.0
-    command: -config.file=/etc/loki/local-config.yaml -log.level=debug
+    image: grafana/loki:latest
+    command:
+      - -config.file=/etc/loki/local-config.yaml
+      - -log.level=debug
+      - -pattern-ingester.enabled=true
     volumes:
       - ./config/loki/:/etc/loki/:ro
     networks:
       - shared-network
+    ports:
+      - "3100:3100"

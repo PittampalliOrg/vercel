@@ -50,6 +50,15 @@ importers:
       '@dapr/dapr':
         specifier: ^3.4.1
         version: 3.5.2
+      '@grafana/faro-react':
+        specifier: ^1.14.1
+        version: 1.14.1(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
+      '@grafana/faro-web-sdk':
+        specifier: ^1.14.1
+        version: 1.14.1
+      '@grafana/faro-web-tracing':
+        specifier: ^1.14.1
+        version: 1.14.1
       '@grafana/grafana-foundation-sdk':
         specifier: 11.4.0-cogv0.0.x.1740757701
         version: 11.4.0-cogv0.0.x.1740757701
@@ -1282,6 +1291,31 @@ packages:
 
   '@floating-ui/utils@0.2.9':
     resolution: {integrity: sha512-MDWhGtE+eHw5JW7lq4qhc5yRLS11ERl1c7Z6Xd0a58DozHES6EnNNwUWbMiG4J9Cgj053Bhk8zvlhFYKVhULwg==}
+
+  '@grafana/faro-core@1.14.1':
+    resolution: {integrity: sha512-wPQEJ3Ow4s5m+scrHUHAbwCTMoXlXgwdjtO5PCKCimaI5q4nzFHp5D2FpFGDul2WfRVzwWvkhX6A7CGTui/myw==}
+    engines: {node: '>=18.0.0'}
+
+  '@grafana/faro-react@1.14.1':
+    resolution: {integrity: sha512-tmoQE6TUdlepizWUNjbtjU1/HBxO9rBHhwx9FvEh7qIJDkdJdZoE2lG3VTQPhT013WuT5rnTnsS6g3L1HoqYeA==}
+    engines: {node: '>=18.0.0'}
+    peerDependencies:
+      react: ^16.8.0 || ^17.0.0 || ^18.0.0
+      react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0
+      react-router-dom: ^4.0.0 || ^5.0.0 || ^6.0.0
+    peerDependenciesMeta:
+      react-dom:
+        optional: true
+      react-router-dom:
+        optional: true
+
+  '@grafana/faro-web-sdk@1.14.1':
+    resolution: {integrity: sha512-Ii1xdpYysBfHO7XbK05uCXGwskDzLH7CYSdXU2gC8loRDR5PiqPzEczzVFeNhzGRcQzcecYWMxOzeucXdhNilw==}
+    engines: {node: '>=18.0.0'}
+
+  '@grafana/faro-web-tracing@1.14.1':
+    resolution: {integrity: sha512-fbsWIj6XCyRD3wd7FAYvxtMMtsN5/I8wb6ak4JCp2iNt2aEa7lhLNTM6r5hKq6oSe77vrl/bfgI51qEw+mdoNw==}
+    engines: {node: '>=18.0.0'}
 
   '@grafana/grafana-foundation-sdk@11.4.0-cogv0.0.x.1740757701':
     resolution: {integrity: sha512-v8PhhbeVpPBokFRYHIFeI7qY6LLVrVTZgiSfRxro7lEYsen9G0PeTad/qL9OwVJrHyud46Vtm9HgZneOKbkREw==}
@@ -4667,6 +4701,9 @@ packages:
     engines: {node: '>= 0.10.x'}
     hasBin: true
 
+  hoist-non-react-statics@3.3.2:
+    resolution: {integrity: sha512-/gGivxi8JPKWNm/W0jSmzcMPpfpPLc3dY/6GxhX2hQ9iGj3aDfklV4ET7NjKpSinLpJ5vafa9iiGIEZg10SfBw==}
+
   hono@4.7.4:
     resolution: {integrity: sha512-Pst8FuGqz3L7tFF+u9Pu70eI0xa5S3LPUmrNd5Jm8nTHze9FxLTK9Kaj5g/k4UcwuJSXTP65SyHOPLrffpcAJg==}
     engines: {node: '>=16.9.0'}
@@ -6529,6 +6566,10 @@ packages:
       '@samchon/openapi': '>=3.0.0 <4.0.0'
       typescript: '>=4.8.0 <5.9.0'
 
+  ua-parser-js@1.0.40:
+    resolution: {integrity: sha512-z6PJ8Lml+v3ichVojCiB8toQJBuwR42ySM4ezjXIqXK3M0HczmKQ3LF4rhU55PfD99KEEXQG6yb7iOMyvYuHew==}
+    hasBin: true
+
   uc.micro@2.1.0:
     resolution: {integrity: sha512-ARDJmphmdvUk6Glw7y9DQ2bFkKBHwQHLi2lsaH6PPmz/Ka9sFOBsBluozhDltWmnv9u/cF6Rt87znRTPV+yp/A==}
 
@@ -6686,6 +6727,9 @@ packages:
 
   wcwidth@1.0.1:
     resolution: {integrity: sha512-XHPEwS0q6TaxcvG85+8EYkbiCux2XtWG2mkc47Ng2A77BQu9+DqIOJldST4HgPkuea7dvKSj5VgX3P1d4rW8Tg==}
+
+  web-vitals@4.2.4:
+    resolution: {integrity: sha512-r4DIlprAGwJ7YM11VZp4R884m0Vmgr6EAKe3P+kO0PPj3Unqyvv59rczf6UiGcb9Z8QxZVcqKNwv/g0WNdWwsw==}
 
   webidl-conversions@3.0.1:
     resolution: {integrity: sha512-2JAn3z8AR6rjK8Sm8orRC0h/bcl/DqL7tRPdGZ4I1CjdF+EaMLmYxBHyXuKL849eucPFhvBoxMsflfOb8kxaeQ==}
@@ -7439,6 +7483,44 @@ snapshots:
       react-dom: 19.0.0(react@19.0.0)
 
   '@floating-ui/utils@0.2.9': {}
+
+  '@grafana/faro-core@1.14.1':
+    dependencies:
+      '@opentelemetry/api': 1.9.0
+      '@opentelemetry/otlp-transformer': 0.57.2(@opentelemetry/api@1.9.0)
+
+  '@grafana/faro-react@1.14.1(react-dom@19.0.0(react@19.0.0))(react@19.0.0)':
+    dependencies:
+      '@grafana/faro-web-sdk': 1.14.1
+      '@grafana/faro-web-tracing': 1.14.1
+      hoist-non-react-statics: 3.3.2
+      react: 19.0.0
+    optionalDependencies:
+      react-dom: 19.0.0(react@19.0.0)
+    transitivePeerDependencies:
+      - supports-color
+
+  '@grafana/faro-web-sdk@1.14.1':
+    dependencies:
+      '@grafana/faro-core': 1.14.1
+      ua-parser-js: 1.0.40
+      web-vitals: 4.2.4
+
+  '@grafana/faro-web-tracing@1.14.1':
+    dependencies:
+      '@grafana/faro-web-sdk': 1.14.1
+      '@opentelemetry/api': 1.9.0
+      '@opentelemetry/core': 1.30.1(@opentelemetry/api@1.9.0)
+      '@opentelemetry/exporter-trace-otlp-http': 0.57.2(@opentelemetry/api@1.9.0)
+      '@opentelemetry/instrumentation': 0.57.2(@opentelemetry/api@1.9.0)
+      '@opentelemetry/instrumentation-fetch': 0.57.2(@opentelemetry/api@1.9.0)
+      '@opentelemetry/instrumentation-xml-http-request': 0.57.2(@opentelemetry/api@1.9.0)
+      '@opentelemetry/otlp-transformer': 0.57.2(@opentelemetry/api@1.9.0)
+      '@opentelemetry/resources': 1.30.1(@opentelemetry/api@1.9.0)
+      '@opentelemetry/sdk-trace-web': 1.30.1(@opentelemetry/api@1.9.0)
+      '@opentelemetry/semantic-conventions': 1.30.0
+    transitivePeerDependencies:
+      - supports-color
 
   '@grafana/grafana-foundation-sdk@11.4.0-cogv0.0.x.1740757701':
     dependencies:
@@ -11433,6 +11515,10 @@ snapshots:
       process: 0.10.1
       xtend: 4.0.2
 
+  hoist-non-react-statics@3.3.2:
+    dependencies:
+      react-is: 16.13.1
+
   hono@4.7.4: {}
 
   html-url-attributes@3.0.1: {}
@@ -13687,6 +13773,8 @@ snapshots:
       randexp: 0.5.3
       typescript: 5.8.2
 
+  ua-parser-js@1.0.40: {}
+
   uc.micro@2.1.0: {}
 
   ufo@1.5.4: {}
@@ -13830,6 +13918,8 @@ snapshots:
   wcwidth@1.0.1:
     dependencies:
       defaults: 1.0.4
+
+  web-vitals@4.2.4: {}
 
   webidl-conversions@3.0.1: {}
 
