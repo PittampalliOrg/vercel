@@ -1,256 +1,81 @@
-extensions:
-  health_check: {}
-  pprof: {}
-  zpages: {}
-
-  file_storage/agent:
-    directory: /app/logstate/agent
-    create_directory: true
-
-  file_storage/app:
-    directory: /app/logstate/app
-    create_directory: true
-
 receivers:
-  filelog/agent:
-    include: [ /app/otelcol.log.json ]
-    storage: file_storage/agent
-    attributes:
-      # Use a literal string (no colon). Or fallback env syntax if you want env:
-      service.name: "otelcol_agent"
-      service.namespace: "agent_namespace"
-    operators:
-      - type: json_parser
-        severity:
-          parse_from: attributes.level
-        timestamp:
-          parse_from: attributes.ts
-          layout_type: epoch
-          layout: 's.ns'
-      - type: remove
-        field: body
-
-  filelog/app:
-    include: [ /app/log/*.log ]
-    storage: file_storage/app
-    multiline:
-      line_start_pattern: timestamp=
-    operators:
-      - type: key_value_parser
-        delimiter: "="
-        pair_delimiter: "\t"
-      - type: move
-        from: attributes["service.version"]
-        to: resource["service.version"]
-      - type: move
-        from: attributes.message
-        to: body
-      - type: time_parser
-        parse_from: attributes.timestamp
-        layout_type: strptime
-        layout: "%Y-%m-%dT%H:%M:%S.%LZ"
-      - type: remove
-        field: attributes.timestamp
-      - type: trace_parser
-        trace_id:
-          parse_from: attributes.traceId
-        span_id:
-          parse_from: attributes.spanId
-      - type: remove
-        field: attributes.traceId
-      - type: remove
-        field: attributes.spanId
-    resource:
-      # Example fallback syntax if you want environment var with a default:
-      service.name: my-app
-      service.namespace: app_namespace
-      host.name: unknown_host
-      deployment.environment: dev
-
-  prometheus:
-    config:
-      scrape_configs:
-        - job_name: otelcol-contrib
-          scrape_interval: 10s
-          static_configs:
-            - targets: [0.0.0.0:8888]
-
-  hostmetrics:
-    collection_interval: 10s
-    scrapers:
-      cpu:
-        metrics:
-          system.cpu.logical.count:
-            enabled: true
-      memory:
-        metrics:
-          system.memory.utilization:
-            enabled: true
-          system.memory.limit:
-            enabled: true
-      load:
-      disk:
-      filesystem:
-        metrics:
-          system.filesystem.utilization:
-            enabled: true
-      network:
-      paging:
-      processes:
-      process:
-        mute_process_user_error: true
-        metrics:
-          process.cpu.utilization:
-            enabled: true
-          process.memory.utilization:
-            enabled: true
-          process.threads:
-            enabled: true
-          process.paging.faults:
-            enabled: true
-
   otlp:
     protocols:
       grpc:
-        endpoint: "0.0.0.0:4317"
+        endpoint: otel-collector:4317
       http:
-        endpoint: "0.0.0.0:4318"
+        endpoint: otel-collector:4318
+        include_metadata: true
         cors:
-          allowed_origins: [ "http://localhost", "https://*" ]
-          allowed_headers: [ "Content-Type","X-Api-Key","X-Faro-Session-Id" ]
+          allowed_origins:
+            - http://localhost
+            - https://*
+          allowed_headers:
+            - "Content-Type"
+            - "X-Api-Key"
+            - "X-Faro-Session-Id"
           max_age: 7200
-
-processors:
-  batch: {}
-
-  resource/agent:
-    attributes:
-      - action: upsert
-        key: service.namespace
-        value: "agent"
-      - key: service.name
-        action: upsert
-        value: "otelcol_contrib_agent"
-
-  attributes/agent:
-    actions:
-      - key: service.namespace
-        action: upsert
-        value: "agent"
-      - key: service.name
-        action: upsert
-        value: "otelcol_contrib_agent"
-
-  attributes/agent/loki:
-    actions:
-      - action: insert
-        key: loki.attribute.labels
-        value: service.name, service.namespace, service.version, deployment.environment, host.name
-
-  resourcedetection/system:
-    detectors: ["system"]
-
-  transform:
-    metric_statements:
-      - context: datapoint
-        statements:
-          - set(attributes["host.name"], resource.attributes["host.name"])
-          - set(attributes["process.command"], resource.attributes["process.command"])
-          - set(attributes["process.command_line"], resource.attributes["process.command_line"])
-          - set(attributes["process.executable.name"], resource.attributes["process.executable.name"])
-          - set(attributes["process.executable.path"], resource.attributes["process.executable.path"])
-          - set(attributes["process.owner"], resource.attributes["process.owner"])
-          - set(attributes["process.parent_pid"], resource.attributes["process.parent_pid"])
-          - set(attributes["process.pid"], resource.attributes["process.pid"])
-
-  # for app logs
-  batch/app: {}
-
-  # tail sampling example
-  tail_sampling/probabilistic:
-    policies:
-      - name: probabilistic-policy
-        type: probabilistic
-        probabilistic:
-          sampling_percentage: 100
-
-  tail_sampling/latency-error:
-    decision_wait: 10s
-    policies:
-      - name: latency-policy
-        type: latency
-        latency: { threshold_ms: 100 }
-      - name: error-policy
-        type: and
-        and:
-          and_sub_policy:
-            - name: status_code-error-policy
-              type: status_code
-              status_code:
-                status_codes: [ERROR]
-            - name: http-status-code-error-policy
-              type: string_attribute
-              string_attribute:
-                key: error.type
-                values: [4..]
-                enabled_regex_matching: true
-                invert_match: true
-
-connectors:
-  servicegraph:
-    dimensions: [ db.system, messaging.system ]
-    virtual_node_peer_attributes: [ db.name, db.system, messaging.system, peer.service ]
-    virtual_node_extra_label: true
 
 exporters:
   debug:
     verbosity: detailed
-
-  loki:
-    endpoint: http://loki:3100/loki/api/v1/push
-    default_labels_enabled:
-      level: true
-
-  otlphttp/mimir:
-    endpoint: http://mimir:9009/otlp
-
-  otlphttp/tempo:
-    endpoint: http://tempo:4318/
-
   otlp/jaeger:
-    endpoint: jaeger:4317
+    endpoint: "jaeger:4317"
     tls:
       insecure: true
+  otlphttp/mimir:
+    endpoint: http://mimir:9009/otlp
+  otlphttp/loki:
+    endpoint: http://loki:3100/otlp 
+  otlp/tempo:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
+  otlp/pyroscope:
+    endpoint: "http://pyroscope:4040"
+    tls:
+      insecure: true
+  # clickhouse:
+  #   endpoint: tcp://clickhouse:9000
+  #   # ttl: 72h
+  #   traces_table_name: otel_traces
+  #   logs_table_name: otel_logs
+  #   create_schema: true
+  #   timeout: 5s
+  #   database: default
+  #   sending_queue:
+  #     queue_size: 1000
+  #   retry_on_failure:
+  #     enabled: true
+  #     initial_interval: 5s
+  #     max_interval: 30s
+  #     max_elapsed_time: 300s
+  #   username: "username"
+  #   password: "password"
+
+processors:
+  batch:
 
 service:
-  extensions: [health_check, pprof, zpages, file_storage/agent, file_storage/app]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp/tempo, otlp/jaeger]
+    metrics:
+      receivers: [otlp]
+      exporters: [otlphttp/mimir]
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlphttp/loki, debug]
+    # profiles:
+    #   receivers: [otlp]
+    #   exporters: [otlp/pyroscope]
   telemetry:
     metrics:
       level: detailed
     logs:
       level: info
-      encoding: json
-      # Write to stdout to avoid "permission denied" if local filesystem is read-only
-      output_paths: ["stdout"]
-      # If you want a file, ensure a writable path, e.g. "/tmp/otelcol.log.json"
 
-  pipelines:
-    logs/agent:
-      receivers: [filelog/agent]
-      processors: [batch, resource/agent, attributes/agent/loki]
-      exporters: [loki]
 
-    logs/app:
-      receivers: [filelog/app]
-      processors: [batch/app]
-      exporters: [loki, debug]
-
-    metrics:
-      receivers: [prometheus, hostmetrics]
-      processors: [attributes/agent, resourcedetection/system, transform, batch]
-      exporters: [otlphttp/mimir]
-
-    traces:
-      receivers: [otlp]
-      processors: [tail_sampling/latency-error, tail_sampling/probabilistic, batch]
-      exporters: [otlphttp/tempo, otlp/jaeger]

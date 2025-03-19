@@ -17,11 +17,11 @@ import { NodeSDK } from '@opentelemetry/sdk-node';
 
 // --- Create Exporters ---
 const traceExporter = new OTLPTraceExporter({
-  url: 'http://otel-collector:4318/v1/traces',
+  url: 'http://alloy:4318/v1/traces',
 });
 
 const metricExporter = new OTLPMetricExporter({
-  url: 'http://otel-collector:4318/v1/metrics',
+  url: 'http://alloy:4318/v1/metrics',
 });
 
 const metricReader = new PeriodicExportingMetricReader({
@@ -29,7 +29,7 @@ const metricReader = new PeriodicExportingMetricReader({
 });
 
 const logRecordExporter = new OTLPLogExporter({
-  url: 'http://otel-collector:4318/v1/logs',
+  url: 'http://alloy:4318/v1/logs',
 });
 
 // --- Create NodeSDK ---

@@ -73,6 +73,7 @@ services:
       - shared-network
     expose:
       - "3000"
+    command: sleep infinity
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.playground.rule=(Host(`localhost`) && PathPrefix(`/playground`))"
@@ -81,11 +82,12 @@ services:
 
   db:
     image: pgvector/pgvector:pg17
-    # no container_name
     restart: unless-stopped
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./src/lib/db/migrations:/docker-entrypoint-initdb.d:ro
+      - ./config/postgresql/customPostgresql.conf:/etc/postgresql.conf
+      - ./logs:/logs
     environment:
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_USER=postgres
@@ -94,6 +96,7 @@ services:
       - shared-network
     ports:
       - "5432:5432"
+    command: postgres -c config_file=/etc/postgresql.conf
 
   # Alloy: remove the `profiles` line so it always starts
   alloy:
@@ -101,11 +104,25 @@ services:
     restart: on-failure
     volumes:
       - ./config/alloy:/etc/alloy
+      - /var/run/docker.sock:/var/run/docker.sock
+    security_opt:
+      - seccomp:unconfined
+    cap_add:
+      - SYS_ADMIN
+      - SYS_RESOURCE
+      - SYSLOG # Add this capability to address kptr_restrict=1 requirements
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
     environment:
       - REMOTE_WRITE_HOST=mimir:9009
       - LOKI_HOST=loki:3100
       - TEMPO_HOST=tempo:4317
       - PYROSCOPE_HOST=pyroscope:4040
+      - GRAFANA_CLOUD_INSTANCE_ID=1159337
+      - GRAFANA_CLOUD_API_KEY="${GRAFANA_CLOUD_API_KEY}"
+      - GRAFANA_CLOUD_OTLP_ENDPOINT=https://otlp-gateway-prod-us-east-2.grafana.net/otlp
     depends_on:
       - mimir
       - loki
@@ -121,6 +138,8 @@ services:
       - shared-network
     ports:
       - "12345:12345"
+      - "4317:4317"
+      - "4318:4318"
 
   pyroscope:
     image: grafana/pyroscope:latest
@@ -162,36 +181,106 @@ services:
       - shared-network
     ports:
       - "3200:3200"
-      - "4317:4317"
+      - "4317"
 
-  # otel-collector:
-  #   image: otel/opentelemetry-collector-contrib:0.114.0
-  #   # no container_name
-  #   deploy:
-  #     resources:
-  #       limits:
-  #         memory: 200M
-  #   restart: unless-stopped
-  #   command: 
-  #     - "--config=/etc/otelcol-config.yml"
-  #     - "--config=/etc/otelcol-config-extras.yml"
-  #     - "--feature-gates=service.profilesSupport"
-  #   user: 0:0
-  #   volumes:
-  #     - ${HOST_FILESYSTEM}:/hostfs:ro
-  #     - ${DOCKER_SOCK}:/var/run/docker.sock:ro
-  #     - /var/lib/docker/containers:/var/lib/docker/containers:ro
-  #     - ./config/otel-collector/otel-collector-config.yml:/etc/otelcol-config.yml
-  #     - ./config/otel-collector/otelcol-config-extras.yml:/etc/otelcol-config-extras.yml
-  #     - ./logs:/logs
-  #   networks:
-  #     - shared-network
-  #   ports:
-  #     - "${OTEL_COLLECTOR_PORT_GRPC}:${OTEL_COLLECTOR_PORT_GRPC}"
-  #     - "${OTEL_COLLECTOR_PORT_HTTP}:${OTEL_COLLECTOR_PORT_HTTP}"
-  #     - "13133:13133"
-  #     - "9464"
-  #     - "8889"
+  beyla-frontend:
+    image: grafana/beyla:latest
+    pid: "service:frontend"
+    privileged: true
+    network_mode: host
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup  # Required for context propagation
+    cap_add:
+      - BPF                # Required for eBPF probes
+      - SYS_PTRACE         # Allows inspecting executables
+      - NET_RAW            # For socket filters
+      - CHECKPOINT_RESTORE # For opening ELF files
+      - DAC_READ_SEARCH    # For opening ELF files
+      - PERFMON            # For loading BPF programs
+      - NET_ADMIN          # Required for context propagation
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    environment:
+      - BEYLA_SERVICE_NAME=frontend
+      - BEYLA_OPEN_PORT=3000
+      - BEYLA_TRACE_PRINTER=text
+      - BEYLA_NETWORK_METRICS=true
+      - BEYLA_NETWORK_SOURCE=socket_filter
+      - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
+      - OTEL_EXPORTER_OTLP_HEADERS=""
+      - BEYLA_BPF_ENABLE_CONTEXT_PROPAGATION=true
+    depends_on:
+      frontend:
+        condition: service_started
+
+  beyla-playground:
+    image: grafana/beyla:latest
+    pid: "service:playground"
+    privileged: true
+    network_mode: host
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup  # Required for context propagation
+    cap_add:
+      - BPF                # Required for eBPF probes
+      - SYS_PTRACE         # Allows inspecting executables
+      - NET_RAW            # For socket filters
+      - CHECKPOINT_RESTORE # For opening ELF files
+      - DAC_READ_SEARCH    # For opening ELF files
+      - PERFMON            # For loading BPF programs
+      - NET_ADMIN          # Required for context propagation
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    environment:
+      - BEYLA_SERVICE_NAME=playground
+      - BEYLA_OPEN_PORT=3000
+      - BEYLA_TRACE_PRINTER=text
+      - BEYLA_NETWORK_METRICS=true
+      - BEYLA_NETWORK_SOURCE=socket_filter
+      - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
+      - OTEL_EXPORTER_OTLP_HEADERS=""
+      - BEYLA_BPF_ENABLE_CONTEXT_PROPAGATION=true
+    depends_on:
+      frontend:
+        condition: service_started
+
+  beyla-db:
+    image: grafana/beyla:latest
+    pid: "service:db"
+    privileged: true
+    network_mode: host
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup  # Required for context propagation
+    cap_add:
+      - BPF                # Required for eBPF probes
+      - SYS_PTRACE         # Allows inspecting executables
+      - NET_RAW            # For socket filters
+      - CHECKPOINT_RESTORE # For opening ELF files
+      - DAC_READ_SEARCH    # For opening ELF files
+      - PERFMON            # For loading BPF programs
+      - NET_ADMIN          # Required for context propagation
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    environment:
+      - BEYLA_SERVICE_NAME=db
+      - BEYLA_OPEN_PORT=5432
+      - BEYLA_TRACE_PRINTER=text
+      - BEYLA_NETWORK_METRICS=true
+      - BEYLA_NETWORK_SOURCE=socket_filter
+      - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
+      - OTEL_EXPORTER_OTLP_HEADERS=""
+      - BEYLA_BPF_ENABLE_CONTEXT_PROPAGATION=true
+    depends_on:
+      frontend:
+        condition: service_started
 
   prometheus:
     image: prom/prometheus:latest
@@ -212,6 +301,8 @@ services:
     volumes:
       - ./config/grafana/grafana.ini:/etc/grafana/grafana.ini:ro
       - ./config/grafana/provisioning/:/etc/grafana/provisioning/:ro
+    env_file:
+      - .env
     environment:
       - GF_AUTH_ANONYMOUS_ENABLED=true
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
@@ -224,7 +315,7 @@ services:
     networks:
       - shared-network
     ports:
-      - "3000:3000"
+      - "3000"
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.grafana.rule=(Host(`localhost`) && PathPrefix(`/grafana`))"

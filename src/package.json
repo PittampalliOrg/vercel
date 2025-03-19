@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "NODE_OPTIONS='--inspect' NODE_OPTIONS='--enable-source-maps' NEXT_OTEL_VERBOSE=1 next dev --turbopack",
+    "dev": "NODE_OPTIONS='--inspect' NODE_OPTIONS='--enable-source-maps' NEXT_OTEL_VERBOSE=1 AUTH_SECRET=v0dZ03G4ECmMYMA4/Ht32mBeV1XR4znOTDffnyKxF5o= next dev --turbopack",
     "build": "next build -d",
     "start": "next start --keepAliveTimeout 70000",
     "info": "next info --verbose",

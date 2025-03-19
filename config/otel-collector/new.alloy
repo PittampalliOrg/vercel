@@ -1,0 +1,71 @@
+otelcol.receiver.otlp "default" {
+	grpc {
+		endpoint = "otel-collector:4317"
+	}
+
+	http {
+		endpoint = "otel-collector:4318"
+
+		cors {
+			allowed_origins = ["http://localhost", "https://*"]
+			allowed_headers = ["Content-Type", "X-Api-Key", "X-Faro-Session-Id"]
+			max_age         = 7200
+		}
+		include_metadata = true
+	}
+
+	output {
+		metrics = [otelcol.exporter.otlphttp.default_mimir.input]
+		logs    = [otelcol.processor.batch.default.input]
+		traces  = [otelcol.processor.batch.default.input]
+	}
+}
+
+otelcol.processor.batch "default" {
+	output {
+		logs   = [otelcol.exporter.otlphttp.default_loki.input, otelcol.exporter.debug.default.input]
+		traces = [otelcol.exporter.otlp.default_tempo.input, otelcol.exporter.otlp.default_jaeger.input]
+	}
+}
+
+otelcol.exporter.otlphttp "default_mimir" {
+	client {
+		endpoint                = "http://mimir:9009/otlp"
+		max_idle_conns_per_host = 0
+		max_conns_per_host      = 0
+		http2_ping_timeout      = "0s"
+	}
+}
+
+otelcol.exporter.otlphttp "default_loki" {
+	client {
+		endpoint                = "http://loki:3100/otlp"
+		max_idle_conns_per_host = 0
+		max_conns_per_host      = 0
+		http2_ping_timeout      = "0s"
+	}
+}
+
+otelcol.exporter.debug "default" {
+	verbosity = "Detailed"
+}
+
+otelcol.exporter.otlp "default_tempo" {
+	client {
+		endpoint = "tempo:4317"
+
+		tls {
+			insecure = true
+		}
+	}
+}
+
+otelcol.exporter.otlp "default_jaeger" {
+	client {
+		endpoint = "jaeger:4317"
+
+		tls {
+			insecure = true
+		}
+	}
+}
