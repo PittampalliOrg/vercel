@@ -2,9 +2,60 @@ livedebugging {
   enabled = true
 }
 
+otelcol.receiver.filelog "postgres_logs" {
+  include = ["/var/lib/docker/containers/*/*.log"]
+  operators = [
+    {
+      // Router to identify Docker JSON logs
+      type = "router",
+      id = "get-format",
+      routes = [
+        {
+          output = "extract_docker_metadata",
+          expr = "body matches \"^\\\\{\"",
+        },
+      ],
+    },
+    {
+      // Extract Docker metadata
+      type = "json_parser",
+      id = "extract_docker_metadata",
+      output = "filter_postgres",
+    },
+    {
+      // Filter to only include PostgreSQL container logs
+      type = "filter",
+      id = "filter_postgres",
+      expr = "attributes.container_name matches \".*postgres.*\"",
+      output = "extract_postgres_log",
+    },
+    {
+      // Parse PostgreSQL logs
+      type = "json_parser",
+      id = "extract_postgres_log",
+      field = "attributes.log",
+      output = "add_resource_attributes",
+    },
+    {
+      // Add resource attributes for correlation
+      type = "add",
+      id = "add_resource_attributes",
+      field = "resource.attributes.service.name",
+      value = "postgresql",
+    },
+  ]
+  output {
+    logs = [otelcol.exporter.debug.default.input]
+  }
+}
+
+// Make sure this component exists
+otelcol.exporter.debug "default" {}
+
+
 otelcol.receiver.otlp "default" {
     // https://grafana.com/docs/alloy/latest/reference/components/otelcol.receiver.otlp/
-
+    
     // configures the default grpc endpoint "0.0.0.0:4317"
     grpc { }
     // configures the default http/protobuf endpoint "0.0.0.0:4318"
@@ -16,22 +67,22 @@ otelcol.receiver.otlp "default" {
         }
         include_metadata = true
     }
-
-    output {
-        metrics = [otelcol.processor.resourcedetection.default.input]
-        logs    = [otelcol.processor.resourcedetection.default.input]
-        traces  = [otelcol.processor.resourcedetection.default.input]
-    }
+    
+  output {
+    metrics = [otelcol.exporter.debug.traefik_metrics.input, otelcol.processor.resourcedetection.default.input]
+    traces  = [otelcol.exporter.debug.traefik_traces.input, otelcol.processor.resourcedetection.default.input]
+    logs    = [otelcol.processor.resourcedetection.default.input]
+  }
 }
 
 otelcol.processor.resourcedetection "default" {
     // https://grafana.com/docs/alloy/latest/reference/components/otelcol.processor.resourcedetection/
     detectors = ["env", "system"]
-
+    
     system {
         hostname_sources = ["os"]
     }
-
+    
     output {
         metrics = [otelcol.processor.transform.drop_unneeded_resource_attributes.input]
         logs    = [otelcol.processor.transform.drop_unneeded_resource_attributes.input]
@@ -42,7 +93,7 @@ otelcol.processor.resourcedetection "default" {
 otelcol.processor.transform "drop_unneeded_resource_attributes" {
     // https://grafana.com/docs/alloy/latest/reference/components/otelcol.processor.transform/
     error_mode = "ignore"
-
+    
     trace_statements {
         context    = "resource"
         statements = [
@@ -57,7 +108,7 @@ otelcol.processor.transform "drop_unneeded_resource_attributes" {
             "delete_key(attributes, \"process.runtime.version\")",
         ]
     }
-
+    
     metric_statements {
         context    = "resource"
         statements = [
@@ -72,7 +123,7 @@ otelcol.processor.transform "drop_unneeded_resource_attributes" {
             "delete_key(attributes, \"process.runtime.version\")",
         ]
     }
-
+    
     log_statements {
         context    = "resource"
         statements = [
@@ -87,7 +138,7 @@ otelcol.processor.transform "drop_unneeded_resource_attributes" {
             "delete_key(attributes, \"process.runtime.version\")",
         ]
     }
-
+    
     output {
         metrics = [otelcol.processor.transform.add_resource_attributes_as_metric_attributes.input]
         logs    = [otelcol.processor.batch.default.input]
@@ -113,11 +164,11 @@ otelcol.connector.servicegraph "default" {
         "cloud.availability_zone",
     ]
     latency_histogram_buckets = ["0.005s", "0.01s", "0.025s", "0.05s", "0.075s", "0.1s", "0.25s", "0.5s", "0.75s", "1s", "2.5s", "5s", "7.5s", "10s"]
-
+    
     store {
         ttl = "2s"
     }
-
+    
     output {
         metrics = [otelcol.processor.batch.default.input]
     }
@@ -129,38 +180,38 @@ otelcol.connector.spanmetrics "default" {
     dimension {
         name = "service.namespace"
     }
-
+    
     dimension {
         name = "service.version"
     }
-
+    
     dimension {
         name = "deployment.environment"
     }
-
+    
     dimension {
         name = "k8s.cluster.name"
     }
-
+    
     dimension {
         name = "k8s.namespace.name"
     }
-
+    
     dimension {
         name = "cloud.region"
     }
-
+    
     dimension {
         name = "cloud.availability_zone"
     }
-
+    
     histogram {
         explicit {
             buckets = ["0.005s", "0.01s", "0.025s", "0.05s", "0.075s", "0.1s", "0.25s", "0.5s", "0.75s", "1s", "2.5s", "5s", "7.5s", "10s"]
         }
         unit = "s"
     }
-
+    
     output {
         metrics = [otelcol.processor.batch.default.input]
     }
@@ -170,7 +221,7 @@ otelcol.connector.spanmetrics "default" {
 otelcol.processor.probabilistic_sampler "default" {
     // https://grafana.com/docs/alloy/latest/reference/components/otelcol.processor.probabilistic_sampler/
     sampling_percentage = 10 // Keep 10% of traces
-
+    
     output {
         traces = [otelcol.processor.batch.default.input]
     }
@@ -179,7 +230,7 @@ otelcol.processor.probabilistic_sampler "default" {
 otelcol.connector.host_info "default" {
     // https://grafana.com/docs/alloy/latest/reference/components/otelcol.connector.host_info/
     host_identifiers = ["host.name"]
-
+    
     output {
         metrics = [otelcol.processor.batch.default.input]
     }
@@ -188,7 +239,7 @@ otelcol.connector.host_info "default" {
 otelcol.processor.transform "add_resource_attributes_as_metric_attributes" {
     // https://grafana.com/docs/alloy/latest/reference/components/otelcol.processor.transform/
     error_mode = "ignore"
-
+    
     metric_statements {
         context    = "datapoint"
         statements = [
@@ -196,7 +247,7 @@ otelcol.processor.transform "add_resource_attributes_as_metric_attributes" {
             "set(attributes[\"service.version\"], resource.attributes[\"service.version\"])",
         ]
     }
-
+    
     output {
         metrics = [otelcol.processor.batch.default.input]
     }
@@ -229,14 +280,10 @@ otelcol.exporter.otlphttp "default_loki" {
     }
 }
 
-otelcol.exporter.debug "default" {
-    verbosity = "Detailed"
-}
-
 otelcol.exporter.otlp "default_tempo" {
     client {
         endpoint = "tempo:4317"
-
+        
         tls {
             insecure = true
         }
@@ -254,7 +301,7 @@ discovery.relabel "alloy" {
         regex         = ".*/alloy"
         action        = "keep"
     }
-
+    
     // provide arbitrary service_name label, otherwise it will be "unspecified"
     rule {
         source_labels = ["__meta_process_exe"]
@@ -265,32 +312,55 @@ discovery.relabel "alloy" {
     }
 }
 
-// Comment out or remove the pyroscope.ebpf component that was causing errors
+// Pyroscope configuration - either enable both components or comment out both
 // pyroscope.ebpf "instance" {
-// 	forward_to = [pyroscope.write.endpoint.receiver]
-// 	targets    = discovery.relabel.alloy.output
+//     forward_to = [pyroscope.write.endpoint.receiver]
+//     targets    = discovery.relabel.alloy.output
 // }
 
-pyroscope.write "endpoint" {
-    endpoint {
-        url = "http://pyroscope:4040"
-        // url = "<Grafana Cloud URL>",
-        // basic_auth {
-        //  username = "<Grafana Cloud User>",
-        //  password = "<Grafana Cloud Password>",
-        // }
-    }
+// pyroscope.write "endpoint" {
+//     endpoint {
+//         url = "http://pyroscope:4040"
+//         // url = "<Grafana Cloud URL>",
+//         // basic_auth {
+//         //  username = "<Grafana Cloud User>",
+//         //  password = "<Grafana Cloud Password>",
+//         // }
+//     }
+// }
+
+// PostgreSQL table size metrics collection
+prometheus.exporter.postgres "postgres_table_size" {
+    data_source_names = ["postgresql://postgres:postgres@db:5432/postgres?sslmode=disable"]
+    custom_queries_config_path = "/etc/alloy/pg_table_size-details.yaml"
 }
 
-// PostgreSQL metrics collection
 prometheus.exporter.postgres "postgres_queries" {
-   data_source_names = ["postgresql://postgres:postgres@db:5432/postgres?sslmode=disable"]
-   custom_queries_config_path = "/etc/alloy/queries-pg_stat.yaml"
+  data_source_names = ["postgresql://postgres:postgres@db:5432/postgres?sslmode=disable"]
+  custom_queries_config_path = "/etc/alloy/queries-pg_stat.yaml"
+  
+  disable_settings_metrics = true
 }
 
-// Scrape PostgreSQL metrics
 prometheus.scrape "postgres_query_metrics" {
-    targets    = prometheus.exporter.postgres.postgres_queries.targets
+  targets = prometheus.exporter.postgres.postgres_queries.targets
+  forward_to = [prometheus.relabel.truncate_query_labels.receiver]
+}
+
+// Then, apply relabeling to truncate long query labels
+prometheus.relabel "truncate_query_labels" {
+  rule {
+    source_labels = ["query"]
+    regex = "(.{1,1000}).*"  // Truncate to 1000 chars
+    target_label = "query"
+    replacement = "$1..."
+  }
+  
+  forward_to = [otelcol.receiver.prometheus.postgres.receiver]
+}
+// Scrape PostgreSQL table size metrics
+prometheus.scrape "postgres_table_size_metrics" {
+    targets    = prometheus.exporter.postgres.postgres_table_size.targets
     forward_to = [otelcol.receiver.prometheus.postgres.receiver]
 }
 
@@ -311,15 +381,44 @@ local.file_match "logs_integrations_postgres_exporter" {
     }]
 }
 
-// Process PostgreSQL logs
 loki.source.file "logs_integrations_postgres_exporter" {
     targets    = local.file_match.logs_integrations_postgres_exporter.targets
-    forward_to = [loki.write.default_loki.receiver]
+    forward_to = [otelcol.receiver.loki.postgres_logs.receiver]
 }
 
-// Add this component to handle Loki logs properly
-loki.write "default_loki" {
-    endpoint {
-        url = "http://loki:3100/loki/api/v1/push"
+otelcol.receiver.loki "postgres_logs" {
+    output {
+        logs = [otelcol.processor.batch.default.input]
     }
+}
+
+discovery.relabel "metrics_integrations_integrations_traefik" {
+  targets = [{
+    __address__ = "traefik:8080",  // Adjust to your Traefik metrics endpoint
+  }]
+
+  rule {
+    target_label = "instance"
+    replacement  = constants.hostname
+  }
+}
+
+prometheus.scrape "metrics_integrations_integrations_traefik" {
+  targets    = discovery.relabel.metrics_integrations_integrations_traefik.output
+  forward_to = [prometheus.remote_write.default.receiver]  // Or use otelcol.receiver.prometheus
+  job_name   = "integrations/traefik"
+}
+
+// Option 1: If you want to use Prometheus format
+prometheus.remote_write "default" {
+  endpoint {
+    url = "http://mimir:9009/api/prom/push"  // Adjust to your endpoint
+  }
+}
+otelcol.exporter.debug "traefik_metrics" {
+  verbosity = "detailed"
+}
+
+otelcol.exporter.debug "traefik_traces" {
+  verbosity = "detailed"
 }

@@ -71,6 +71,7 @@ services:
       - "traefik.http.routers.app.entrypoints=web"
     depends_on:
       - traefik
+    command: sleep infinity
 
   db:
     image: pgvector/pgvector:pg17
