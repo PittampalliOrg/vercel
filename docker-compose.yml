@@ -1,35 +1,25 @@
-version: "3.8"
-
 networks:
   shared-network:
-    name: shared-network
+    external: true
 
 volumes:
   postgres-data:
   prometheus_data:
 
+include:
+   - path: ../plugin/pittampalli-gp-app/docker-compose.yaml
+
 services:
   traefik:
     image: "traefik:v3.3"
-    # no container_name set here
-    command:
-      - "--log.level=DEBUG"
-      - "--api.insecure=true"
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=true"
-      - "--entryPoints.web.address=:80"
-      - "--tracing.otlp.http=true"
-      - "--tracing.otlp.http.endpoint=http://otel-collector:4318/v1/traces"
-      - "--experimental.otlpLogs=true"
-      - "--log.otlp.http.endpoint=http://otel-collector:4318/v1/logs"
-      - "--metrics.otlp.http.endpoint=http://otel-collector:4318/v1/metrics"
+    volumes:
+      - ./config/traefik/traefik.yaml:/etc/traefik/traefik.yaml:ro
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
     ports:
       - "80:80"
       - "8080:8080"
     networks:
       - shared-network
-    volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock:ro"
 
   app:
     image: "traefik/whoami"
@@ -37,6 +27,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.app.rule=(Host(`localhost`) && PathPrefix(`/app`))"
+      - "traefik.http.routers.app.entrypoints=web"
     networks:
       - shared-network
 
@@ -56,6 +47,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.frontend.rule=(Host(`localhost`) && PathPrefix(`/frontend`))"
+      - "traefik.http.routers.frontend.entrypoints=web"
     networks:
       - shared-network
     depends_on:
@@ -73,10 +65,10 @@ services:
       - shared-network
     expose:
       - "3000"
-    command: sleep infinity
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.playground.rule=(Host(`localhost`) && PathPrefix(`/playground`))"
+      - "traefik.http.routers.app.entrypoints=web"
     depends_on:
       - traefik
 
@@ -104,25 +96,11 @@ services:
     restart: on-failure
     volumes:
       - ./config/alloy:/etc/alloy
-      - /var/run/docker.sock:/var/run/docker.sock
-    security_opt:
-      - seccomp:unconfined
-    cap_add:
-      - SYS_ADMIN
-      - SYS_RESOURCE
-      - SYSLOG # Add this capability to address kptr_restrict=1 requirements
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
     environment:
       - REMOTE_WRITE_HOST=mimir:9009
       - LOKI_HOST=loki:3100
       - TEMPO_HOST=tempo:4317
       - PYROSCOPE_HOST=pyroscope:4040
-      - GRAFANA_CLOUD_INSTANCE_ID=1159337
-      - GRAFANA_CLOUD_API_KEY="${GRAFANA_CLOUD_API_KEY}"
-      - GRAFANA_CLOUD_OTLP_ENDPOINT=https://otlp-gateway-prod-us-east-2.grafana.net/otlp
     depends_on:
       - mimir
       - loki
@@ -138,8 +116,8 @@ services:
       - shared-network
     ports:
       - "12345:12345"
-      - "4317:4317"
-      - "4318:4318"
+      - "${OTEL_COLLECTOR_PORT_GRPC}:${OTEL_COLLECTOR_PORT_GRPC}"
+      - "${OTEL_COLLECTOR_PORT_HTTP}:${OTEL_COLLECTOR_PORT_HTTP}"
 
   pyroscope:
     image: grafana/pyroscope:latest
@@ -156,104 +134,12 @@ services:
     ports:
       - "4040:4040"
 
-  init:
-    image: grafana/tempo:latest
-    user: root
-    entrypoint:
-      - "chown"
-      - "10001:10001"
-      - "/var/tempo"
-    volumes:
-      - ./tempo-data:/var/tempo
-    networks:
-      - shared-network
-
-  tempo:
-    image: grafana/tempo:latest
-    # no container_name
-    command: [ "-config.file=/etc/tempo.yaml" ]
-    volumes:
-      - ./config/shared/tempo.yaml:/etc/tempo.yaml:ro
-      - ./tempo-data:/var/tempo
-    depends_on:
-      - init
-    networks:
-      - shared-network
-    ports:
-      - "3200:3200"
-      - "4317"
-
-  beyla-frontend:
-    image: grafana/beyla:latest
-    pid: "service:frontend"
-    privileged: true
-    network_mode: host
-    volumes:
-      - /sys/fs/cgroup:/sys/fs/cgroup  # Required for context propagation
-    cap_add:
-      - BPF                # Required for eBPF probes
-      - SYS_PTRACE         # Allows inspecting executables
-      - NET_RAW            # For socket filters
-      - CHECKPOINT_RESTORE # For opening ELF files
-      - DAC_READ_SEARCH    # For opening ELF files
-      - PERFMON            # For loading BPF programs
-      - NET_ADMIN          # Required for context propagation
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
-    environment:
-      - BEYLA_SERVICE_NAME=frontend
-      - BEYLA_OPEN_PORT=3000
-      - BEYLA_TRACE_PRINTER=text
-      - BEYLA_NETWORK_METRICS=true
-      - BEYLA_NETWORK_SOURCE=socket_filter
-      - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
-      - OTEL_EXPORTER_OTLP_HEADERS=""
-      - BEYLA_BPF_ENABLE_CONTEXT_PROPAGATION=true
-    depends_on:
-      frontend:
-        condition: service_started
-
-  beyla-playground:
-    image: grafana/beyla:latest
-    pid: "service:playground"
-    privileged: true
-    network_mode: host
-    volumes:
-      - /sys/fs/cgroup:/sys/fs/cgroup  # Required for context propagation
-    cap_add:
-      - BPF                # Required for eBPF probes
-      - SYS_PTRACE         # Allows inspecting executables
-      - NET_RAW            # For socket filters
-      - CHECKPOINT_RESTORE # For opening ELF files
-      - DAC_READ_SEARCH    # For opening ELF files
-      - PERFMON            # For loading BPF programs
-      - NET_ADMIN          # Required for context propagation
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
-    environment:
-      - BEYLA_SERVICE_NAME=playground
-      - BEYLA_OPEN_PORT=3000
-      - BEYLA_TRACE_PRINTER=text
-      - BEYLA_NETWORK_METRICS=true
-      - BEYLA_NETWORK_SOURCE=socket_filter
-      - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
-      - OTEL_EXPORTER_OTLP_HEADERS=""
-      - BEYLA_BPF_ENABLE_CONTEXT_PROPAGATION=true
-    depends_on:
-      frontend:
-        condition: service_started
-
   beyla-db:
     image: grafana/beyla:latest
     pid: "service:db"
     privileged: true
-    network_mode: host
+    networks:
+      - shared-network
     volumes:
       - /sys/fs/cgroup:/sys/fs/cgroup  # Required for context propagation
     cap_add:
@@ -282,6 +168,61 @@ services:
       frontend:
         condition: service_started
 
+  init:
+    image: grafana/tempo:latest
+    user: root
+    entrypoint:
+      - "chown"
+      - "10001:10001"
+      - "/var/tempo"
+    volumes:
+      - ./tempo-data:/var/tempo
+    networks:
+      - shared-network
+
+  tempo:
+    image: grafana/tempo:latest
+    # no container_name
+    command: [ "-config.file=/etc/tempo.yaml" ]
+    volumes:
+      - ./config/shared/tempo.yaml:/etc/tempo.yaml:ro
+      - ./tempo-data:/var/tempo
+    depends_on:
+      - init
+    networks:
+      - shared-network
+    ports:
+      - "3200:3200"
+
+  # otel-collector:
+  #   image: otel/shared-network-collector-contrib:0.114.0
+  #   # no container_name
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         memory: 200M
+  #   restart: unless-stopped
+  #   command: 
+  #     - "--config=/etc/otelcol-config.yml"
+  #     - "--config=/etc/otelcol-config-extras.yml"
+  #     - "--feature-gates=service.profilesSupport"
+  #   user: 0:0
+  #   volumes:
+  #     - ${HOST_FILESYSTEM}:/hostfs:ro
+  #     - ${DOCKER_SOCK}:/var/run/docker.sock:ro
+  #     - /var/lib/docker/containers:/var/lib/docker/containers:ro
+  #     - ./config/otel-collector/otel-collector-config.yml:/etc/otelcol-config.yml
+  #     - ./config/otel-collector/otelcol-config-extras.yml:/etc/otelcol-config-extras.yml
+  #     - ./logs:/logs
+  #   networks:
+  #     - shared-network
+  #   ports:
+  #     - "${OTEL_COLLECTOR_PORT_GRPC}:${OTEL_COLLECTOR_PORT_GRPC}"
+  #     - "${OTEL_COLLECTOR_PORT_HTTP}:${OTEL_COLLECTOR_PORT_HTTP}"
+  #     - "13133:13133"
+  #     - "9464"
+  #     - "8889"
+
   prometheus:
     image: prom/prometheus:latest
     command:
@@ -296,33 +237,31 @@ services:
     ports:
       - "9090:9090"
 
-  grafana:
-    image: grafana/grafana:latest
-    volumes:
-      - ./config/grafana/grafana.ini:/etc/grafana/grafana.ini:ro
-      - ./config/grafana/provisioning/:/etc/grafana/provisioning/:ro
-    env_file:
-      - .env
-    environment:
-      - GF_AUTH_ANONYMOUS_ENABLED=true
-      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
-      - GF_AUTH_DISABLE_LOGIN_FORM=true
-      - GF_FEATURE_TOGGLES_ENABLE=traceqlEditor traceToProfiles tracesEmbeddedFlameGraph
-      - GF_INSTALL_PLUGINS=grafana-pyroscope-app
-      - GF_INSTALL_PLUGINS=grafana-lokiexplore-app
-      - GF_INSTALL_PLUGINS=grafana-metricsdrilldown-app
-      - GF_INSTALL_PLUGINS=https://storage.googleapis.com/integration-artifacts/grafana-exploretraces-app/grafana-exploretraces-app-latest.zip;grafana-traces-app
-    networks:
-      - shared-network
-    ports:
-      - "3000"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.grafana.rule=(Host(`localhost`) && PathPrefix(`/grafana`))"
-    depends_on:
-      - mimir
-      - loki
-      - tempo
+  # grafana:
+  #   image: grafana/grafana:latest
+  #   volumes:
+  #     - ./config/grafana/grafana.ini:/etc/grafana/grafana.ini:ro
+  #     - ./config/grafana/provisioning/:/etc/grafana/provisioning/:ro
+  #   environment:
+  #     - GF_AUTH_ANONYMOUS_ENABLED=true
+  #     - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+  #     - GF_AUTH_DISABLE_LOGIN_FORM=true
+  #     - GF_FEATURE_TOGGLES_ENABLE=traceqlEditor traceToProfiles tracesEmbeddedFlameGraph
+  #     - GF_INSTALL_PLUGINS=grafana-pyroscope-app
+  #     - GF_INSTALL_PLUGINS=grafana-lokiexplore-app
+  #     - GF_INSTALL_PLUGINS=grafana-metricsdrilldown-app
+  #     - GF_INSTALL_PLUGINS=https://storage.googleapis.com/integration-artifacts/grafana-exploretraces-app/grafana-exploretraces-app-latest.zip;grafana-traces-app
+  #   networks:
+  #     - shared-network
+  #   ports:
+  #     - "3000:3000"
+  #   labels:
+  #     - "traefik.enable=true"
+  #     - "traefik.http.routers.grafana.rule=(Host(`localhost`) && PathPrefix(`/grafana`))"
+  #   depends_on:
+  #     - mimir
+  #     - loki
+  #     - tempo
 
   mimir:
     image: grafana/mimir:latest

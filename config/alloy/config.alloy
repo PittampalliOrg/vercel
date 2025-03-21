@@ -1,336 +1,325 @@
+livedebugging {
+  enabled = true
+}
+
 otelcol.receiver.otlp "default" {
-	// https://grafana.com/docs/alloy/latest/reference/components/otelcol.receiver.otlp/
+    // https://grafana.com/docs/alloy/latest/reference/components/otelcol.receiver.otlp/
 
-	// configures the default grpc endpoint "0.0.0.0:4317"
-	grpc { }
-	// configures the default http/protobuf endpoint "0.0.0.0:4318"
-	http {
-		cors {
-			allowed_origins = ["http://localhost", "https://*"]
-			allowed_headers = ["Content-Type", "X-Api-Key", "X-Faro-Session-Id"]
-			max_age         = 7200
-		}
-		include_metadata = true
-	}
+    // configures the default grpc endpoint "0.0.0.0:4317"
+    grpc { }
+    // configures the default http/protobuf endpoint "0.0.0.0:4318"
+    http {
+        cors {
+            allowed_origins = ["http://localhost", "https://*"]
+            allowed_headers = ["Content-Type", "X-Api-Key", "X-Faro-Session-Id"]
+            max_age         = 7200
+        }
+        include_metadata = true
+    }
 
-	output {
-		metrics = [otelcol.processor.resourcedetection.default.input]
-		logs    = [otelcol.processor.resourcedetection.default.input]
-		traces  = [otelcol.processor.resourcedetection.default.input]
-	}
+    output {
+        metrics = [otelcol.processor.resourcedetection.default.input]
+        logs    = [otelcol.processor.resourcedetection.default.input]
+        traces  = [otelcol.processor.resourcedetection.default.input]
+    }
 }
 
 otelcol.processor.resourcedetection "default" {
-	// https://grafana.com/docs/alloy/latest/reference/components/otelcol.processor.resourcedetection/
-	detectors = ["env", "system"]
+    // https://grafana.com/docs/alloy/latest/reference/components/otelcol.processor.resourcedetection/
+    detectors = ["env", "system"]
 
-	system {
-		hostname_sources = ["os"]
-	}
+    system {
+        hostname_sources = ["os"]
+    }
 
-	output {
-		metrics = [otelcol.processor.transform.drop_unneeded_resource_attributes.input]
-		logs    = [otelcol.processor.transform.drop_unneeded_resource_attributes.input]
-		traces  = [otelcol.processor.transform.drop_unneeded_resource_attributes.input]
-	}
+    output {
+        metrics = [otelcol.processor.transform.drop_unneeded_resource_attributes.input]
+        logs    = [otelcol.processor.transform.drop_unneeded_resource_attributes.input]
+        traces  = [otelcol.processor.transform.drop_unneeded_resource_attributes.input]
+    }
 }
 
 otelcol.processor.transform "drop_unneeded_resource_attributes" {
-	// https://grafana.com/docs/alloy/latest/reference/components/otelcol.processor.transform/
-	error_mode = "ignore"
+    // https://grafana.com/docs/alloy/latest/reference/components/otelcol.processor.transform/
+    error_mode = "ignore"
 
-	trace_statements {
-		context    = "resource"
-		statements = [
-			"delete_key(attributes, \"k8s.pod.start_time\")",
-			"delete_key(attributes, \"os.description\")",
-			"delete_key(attributes, \"os.type\")",
-			"delete_key(attributes, \"process.command_args\")",
-			"delete_key(attributes, \"process.executable.path\")",
-			"delete_key(attributes, \"process.pid\")",
-			"delete_key(attributes, \"process.runtime.description\")",
-			"delete_key(attributes, \"process.runtime.name\")",
-			"delete_key(attributes, \"process.runtime.version\")",
-		]
-	}
+    trace_statements {
+        context    = "resource"
+        statements = [
+            "delete_key(attributes, \"k8s.pod.start_time\")",
+            "delete_key(attributes, \"os.description\")",
+            "delete_key(attributes, \"os.type\")",
+            "delete_key(attributes, \"process.command_args\")",
+            "delete_key(attributes, \"process.executable.path\")",
+            "delete_key(attributes, \"process.pid\")",
+            "delete_key(attributes, \"process.runtime.description\")",
+            "delete_key(attributes, \"process.runtime.name\")",
+            "delete_key(attributes, \"process.runtime.version\")",
+        ]
+    }
 
-	metric_statements {
-		context    = "resource"
-		statements = [
-			"delete_key(attributes, \"k8s.pod.start_time\")",
-			"delete_key(attributes, \"os.description\")",
-			"delete_key(attributes, \"os.type\")",
-			"delete_key(attributes, \"process.command_args\")",
-			"delete_key(attributes, \"process.executable.path\")",
-			"delete_key(attributes, \"process.pid\")",
-			"delete_key(attributes, \"process.runtime.description\")",
-			"delete_key(attributes, \"process.runtime.name\")",
-			"delete_key(attributes, \"process.runtime.version\")",
-		]
-	}
+    metric_statements {
+        context    = "resource"
+        statements = [
+            "delete_key(attributes, \"k8s.pod.start_time\")",
+            "delete_key(attributes, \"os.description\")",
+            "delete_key(attributes, \"os.type\")",
+            "delete_key(attributes, \"process.command_args\")",
+            "delete_key(attributes, \"process.executable.path\")",
+            "delete_key(attributes, \"process.pid\")",
+            "delete_key(attributes, \"process.runtime.description\")",
+            "delete_key(attributes, \"process.runtime.name\")",
+            "delete_key(attributes, \"process.runtime.version\")",
+        ]
+    }
 
-	log_statements {
-		context    = "resource"
-		statements = [
-			"delete_key(attributes, \"k8s.pod.start_time\")",
-			"delete_key(attributes, \"os.description\")",
-			"delete_key(attributes, \"os.type\")",
-			"delete_key(attributes, \"process.command_args\")",
-			"delete_key(attributes, \"process.executable.path\")",
-			"delete_key(attributes, \"process.pid\")",
-			"delete_key(attributes, \"process.runtime.description\")",
-			"delete_key(attributes, \"process.runtime.name\")",
-			"delete_key(attributes, \"process.runtime.version\")",
-		]
-	}
+    log_statements {
+        context    = "resource"
+        statements = [
+            "delete_key(attributes, \"k8s.pod.start_time\")",
+            "delete_key(attributes, \"os.description\")",
+            "delete_key(attributes, \"os.type\")",
+            "delete_key(attributes, \"process.command_args\")",
+            "delete_key(attributes, \"process.executable.path\")",
+            "delete_key(attributes, \"process.pid\")",
+            "delete_key(attributes, \"process.runtime.description\")",
+            "delete_key(attributes, \"process.runtime.name\")",
+            "delete_key(attributes, \"process.runtime.version\")",
+        ]
+    }
 
-	output {
-		metrics = [otelcol.processor.transform.add_resource_attributes_as_metric_attributes.input]
-		logs    = [otelcol.processor.batch.default.input]
-		traces  = [
-			otelcol.connector.servicegraph.default.input,
-			otelcol.connector.spanmetrics.default.input,
-			otelcol.processor.probabilistic_sampler.default.input,
-			otelcol.connector.host_info.default.input,
-		]
-	}
+    output {
+        metrics = [otelcol.processor.transform.add_resource_attributes_as_metric_attributes.input]
+        logs    = [otelcol.processor.batch.default.input]
+        traces  = [
+            otelcol.connector.servicegraph.default.input,
+            otelcol.connector.spanmetrics.default.input,
+            otelcol.processor.probabilistic_sampler.default.input,
+            otelcol.connector.host_info.default.input,
+        ]
+    }
 }
 
 // Added servicegraph connector for better trace visualization
 otelcol.connector.servicegraph "default" {
-	// https://grafana.com/docs/alloy/latest/reference/components/otelcol.connector.servicegraph/
-	dimensions = [
-		"service.namespace",
-		"service.version",
-		"deployment.environment",
-		"k8s.cluster.name",
-		"k8s.namespace.name",
-		"cloud.region",
-		"cloud.availability_zone",
-	]
-	latency_histogram_buckets = ["0s", "0.005s", "0.01s", "0.025s", "0.05s", "0.075s", "0.1s", "0.25s", "0.5s", "0.75s", "1s", "2.5s", "5s", "7.5s", "10s"]
+    // https://grafana.com/docs/alloy/latest/reference/components/otelcol.connector.servicegraph/
+    dimensions = [
+        "service.namespace",
+        "service.version",
+        "deployment.environment",
+        "k8s.cluster.name",
+        "k8s.namespace.name",
+        "cloud.region",
+        "cloud.availability_zone",
+    ]
+    latency_histogram_buckets = ["0.005s", "0.01s", "0.025s", "0.05s", "0.075s", "0.1s", "0.25s", "0.5s", "0.75s", "1s", "2.5s", "5s", "7.5s", "10s"]
 
-	store {
-		ttl = "2s"
-	}
+    store {
+        ttl = "2s"
+    }
 
-	output {
-		metrics = [otelcol.processor.batch.default.input]
-	}
+    output {
+        metrics = [otelcol.processor.batch.default.input]
+    }
 }
 
 // Added spanmetrics connector for better trace metrics
 otelcol.connector.spanmetrics "default" {
-	// https://grafana.com/docs/alloy/latest/reference/components/otelcol.connector.spanmetrics/
-	dimension {
-		name = "service.namespace"
-	}
+    // https://grafana.com/docs/alloy/latest/reference/components/otelcol.connector.spanmetrics/
+    dimension {
+        name = "service.namespace"
+    }
 
-	dimension {
-		name = "service.version"
-	}
+    dimension {
+        name = "service.version"
+    }
 
-	dimension {
-		name = "deployment.environment"
-	}
+    dimension {
+        name = "deployment.environment"
+    }
 
-	dimension {
-		name = "k8s.cluster.name"
-	}
+    dimension {
+        name = "k8s.cluster.name"
+    }
 
-	dimension {
-		name = "k8s.namespace.name"
-	}
+    dimension {
+        name = "k8s.namespace.name"
+    }
 
-	dimension {
-		name = "cloud.region"
-	}
+    dimension {
+        name = "cloud.region"
+    }
 
-	dimension {
-		name = "cloud.availability_zone"
-	}
+    dimension {
+        name = "cloud.availability_zone"
+    }
 
-	histogram {
-		explicit {
-			buckets = ["0s", "0.005s", "0.01s", "0.025s", "0.05s", "0.075s", "0.1s", "0.25s", "0.5s", "0.75s", "1s", "2.5s", "5s", "7.5s", "10s"]
-		}
-		unit = "s"
-	}
+    histogram {
+        explicit {
+            buckets = ["0.005s", "0.01s", "0.025s", "0.05s", "0.075s", "0.1s", "0.25s", "0.5s", "0.75s", "1s", "2.5s", "5s", "7.5s", "10s"]
+        }
+        unit = "s"
+    }
 
-	output {
-		metrics = [otelcol.processor.batch.default.input]
-	}
+    output {
+        metrics = [otelcol.processor.batch.default.input]
+    }
 }
 
 // Added probabilistic sampler to reduce trace volume
 otelcol.processor.probabilistic_sampler "default" {
-	// https://grafana.com/docs/alloy/latest/reference/components/otelcol.processor.probabilistic_sampler/
-	sampling_percentage = 10 // Keep 10% of traces
+    // https://grafana.com/docs/alloy/latest/reference/components/otelcol.processor.probabilistic_sampler/
+    sampling_percentage = 10 // Keep 10% of traces
 
-	output {
-		traces = [otelcol.processor.batch.default.input]
-	}
+    output {
+        traces = [otelcol.processor.batch.default.input]
+    }
 }
 
 otelcol.connector.host_info "default" {
-	// https://grafana.com/docs/alloy/latest/reference/components/otelcol.connector.host_info/
-	host_identifiers = ["host.name"]
+    // https://grafana.com/docs/alloy/latest/reference/components/otelcol.connector.host_info/
+    host_identifiers = ["host.name"]
 
-	output {
-		metrics = [otelcol.processor.batch.default.input]
-	}
+    output {
+        metrics = [otelcol.processor.batch.default.input]
+    }
 }
 
 otelcol.processor.transform "add_resource_attributes_as_metric_attributes" {
-	// https://grafana.com/docs/alloy/latest/reference/components/otelcol.processor.transform/
-	error_mode = "ignore"
+    // https://grafana.com/docs/alloy/latest/reference/components/otelcol.processor.transform/
+    error_mode = "ignore"
 
-	metric_statements {
-		context    = "datapoint"
-		statements = [
-			"set(attributes[\"deployment.environment\"], resource.attributes[\"deployment.environment\"])",
-			"set(attributes[\"service.version\"], resource.attributes[\"service.version\"])",
-		]
-	}
+    metric_statements {
+        context    = "datapoint"
+        statements = [
+            "set(attributes[\"deployment.environment\"], resource.attributes[\"deployment.environment\"])",
+            "set(attributes[\"service.version\"], resource.attributes[\"service.version\"])",
+        ]
+    }
 
-	output {
-		metrics = [otelcol.processor.batch.default.input]
-	}
+    output {
+        metrics = [otelcol.processor.batch.default.input]
+    }
 }
 
 otelcol.processor.batch "default" {
-	// https://grafana.com/docs/alloy/latest/reference/components/otelcol.processor.batch/
-	output {
-		metrics = [otelcol.exporter.otlphttp.grafana_cloud.input, otelcol.exporter.otlphttp.default_mimir.input]
-		logs    = [otelcol.exporter.otlphttp.grafana_cloud.input, otelcol.exporter.otlphttp.default_loki.input]
-		traces  = [otelcol.exporter.otlphttp.grafana_cloud.input, otelcol.exporter.otlp.default_tempo.input]
-	}
-}
-
-otelcol.exporter.otlphttp "grafana_cloud" {
-	// https://grafana.com/docs/alloy/latest/reference/components/otelcol.exporter.otlphttp/
-	client {
-		endpoint = "https://otlp-gateway-prod-us-east-2.grafana.net/otlp"
-		auth     = otelcol.auth.basic.grafana_cloud.handler
-	}
-}
-
-otelcol.auth.basic "grafana_cloud" {
-	// https://grafana.com/docs/alloy/latest/reference/components/otelcol.auth.basic/
-	username = "1159337"
-	password = "${GRAFANA_CLOUD_API_KEY}"
+    // https://grafana.com/docs/alloy/latest/reference/components/otelcol.processor.batch/
+    output {
+        metrics = [otelcol.exporter.otlphttp.default_mimir.input]
+        logs    = [otelcol.exporter.otlphttp.default_loki.input]
+        traces  = [otelcol.exporter.otlp.default_tempo.input]
+    }
 }
 
 otelcol.exporter.otlphttp "default_mimir" {
-	client {
-		endpoint                = "http://mimir:9009/otlp"
-		max_idle_conns_per_host = 0
-		max_conns_per_host      = 0
-		http2_ping_timeout      = "0s"
-	}
+    client {
+        endpoint                = "http://mimir:9009/otlp"
+        max_idle_conns_per_host = 0
+        max_conns_per_host      = 0
+        http2_ping_timeout      = "0s"
+    }
 }
 
 otelcol.exporter.otlphttp "default_loki" {
-	client {
-		endpoint                = "http://loki:3100/otlp"
-		max_idle_conns_per_host = 0
-		max_conns_per_host      = 0
-		http2_ping_timeout      = "0s"
-	}
+    client {
+        endpoint                = "http://loki:3100/otlp"
+        max_idle_conns_per_host = 0
+        max_conns_per_host      = 0
+        http2_ping_timeout      = "0s"
+    }
 }
 
 otelcol.exporter.debug "default" {
-	verbosity = "Detailed"
+    verbosity = "Detailed"
 }
 
 otelcol.exporter.otlp "default_tempo" {
-	client {
-		endpoint = "tempo:4317"
+    client {
+        endpoint = "tempo:4317"
 
-		tls {
-			insecure = true
-		}
-	}
+        tls {
+            insecure = true
+        }
+    }
 }
 
 // Process discovery for profiling
 discovery.process "all" { }
 
 discovery.relabel "alloy" {
-	targets = discovery.process.all.targets
-	// Filter needed processes
-	rule {
-		source_labels = ["__meta_process_exe"]
-		regex         = ".*/alloy"
-		action        = "keep"
-	}
+    targets = discovery.process.all.targets
+    // Filter needed processes
+    rule {
+        source_labels = ["__meta_process_exe"]
+        regex         = ".*/alloy"
+        action        = "keep"
+    }
 
-	// provide arbitrary service_name label, otherwise it will be "unspecified"
-	rule {
-		source_labels = ["__meta_process_exe"]
-		target_label  = "service_name"
-		regex         = ".*/alloy"
-		action        = "replace"
-		replacement   = "ebpf/local/alloy"
-	}
+    // provide arbitrary service_name label, otherwise it will be "unspecified"
+    rule {
+        source_labels = ["__meta_process_exe"]
+        target_label  = "service_name"
+        regex         = ".*/alloy"
+        action        = "replace"
+        replacement   = "ebpf/local/alloy"
+    }
 }
 
-pyroscope.ebpf "instance" {
-	forward_to = [pyroscope.write.endpoint.receiver]
-	targets    = concat(
-		discovery.relabel.alloy.output,
-		[{"__process_pid__" = "1", "service_name" = "ebpf/local/init"}],
-	)
-}
+// Comment out or remove the pyroscope.ebpf component that was causing errors
+// pyroscope.ebpf "instance" {
+// 	forward_to = [pyroscope.write.endpoint.receiver]
+// 	targets    = discovery.relabel.alloy.output
+// }
 
 pyroscope.write "endpoint" {
-	endpoint {
-		url = "http://pyroscope:4040"
-		// url = "<Grafana Cloud URL>",
-		// basic_auth {
-		//  username = "<Grafana Cloud User>",
-		//  password = "<Grafana Cloud Password>",
-		// }
-	}
+    endpoint {
+        url = "http://pyroscope:4040"
+        // url = "<Grafana Cloud URL>",
+        // basic_auth {
+        //  username = "<Grafana Cloud User>",
+        //  password = "<Grafana Cloud Password>",
+        // }
+    }
 }
 
 // PostgreSQL metrics collection
 prometheus.exporter.postgres "postgres_queries" {
-  data_source_names = ["postgresql://postgres:postgres@db:5432/postgres?sslmode=disable"]
-  custom_queries_config_path = "/etc/alloy/queries-pg_stat.yaml"
+   data_source_names = ["postgresql://postgres:postgres@db:5432/postgres?sslmode=disable"]
+   custom_queries_config_path = "/etc/alloy/queries-pg_stat.yaml"
 }
+
 // Scrape PostgreSQL metrics
 prometheus.scrape "postgres_query_metrics" {
-	targets    = prometheus.exporter.postgres.postgres_queries.targets
-	forward_to = [otelcol.receiver.prometheus.postgres.receiver]
+    targets    = prometheus.exporter.postgres.postgres_queries.targets
+    forward_to = [otelcol.receiver.prometheus.postgres.receiver]
 }
 
 // Convert Prometheus metrics to OTLP format
 otelcol.receiver.prometheus "postgres" {
-	output {
-		metrics = [otelcol.processor.batch.default.input]
-	}
+    output {
+        metrics = [otelcol.processor.batch.default.input]
+    }
 }
 
 // PostgreSQL log collection
 local.file_match "logs_integrations_postgres_exporter" {
-	path_targets = [{
-		__address__ = "localhost",
-		__path__    = "/logs/postgresql-*.log", // Matches your log_filename pattern
-		instance    = constants.hostname,
-		job         = "integrations/postgres_exporter",
-	}]
+    path_targets = [{
+        __address__ = "localhost",
+        __path__    = "/logs/postgresql-*.log", // Matches your log_filename pattern
+        instance    = constants.hostname,
+        job         = "integrations/postgres_exporter",
+    }]
 }
 
 // Process PostgreSQL logs
 loki.source.file "logs_integrations_postgres_exporter" {
-  targets = local.file_match.logs_integrations_postgres_exporter.targets
-  forward_to = [loki.write.default_loki.receiver]
+    targets    = local.file_match.logs_integrations_postgres_exporter.targets
+    forward_to = [loki.write.default_loki.receiver]
 }
 
 // Add this component to handle Loki logs properly
 loki.write "default_loki" {
-	endpoint {
-		url = "http://loki:3100/loki/api/v1/push"
-	}
+    endpoint {
+        url = "http://loki:3100/loki/api/v1/push"
+    }
 }

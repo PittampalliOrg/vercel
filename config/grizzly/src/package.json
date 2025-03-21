@@ -1,0 +1,13 @@
+{
+	"scripts": {
+		"serve": "grr serve -w -p 8081 -S 'pnpm exec ts-node main.ts' main.ts"
+	},
+	"devDependencies": {
+		"@types/node": "^22.13.10",
+		"ts-node": "^10.9.2",
+		"typescript": "^5.8.2"
+	},
+	"dependencies": {
+		"@grafana/grafana-foundation-sdk": "~11.2.0-cogv0.0.x.1728036865"
+	}
+}

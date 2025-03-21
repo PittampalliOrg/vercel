@@ -1,0 +1,30 @@
+{
+  "timezone": "browser",
+  "editable": true,
+  "graphTooltip": 0,
+  "fiscalYearStartMonth": 0,
+  "schemaVersion": 39,
+  "templating": {},
+  "annotations": {},
+  "title": "[Example] Custom query",
+  "uid": "example-custom-query",
+  "panels": [
+    {
+      "type": "timeseries",
+      "transparent": false,
+      "repeatDirection": "h",
+      "title": "Sample panel",
+      "targets": [
+        {
+          "query": "query here"
+        }
+      ],
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      }
+    }
+  ]
+}
