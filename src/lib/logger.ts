@@ -9,7 +9,7 @@ import { OpenTelemetryTransportV3 } from '@opentelemetry/winston-transport';
 import { createLogger, transports, format } from 'winston';
 
 const logRecordExporter = new OTLPLogExporter({
-  url: 'http://otel-collector:4318/v1/logs',
+  url: 'http://alloy:4318/v1/logs',
 });
 
 

@@ -1,4 +1,4 @@
-
+# 'config/alloy/config.alloy'
 livedebugging {
   enabled = true
 }
@@ -97,11 +97,13 @@ otelcol.receiver.otlp "default" {
   output {
     metrics = [
       otelcol.exporter.debug.traefik_metrics.input,
-      otelcol.processor.resourcedetection.default.input,
+      otelcol.processor.resourcedetection.default.input
     ]
     traces  = [
       otelcol.exporter.debug.traefik_traces.input,
-      otelcol.processor.resourcedetection.default.input,
+      otelcol.processor.resourcedetection.default.input
+      // Note: We do NOT directly send traces to autologging here.
+      // We'll do that after the batch processor so the spans are fully processed.
     ]
     logs    = [otelcol.processor.resourcedetection.default.input]
   }
@@ -196,7 +198,7 @@ otelcol.connector.servicegraph "default" {
   ]
   latency_histogram_buckets = [
     "0.005s", "0.01s", "0.025s", "0.05s", "0.075s", "0.1s",
-    "0.25s", "0.5s", "0.75s", "1s", "2.5s", "5s", "7.5s", "10s",
+    "0.25s", "0.5s", "0.75s", "1s", "2.5s", "5s", "7.5s", "10s"
   ]
   
   store {
@@ -237,13 +239,13 @@ otelcol.connector.spanmetrics "default" {
       buckets = [
         "0.005s", "0.01s", "0.025s", "0.05s", "0.075s",
         "0.1s", "0.25s", "0.5s", "0.75s", "1s",
-        "2.5s", "5s", "7.5s", "10s",
+        "2.5s", "5s", "7.5s", "10s"
       ]
     }
     unit = "s"
   }
 
-
+  # ADDED/UPDATED: Enable exemplars for metric→trace correlation
   exemplars {
     enabled = true
   }
@@ -294,10 +296,10 @@ otelcol.processor.batch "default" {
     metrics = [otelcol.exporter.otlphttp.default_mimir.input]
     logs    = [otelcol.exporter.otlphttp.default_loki.input]
 
-  
+    # UPDATED: Also send traces to the new autologging pipeline for trace→logs correlation
     traces   = [
       otelcol.exporter.otlp.default_tempo.input,
-      otelcol.connector.spanlogs.autologging.input,
+      otelcol.connector.spanlogs.autologging.input
     ]
   }
 }
@@ -470,14 +472,18 @@ otelcol.receiver.prometheus "cadvisor" {
   }
 }
 
+###############################################################################
+# ADDED: Span → Log connector to generate logs from root spans, plus
+#        a small Loki pipeline that ships them to your "loki:3100" endpoint.
+###############################################################################
 
 otelcol.connector.spanlogs "autologging" {
-
+  # Only turn root spans into logs:
   roots     = true
   spans     = false
   processes = false
 
-
+  # Include whichever span attributes you'd like in the log line
   span_attributes = [
     "http.method",
     "http.url",
@@ -487,7 +493,7 @@ otelcol.connector.spanlogs "autologging" {
   ]
 
   overrides {
-  
+    # By default, the field is 'traceID' for correlation in Loki
     trace_id_key = "traceID"
   }
 
@@ -497,12 +503,12 @@ otelcol.connector.spanlogs "autologging" {
 }
 
 otelcol.exporter.loki "autologging_spanlogs" {
-
+  # Convert OTel logs → standard Loki log streams
   forward_to = [loki.process.autologging_spanlogs.receiver]
 }
 
 loki.process "autologging_spanlogs" {
-
+  # Example pipeline: parse JSON "body" if needed
   stage.json {
     expressions = { "body" = "" }
   }
@@ -515,10 +521,15 @@ loki.process "autologging_spanlogs" {
 
 loki.write "autologging_spanlogs" {
   external_labels = {
-    job = "spanlogs",
+    job = "spanlogs"
   }
 
   endpoint {
     url = "http://loki:3100/loki/api/v1/push"
+    # If auth is required, uncomment:
+    # basic_auth {
+    #   username = "..."
+    #   password = "..."
+    # }
   }
 }

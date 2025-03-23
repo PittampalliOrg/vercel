@@ -31,12 +31,12 @@ metrics:
     addRoutersLabels: true
     addServicesLabels: true
     http:
-      endpoint: http://alloy:4318/v1/metrics/otlp
+      endpoint: http://alloy:4318/v1/metrics
 
 tracing:
   otlp:
     http:
-      endpoint: http://alloy:4318/v1/traces/otlp
+      endpoint: http://alloy:4318/v1/traces
 
 
 

@@ -5,7 +5,7 @@ import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-proto';
 import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
 import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-http';
 import { Resource } from '@opentelemetry/resources';
-import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
+import { SEMRESATTRS_SERVICE_NAME, ATTR_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
 import { PgInstrumentation } from '@opentelemetry/instrumentation-pg';
 import { UndiciInstrumentation } from '@opentelemetry/instrumentation-undici';
 import { WinstonInstrumentation } from '@opentelemetry/instrumentation-winston';
@@ -13,6 +13,7 @@ import { envDetectorSync, processDetectorSync, hostDetectorSync } from '@opentel
 import * as traceloop from '@traceloop/node-server-sdk';
 import { logger } from "@/lib/logger"
 import { NodeSDK } from '@opentelemetry/sdk-node';
+import { BatchLogRecordProcessor } from '@opentelemetry/sdk-logs';
 
 
 // --- Create Exporters ---
@@ -35,7 +36,7 @@ const logRecordExporter = new OTLPLogExporter({
 // --- Create NodeSDK ---
 const sdk = new NodeSDK({
   resource: new Resource({
-    [ATTR_SERVICE_NAME]: 'frontend', // Name for your client
+    [SEMRESATTRS_SERVICE_NAME]: 'frontend', // Name for your client
   }),
   traceExporter,
   metricReader,
@@ -56,9 +57,6 @@ const sdk = new NodeSDK({
 
 // Start the SDK
 sdk.start();
-
-import '@/lib/clickhouse';  // IMPORTANT: Actually load the custom client so it's ready
-import { BatchLogRecordProcessor } from '@opentelemetry/sdk-logs';
 
 logger.info('Frontend instrumentation started');
 
