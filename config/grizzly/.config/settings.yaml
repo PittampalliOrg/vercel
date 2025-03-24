@@ -1,13 +1,9 @@
 apiversion: v1alpha1
 contexts:
     default:
-        grafana:
-            token: "${GRAFANA_TOKEN}"
-            url: http://grafana:3000
         name: default
     dev:
         grafana:
-            token: "${GRAFANA_TOKEN}"
             url: http://grafana:3000
         name: dev
         output-format: json
@@ -15,3 +11,4 @@ contexts:
             - Dashboard
             - DashboardFolder
 current-context: dev
+
