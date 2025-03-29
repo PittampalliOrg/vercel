@@ -1,0 +1,18 @@
+declare "docker_beyla" {
+  argument "traces_output" { }
+  
+  beyla.ebpf "default" {
+    attributes {
+      // Add Docker container metadata to traces
+      docker {
+        enable = true
+      }
+    }
+  }
+  
+  // Export the targets directly from the beyla.ebpf component
+  export "targets" {
+    value = beyla.ebpf.default.targets
+  }
+}
+

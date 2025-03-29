@@ -1,0 +1,15 @@
+namespace "tracing" {
+  declare "tracing_pipeline" {
+    argument "traces_output" {}
+    
+    otelcol.processor.batch "default" {
+      output {
+        traces = argument.traces_output.value
+      }
+    }
+    
+    export "input" {
+      value = otelcol.processor.batch.default.input
+    }
+  }
+}

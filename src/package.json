@@ -29,6 +29,7 @@
     "@ai-sdk/azure": "^1.1.15",
     "@ai-sdk/fireworks": "^0.1.8",
     "@ai-sdk/openai": "1.1.9",
+    "@anthropic-ai/claude-code": "^0.2.56",
     "@azure/identity": "npm:@azure/identity@^4.6.0",
     "@azure/msal-browser": "^4.2.0",
     "@azure/msal-react": "^1.5.5",
@@ -38,6 +39,9 @@
     "@codemirror/state": "^6.5.0",
     "@codemirror/theme-one-dark": "^6.1.2",
     "@codemirror/view": "^6.35.3",
+    "@copilotkit/react-core": "^1.6.0",
+    "@copilotkit/react-ui": "^1.6.0",
+    "@copilotkit/runtime": "^1.6.0",
     "@dapr/dapr": "^3.4.1",
     "@grafana/faro-react": "^1.14.1",
     "@grafana/faro-web-sdk": "^1.14.1",
@@ -117,7 +121,7 @@
     "@vercel/blob": "^0.24.1",
     "@vercel/otel": "^1.10.1",
     "@vercel/postgres": "^0.10.0",
-    "ai": "4.1.44",
+    "ai": "4.2.8",
     "bcrypt-ts": "^5.0.2",
     "class-variance-authority": "^0.7.0",
     "classnames": "^2.5.1",
@@ -179,6 +183,7 @@
     "@ryoppippi/unplugin-typia": "npm:@jsr/ryoppippi__unplugin-typia@^1.2.0",
     "@simplewebauthn/server": "^13.1.1",
     "@simplewebauthn/types": "^12.0.0",
+    "@tailwindcss/postcss": "^4",
     "@tailwindcss/typography": "^0.5.15",
     "@types/d3-scale": "^4.0.8",
     "@types/json-schema": "^7.0.15",
@@ -202,5 +207,18 @@
     "typescript": "~5.8.2"
   },
   "packageManager": "pnpm@10.5.2+sha512.da9dc28cd3ff40d0592188235ab25d3202add8a207afbedc682220e4a0029ffbff4562102b9e6e46b4e3f9e8bd53e6d05de48544b0c57d4b0179e22c76d1199b",
-  "type": "module"
+  "type": "module",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@biomejs/biome",
+      "@scarf/scarf",
+      "bufferutil",
+      "esbuild",
+      "protobufjs",
+      "sharp"
+    ],
+    "ignoredBuiltDependencies": [
+      "typia"
+    ]
+  }
 }

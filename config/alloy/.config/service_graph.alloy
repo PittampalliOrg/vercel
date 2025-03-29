@@ -1,0 +1,26 @@
+namespace "servicegraph" {
+  declare "connector" {
+    argument "traces_input" {}
+    argument "metrics_output" {}
+    
+    otelcol.connector.servicegraph "default" {
+      // Add dimensions to include in the generated metrics
+      dimensions = ["http.method", "http.target", "http.status_code"]
+      
+      // Configure the connector to receive traces
+      input {
+        traces = argument.traces_input.value
+      }
+      
+      // Send the generated metrics to the specified output
+      output {
+        metrics = argument.metrics_output.value
+      }
+    }
+    
+    // Make sure to export the input field correctly
+    export "input" {
+      value = otelcol.connector.servicegraph.default.input.traces
+    }
+  }
+}

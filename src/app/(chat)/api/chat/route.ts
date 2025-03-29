@@ -26,6 +26,9 @@ import { updateDocument } from '@/lib/ai/tools/update-document';
 import { requestSuggestions } from '@/lib/ai/tools/request-suggestions';
 import { getWeather } from '@/lib/ai/tools/get-weather';
 import { withTraceAndLogging } from '@/lib/withTraceAndLogging';
+import { experimental_createMCPClient as createMCPClient } from 'ai';
+
+
 
 export const maxDuration = 60;
 
@@ -60,6 +63,17 @@ export const POST = withTraceAndLogging(async function POST(request: Request) {
     messages: [{ ...userMessage, createdAt: new Date(), chatId: id }],
   });
 
+  const mcpClient = await createMCPClient({
+    transport: {
+      type: 'sse',
+      url: 'http://mcp:8007/sse'
+    },
+  });
+
+  const tools = await mcpClient.tools();
+
+  console.log('Tools:', tools);
+
   return createDataStreamResponse({
     execute: (dataStream) => {
       const result = streamText({
@@ -67,26 +81,9 @@ export const POST = withTraceAndLogging(async function POST(request: Request) {
         system: systemPrompt({ selectedChatModel }),
         messages,
         maxSteps: 5,
-        experimental_activeTools:
-          selectedChatModel === 'chat-model-reasoning'
-            ? []
-            : [
-                'getWeather',
-                'createDocument',
-                'updateDocument',
-                'requestSuggestions',
-              ],
         experimental_transform: smoothStream({ chunking: 'word' }),
         experimental_generateMessageId: generateUUID,
-        tools: {
-          getWeather,
-          createDocument: createDocument({ session, dataStream }),
-          updateDocument: updateDocument({ session, dataStream }),
-          requestSuggestions: requestSuggestions({
-            session,
-            dataStream,
-          }),
-        },
+        tools: tools,
         onFinish: async ({ response, reasoning }) => {
           if (session.user?.id) {
             try {

@@ -1,0 +1,21 @@
+declare "otlp_receiver" {
+  argument "traces_output" {}
+  
+  otelcol.receiver.otlp "default" {
+    grpc {
+      endpoint = "0.0.0.0:4317"
+    }
+  http {
+    endpoint = "0.0.0.0:4318"
+    cors {
+      allowed_origins = ["http://localhost", "https://*"]
+      allowed_headers = ["Content-Type", "X-Api-Key", "X-Faro-Session-Id"]
+      max_age         = 7200
+    }
+    include_metadata = true
+  }
+    output {
+      traces = argument.traces_output.value
+    }
+  }
+}

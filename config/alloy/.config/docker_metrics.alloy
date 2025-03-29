@@ -1,0 +1,27 @@
+// First declare your custom components
+declare "docker_metrics" {
+  argument "write_to" { }
+
+  prometheus.exporter.cadvisor "integrations_cadvisor" {
+    docker_only = true
+  }
+
+  discovery.relabel "integrations_cadvisor" {
+    targets = prometheus.exporter.cadvisor.integrations_cadvisor.targets
+
+    rule {
+      target_label = "job"
+      replacement  = "integrations/docker"
+    }
+
+    rule {
+      target_label = "instance"
+      replacement  = constants.hostname
+    }
+  }
+
+  prometheus.scrape "integrations_cadvisor" {
+    targets    = discovery.relabel.integrations_cadvisor.output
+    forward_to = argument.write_to.value
+  }
+}

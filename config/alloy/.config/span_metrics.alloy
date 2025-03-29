@@ -1,0 +1,40 @@
+namespace "spanmetrics" {
+  declare "connector" {
+    argument "traces_input" {}
+    argument "metrics_output" {}
+    
+    otelcol.connector.spanmetrics "default" {
+      // Add dimensions to include in the generated metrics
+      dimensions = [
+        { name = "service.name" },
+        { name = "http.method" },
+        { name = "http.target" },
+        { name = "http.status_code" }
+      ]
+      
+      // Configure histogram buckets for latency distribution
+      histogram {
+        explicit {
+          buckets = ["10ms", "50ms", "100ms", "250ms", "500ms", "1s", "2.5s", "5s", "10s"]
+        }
+      }
+      
+      // Set metrics namespace for easier querying
+      namespace = "traces_spanmetrics"
+      
+      // Configure the connector to receive traces
+      input {
+        traces = argument.traces_input.value
+      }
+      
+      // Send the generated metrics to the specified output
+      output {
+        metrics = argument.metrics_output.value
+      }
+    }
+    
+    export "input" {
+      value = otelcol.connector.spanmetrics.default.input
+    }
+  }
+}

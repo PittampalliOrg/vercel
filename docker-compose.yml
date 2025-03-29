@@ -4,10 +4,10 @@ networks:
 
 volumes:
   postgres-data:
-  prometheus_data:
+  loki-data:
 
 include:
-   - path: ../grafana-plugin-examples/docker-compose.yaml
+   - path: ../plugin/pittampalli-gp-app/docker-compose.yaml
 
 services:
   traefik:
@@ -21,7 +21,8 @@ services:
     networks:
       - shared-network
 
-  app:
+  whoami:
+    container_name: whoami
     image: "traefik/whoami"
     # no container_name
     labels:
@@ -33,7 +34,7 @@ services:
 
   frontend:
     image: "next-js"
-    # no container_name
+    container_name: frontend
     volumes:
       - .:/workspace:cached
       - ./.next:/app/.next
@@ -42,8 +43,8 @@ services:
       - NEXT_PUBLIC_BASE_PATH=/frontend
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
     command: sleep infinity
-    expose:
-      - "3000"
+    # expose:
+    #   - "3000"
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.frontend.rule=(Host(`localhost`) && PathPrefix(`/frontend`))"
@@ -53,28 +54,120 @@ services:
     depends_on:
       - traefik
 
-  playground:
-    image: "next-js"
-    # no container_name
+  kiota:
+    image: deno-dotnet
+    container_name: kiota
     volumes:
-      - ../next-app-router-playground:/workspace:cached
-    environment:
-      - NEXT_PUBLIC_BASE_PATH=/playground
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
-    networks:
-      - shared-network
-    expose:
-      - "3000"
+      - ../kiota:/workspace:cached
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: sleep infinity
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.playground.rule=(Host(`localhost`) && PathPrefix(`/playground`))"
-      - "traefik.http.routers.app.entrypoints=web"
+      - "traefik.http.routers.kiota.rule=(Host(`localhost`) && PathPrefix(`/kiota`))"
+      - "traefik.http.routers.kiota.entrypoints=web"
+    networks:
+      - shared-network
     depends_on:
       - traefik
+
+  # fresh:
+  #   image: deno-dotnet
+  #   container_name: fresh
+  #   volumes:
+  #     - ../fresh-project:/workspace:cached
+  #   command: sleep infinity
+  #   labels:
+  #     - "traefik.enable=true"
+  #     - "traefik.http.routers.fresh.rule=(Host(`localhost`) && PathPrefix(`/fresh`))"
+  #     - "traefik.http.routers.fresh.entrypoints=web"
+  #   networks:
+  #     - shared-network
+  #   depends_on:
+  #     - traefik
+
+  mcp:
+    image: "plugin"
+    container_name: mcp
+    volumes:
+      - ../mcp-server:/workspace:cached
+    # environment:
+      # - NEXT_PUBLIC_BASE_PATH=/mcp
+      # - OTEL_EXPORTER_OTLP_ENDPOINT=http://alloy:4318
     command: sleep infinity
+    expose:
+      - 8007
+    # labels:
+    #   - "traefik.enable=true"
+    #   - "traefik.http.routers.mcp.rule=(Host(`localhost`) && PathPrefix(`/mcp`))"
+    #   - "traefik.http.routers.mcp.entrypoints=web"
+    networks:
+      - shared-network
+    # depends_on:
+    #   - traefik
+
+  # mcp-backend:
+  #   image: "plugin"
+  #   container_name: mcp-backend
+  #   volumes:
+  #     - ../open-mcp-client:/workspace:cached
+  #   # environment:
+  #     # - NEXT_PUBLIC_BASE_PATH=/mcp-backend
+  #     # - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+  #   command: sleep infinity
+  #   ports:
+  #     - "8123:8123"
+  #   # labels:
+  #   #   - "traefik.enable=true"
+  #   #   - "traefik.http.routers.mcp-backend.rule=(Host(`localhost`) && PathPrefix(`/mcp-backend`))"
+  #   #   - "traefik.http.routers.mcp-backend.entrypoints=web"
+  #   networks:
+  #     - shared-network
+  #   depends_on:
+  #     - traefik
+
+  # faro:
+  #   image: "next-js"
+  #   container_name: faro
+  #   volumes:
+  #     - ../faro-nextjs-example:/workspace:cached
+  #   environment:
+  #     - NEXT_PUBLIC_BASE_PATH=/faro
+  #     # - OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
+  #   command: sleep infinity
+  #   expose:
+  #     - "3000"
+  #   labels:
+  #     - "traefik.enable=true"
+  #     - "traefik.http.routers.faro.rule=(Host(`localhost`) && PathPrefix(`/faro`))"
+  #     - "traefik.http.routers.faro.entrypoints=web"
+  #   networks:
+  #     - shared-network
+  #   depends_on:
+  #     - traefik
+
+  # playground:
+  #   image: "next-js"
+  #   container_name: playground
+  #   volumes:
+  #     - ../next-app-router-playground:/workspace:cached
+  #   environment:
+  #     - NEXT_PUBLIC_BASE_PATH=/playground
+  #     - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+  #   networks:
+  #     - shared-network
+  #   expose:
+  #     - "3000"
+  #   labels:
+  #     - "traefik.enable=true"
+  #     - "traefik.http.routers.playground.rule=(Host(`localhost`) && PathPrefix(`/playground`))"
+  #     - "traefik.http.routers.app.entrypoints=web"
+  #   depends_on:
+  #     - traefik
+  #   command: sleep infinity
 
   db:
     image: pgvector/pgvector:pg17
+    container_name: db
     restart: unless-stopped
     volumes:
       - postgres-data:/var/lib/postgresql/data
@@ -91,12 +184,48 @@ services:
       - "5432:5432"
     command: postgres -c config_file=/etc/postgresql.conf
 
+  # rest:
+  #   container_name: rest
+  #   image: postgrest/postgrest
+  #   ports:
+  #     - "3011:3000"
+  #   restart: unless-stopped
+  #   depends_on:
+  #     - db
+  #   environment:
+  #     PGRST_DB_URI: postgres://postgres:${POSTGRESQL_PASSWORD}@${POSTGRESQL_HOST}:${POSTGRESQL_PORT}/${POSTGRESQL_DB}
+  #     PGRST_OPENAPI_SERVER_PROXY_URI: http://127.0.0.1:3000
+  #     PGRST_DB_SCHEMAS: ${PGRST_DB_SCHEMAS}
+  #     PGRST_DB_ANON_ROLE: anon
+  #     PGRST_JWT_SECRET: ${JWT_SECRET}
+  #     PGRST_DB_USE_LEGACY_GUCS: "false"
+  #     PGRST_APP_SETTINGS_JWT_SECRET: ${JWT_SECRET}
+  #     PGRST_APP_SETTINGS_JWT_EXP: ${JWT_EXPIRY}
+  #   networks:
+  #     - shared-network
+  #   command:
+  #     [
+  #       "postgrest"
+  #     ]
+
+  # swagger:
+  #   image: swaggerapi/swagger-ui
+  #   ports:
+  #     - "8080:8080"
+  #   expose:
+  #     - "8080"
+  #   environment:
+  #     API_URL: http://localhost:3011/
+
   # Alloy: remove the `profiles` line so it always starts
   alloy:
     image: grafana/alloy:latest
+    container_name: alloy
+    user: root 
     restart: on-failure
     volumes:
       - ./config/alloy:/etc/alloy
+      - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - REMOTE_WRITE_HOST=mimir:9009
       - LOKI_HOST=loki:3100
@@ -109,20 +238,25 @@ services:
       - pyroscope
     command:
       - run
-      - /etc/alloy/config.alloy
+      - /etc/alloy/.config/main.alloy
       - --storage.path=/var/lib/alloy/data
       - --server.http.listen-addr=0.0.0.0:12345
       - --stability.level=experimental
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.alloy.rule=(Host(`localhost`) && PathPrefix(`/alloy`))"
+      - "traefik.http.routers.alloy.entrypoints=web"
     networks:
       - shared-network
     ports:
       - "12345:12345"
       - "${OTEL_COLLECTOR_PORT_GRPC}:${OTEL_COLLECTOR_PORT_GRPC}"
       - "${OTEL_COLLECTOR_PORT_HTTP}:${OTEL_COLLECTOR_PORT_HTTP}"
+      - "12347:12347"
 
   pyroscope:
     image: grafana/pyroscope:latest
-    # no container_name
+    container_name: pyroscope
     environment:
       - JAEGER_AGENT_HOST=tempo
       - JAEGER_SAMPLER_TYPE=const
@@ -135,39 +269,39 @@ services:
     ports:
       - "4040:4040"
 
-  beyla-db:
-    image: grafana/beyla:latest
-    pid: "service:db"
-    privileged: true
-    networks:
-      - shared-network
-    volumes:
-      - /sys/fs/cgroup:/sys/fs/cgroup  # Required for context propagation
-    cap_add:
-      - BPF                # Required for eBPF probes
-      - SYS_PTRACE         # Allows inspecting executables
-      - NET_RAW            # For socket filters
-      - CHECKPOINT_RESTORE # For opening ELF files
-      - DAC_READ_SEARCH    # For opening ELF files
-      - PERFMON            # For loading BPF programs
-      - NET_ADMIN          # Required for context propagation
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
-    environment:
-      - BEYLA_SERVICE_NAME=db
-      - BEYLA_OPEN_PORT=5432
-      - BEYLA_TRACE_PRINTER=text
-      - BEYLA_NETWORK_METRICS=true
-      - BEYLA_NETWORK_SOURCE=socket_filter
-      - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
-      - OTEL_EXPORTER_OTLP_HEADERS=""
-      - BEYLA_BPF_ENABLE_CONTEXT_PROPAGATION=true
-    depends_on:
-      frontend:
-        condition: service_started
+  # beyla-db:
+  #   image: grafana/beyla:latest
+  #   pid: "service:db"
+  #   privileged: true
+  #   networks:
+  #     - shared-network
+  #   volumes:
+  #     - /sys/fs/cgroup:/sys/fs/cgroup  # Required for context propagation
+  #   cap_add:
+  #     - BPF                # Required for eBPF probes
+  #     - SYS_PTRACE         # Allows inspecting executables
+  #     - NET_RAW            # For socket filters
+  #     - CHECKPOINT_RESTORE # For opening ELF files
+  #     - DAC_READ_SEARCH    # For opening ELF files
+  #     - PERFMON            # For loading BPF programs
+  #     - NET_ADMIN          # Required for context propagation
+  #   ulimits:
+  #     memlock:
+  #       soft: -1
+  #       hard: -1
+  #   environment:
+  #     - BEYLA_SERVICE_NAME=db
+  #     - BEYLA_OPEN_PORT=5432
+  #     - BEYLA_TRACE_PRINTER=text
+  #     - BEYLA_NETWORK_METRICS=true
+  #     - BEYLA_NETWORK_SOURCE=socket_filter
+  #     - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+  #     - OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
+  #     - OTEL_EXPORTER_OTLP_HEADERS=""
+  #     - BEYLA_BPF_ENABLE_CONTEXT_PROPAGATION=true
+  #   depends_on:
+  #     frontend:
+  #       condition: service_started
 
   init:
     image: grafana/tempo:latest
@@ -183,7 +317,7 @@ services:
 
   tempo:
     image: grafana/tempo:latest
-    # no container_name
+    container_name: tempo
     command: [ "-config.file=/etc/tempo.yaml" ]
     volumes:
       - ./config/shared/tempo.yaml:/etc/tempo.yaml:ro
@@ -224,19 +358,19 @@ services:
   #     - "9464"
   #     - "8889"
 
-  prometheus:
-    image: prom/prometheus:latest
-    command:
-      - --config.file=/etc/prometheus.yaml
-      - --web.enable-remote-write-receiver
-      - --enable-feature=exemplar-storage
-      - --enable-feature=native-histograms
-    volumes:
-      - ./config/shared/prometheus.yaml:/etc/prometheus.yaml
-    networks:
-      - shared-network
-    ports:
-      - "9090:9090"
+  # prometheus:
+  #   image: prom/prometheus:latest
+  #   command:
+  #     - --config.file=/etc/prometheus.yaml
+  #     - --web.enable-remote-write-receiver
+  #     - --enable-feature=exemplar-storage
+  #     - --enable-feature=native-histograms
+  #   volumes:
+  #     - ./config/shared/prometheus.yaml:/etc/prometheus.yaml
+  #   networks:
+  #     - shared-network
+  #   ports:
+  #     - "9090:9090"
 
   # grafana:
   #   image: grafana/grafana:latest
@@ -266,6 +400,7 @@ services:
 
   mimir:
     image: grafana/mimir:latest
+    container_name: mimir
     volumes:
       - ./config/mimir/mimir.yaml:/etc/mimir.yaml
       # Add a volume for persistent storage
@@ -289,12 +424,14 @@ services:
 
   loki:
     image: grafana/loki:latest
+    container_name: loki
     command:
       - -config.file=/etc/loki/local-config.yaml
       - -log.level=debug
       - -pattern-ingester.enabled=true
     volumes:
       - ./config/loki/:/etc/loki/:ro
+      - loki-data:/loki
     networks:
       - shared-network
     ports:
@@ -302,6 +439,7 @@ services:
 
   grizzly:
     image: next-js
+    container_name: grizzly
     environment:
       - GRAFANA_TOKEN=${GRAFANA_TOKEN}
       # - OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
@@ -321,3 +459,16 @@ services:
       - "8000:8000"
     depends_on:
       - traefik
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --web.enable-remote-write-receiver
+    volumes:
+      - ./config/shared/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
+    networks:
+      - shared-network
+    ports:
+      - "9090:9090"

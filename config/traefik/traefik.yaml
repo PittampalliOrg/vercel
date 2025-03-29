@@ -18,7 +18,7 @@ providers:
 
 
 log:
-  level: DEBUG
+  level: INFO
   noColor: false
   # otlp:
   #   http:

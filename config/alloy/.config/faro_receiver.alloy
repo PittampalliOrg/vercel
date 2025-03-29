@@ -1,0 +1,23 @@
+declare "faro_receiver" {
+  argument "logs_output" {}
+  argument "traces_output" {}
+
+  faro.receiver "default" {
+    server {
+      listen_address = "0.0.0.0"  // Choose a port that's accessible to your Next.js apps
+    }
+
+    // Optional: Configure sourcemaps if you have them
+    // sourcemaps {
+    //   location {
+    //     path = "/path/to/sourcemaps"
+    //     minified_path_prefix = "/assets/"
+    //   }
+    // }
+
+    output {
+      logs = argument.logs_output.value
+      traces = argument.traces_output.value
+    }
+  }
+}

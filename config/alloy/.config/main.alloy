@@ -1,0 +1,150 @@
+import.file "metrics" {
+  filename = "/etc/alloy/.config/docker_metrics.alloy"
+}
+
+import.file "logs" {
+  filename = "/etc/alloy/.config/docker_logs.alloy"
+}
+
+import.file "beyla" {
+  filename = "/etc/alloy/.config/docker_beyla.alloy"
+}
+
+// Add endpoints
+loki.write "local_loki" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}
+
+prometheus.remote_write "metrics_service" {
+  endpoint {
+    url = "http://mimir:9009/api/v1/push"
+  }
+}
+
+// Add OTLP exporter for traces
+otelcol.exporter.otlp "traces" {
+  client {
+    endpoint = "http://tempo:4317"
+    tls {
+      insecure = true
+      insecure_skip_verify = true
+    }
+  }
+}
+
+// Define batch processor for better performance
+otelcol.processor.batch "default" {
+  output {
+    traces = [otelcol.exporter.otlp.traces.input]
+  }
+}
+
+// Prometheus exporter to convert OTel metrics to Prometheus format
+otelcol.exporter.prometheus "metrics" {
+  include_scope_info = true
+  include_scope_labels = true
+  forward_to = [prometheus.remote_write.metrics_service.receiver]
+}
+
+// Enhanced span metrics connector with more dimensions
+otelcol.connector.spanmetrics "default" {
+  // Add more dimensions for better filtering and aggregation
+  dimension {
+    name = "service.name"
+  }
+  dimension {
+    name = "http.method"
+  }
+  dimension {
+    name = "http.target"
+  }
+  dimension {
+    name = "http.status_code"
+  }
+  dimension {
+    name = "span.kind"
+  }
+  dimension {
+    name = "error"
+    default = "false"
+  }
+  
+  // Use delta temporality for better compatibility with Prometheus
+  aggregation_temporality = "DELTA"
+  
+  // Configure histogram buckets for latency distribution
+  histogram {
+    explicit {
+      buckets = ["10ms", "50ms", "100ms", "250ms", "500ms", "1s", "2.5s", "5s", "10s"]
+    }
+  }
+  
+  // Set metrics flush interval for regular updates
+  metrics_flush_interval = "15s"
+  
+  // Set metrics namespace for easier querying
+  namespace = "traces_spanmetrics"
+  
+  output {
+    metrics = [otelcol.exporter.prometheus.metrics.input]
+  }
+}
+
+// Service graph connector for visualizing service dependencies
+otelcol.connector.servicegraph "default" {
+  dimensions = ["http.method", "http.target", "http.status_code"]
+  
+  // How often to flush metrics
+  store_expiration_loop = "5m"  // Changed from store_expiration
+  
+  output {
+    metrics = [otelcol.exporter.prometheus.metrics.input]
+  }
+}
+
+// Define OTLP receiver
+otelcol.receiver.otlp "default" {
+  grpc {
+    endpoint = "0.0.0.0:4317"
+  }
+  http {
+    endpoint = "0.0.0.0:4318"
+    cors {
+      allowed_origins = ["http://localhost", "http://localhost:3000", "https://*"]
+      allowed_headers = ["Content-Type", "X-Api-Key", "X-Faro-Session-Id"]
+      max_age = 7200
+    }
+    include_metadata = true
+  }
+  output {
+    traces = [
+      otelcol.connector.servicegraph.default.input,
+      otelcol.connector.spanmetrics.default.input,
+      otelcol.processor.batch.default.input,
+    ]
+  }
+}
+
+// Use the imported components
+metrics.docker_metrics "docker_metrics" {
+  write_to = [prometheus.remote_write.metrics_service.receiver]
+}
+
+logs.docker_logs "docker_logs" {
+  write_to = [loki.write.local_loki.receiver]
+}
+
+// Faro receiver for frontend instrumentation
+faro.receiver "default" {
+  server {
+    cors_allowed_origins = ["http://localhost", "http://localhost:3000", "https://*"]
+    listen_address = "0.0.0.0"
+    listen_port = 12347
+  }
+  output {
+    logs = [loki.write.local_loki.receiver]
+    traces = [otelcol.exporter.otlp.traces.input]
+  }
+}
