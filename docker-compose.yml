@@ -15,7 +15,7 @@ services:
     volumes:
       - ./config/traefik/traefik.yaml:/etc/traefik/traefik.yaml:ro
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
-      
+
     ports:
       - "80:80"
       - "8080:8080"
@@ -45,7 +45,7 @@ services:
       - NEXT_PUBLIC_BASE_PATH=/frontend
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
     entrypoint: /usr/local/share/docker-init.sh
-    command: sleep infinity 
+    command: sleep infinity
     expose:
       - "3000"
     labels:
@@ -88,6 +88,39 @@ services:
   #   depends_on:
   #     - traefik
 
+  inspector-frontend:
+    image: "plugin"
+    container_name: inspector-frontend
+    volumes:
+      - ../inspector:/workspace
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: ["/bin/sh", "-c", "cd client && npm run dev"]
+    ports:
+      - "5173:5173"  # Maps the client UI to port 8080 on the host
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.inspector.rule=(Host(`localhost`) && PathPrefix(`/inspector`))"
+      - "traefik.http.routers.inspector.entrypoints=web"
+    networks:
+      - shared-network
+    depends_on:
+      - db
+
+  inspector-backend:
+    image: "plugin"
+    container_name: inspector-backend
+    volumes:
+      - ../inspector:/workspace
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: ["/bin/sh", "-c", "cd server && PORT=3011 npm run dev"]
+    ports:
+      - "3011:3011"
+    networks:
+      - shared-network
+    depends_on:
+      - db
+
+
   mcp:
     image: "plugin"
     container_name: mcp
@@ -118,7 +151,7 @@ services:
       # - NEXT_PUBLIC_BASE_PATH=/mcp-frontend
       # - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
     entrypoint: /usr/local/share/docker-init.sh
-    command: sleep infinity 
+    command: sleep infinity
     expose:
       - "8123"
     # labels:
@@ -201,7 +234,7 @@ services:
       - shared-network
     ports:
       - "5433:5432"  # Map to a different host port to avoid conflict
-    command: ["postgresql://host.docker.internal:5432/mydb"]
+    command: ["postgresql://postgres:postgres@host.docker.internal:5432/postgres"]
 
   # rest:
   #   container_name: rest
@@ -240,7 +273,7 @@ services:
   alloy:
     image: grafana/alloy:latest
     container_name: alloy
-    user: root 
+    user: root
     restart: on-failure
     volumes:
       - ./config/alloy:/etc/alloy
@@ -356,7 +389,7 @@ services:
   #       limits:
   #         memory: 200M
   #   restart: unless-stopped
-  #   command: 
+  #   command:
   #     - "--config=/etc/otelcol-config.yml"
   #     - "--config=/etc/otelcol-config-extras.yml"
   #     - "--feature-gates=service.profilesSupport"

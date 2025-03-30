@@ -17,14 +17,19 @@ type ExampleConfig = {
 
 const EXAMPLE_CONFIGS: ExampleConfig[] = [
   {
-    name: "Math Service",
+    name: "Postgres",
     description:
-      "A simple Python server that can perform mathematical operations",
+      "An interface for connecting to a Postgres database",
     icon: <Calculator className="h-4 w-4 text-gray-600" />,
     config: {
       math: {
-        command: "python",
-        args: ["agent/math_server.py"],
+        command: "docker",
+        args: [
+          "run", 
+          "-i", 
+          "--rm", 
+          "mcp/postgres", 
+          "postgresql://postgres:postgres@host.docker.internal:5432/postgres"],
         transport: "stdio",
       },
     },
