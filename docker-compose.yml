@@ -15,6 +15,7 @@ services:
     volumes:
       - ./config/traefik/traefik.yaml:/etc/traefik/traefik.yaml:ro
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      
     ports:
       - "80:80"
       - "8080:8080"
@@ -33,18 +34,20 @@ services:
       - shared-network
 
   frontend:
-    image: "next-js"
+    image: "plugin"
     container_name: frontend
     volumes:
       - .:/workspace:cached
       - ./.next:/app/.next
       - ./public:/app/public
+      - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - NEXT_PUBLIC_BASE_PATH=/frontend
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
-    command: sleep infinity
-    # expose:
-    #   - "3000"
+    entrypoint: /usr/local/share/docker-init.sh
+    command: sleep infinity 
+    expose:
+      - "3000"
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.frontend.rule=(Host(`localhost`) && PathPrefix(`/frontend`))"
@@ -105,25 +108,27 @@ services:
     # depends_on:
     #   - traefik
 
-  # mcp-backend:
-  #   image: "plugin"
-  #   container_name: mcp-backend
-  #   volumes:
-  #     - ../open-mcp-client:/workspace:cached
-  #   # environment:
-  #     # - NEXT_PUBLIC_BASE_PATH=/mcp-backend
-  #     # - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
-  #   command: sleep infinity
-  #   ports:
-  #     - "8123:8123"
-  #   # labels:
-  #   #   - "traefik.enable=true"
-  #   #   - "traefik.http.routers.mcp-backend.rule=(Host(`localhost`) && PathPrefix(`/mcp-backend`))"
-  #   #   - "traefik.http.routers.mcp-backend.entrypoints=web"
-  #   networks:
-  #     - shared-network
-  #   depends_on:
-  #     - traefik
+  mcp-frontend:
+    image: "plugin"
+    container_name: mcp-frontend
+    volumes:
+      - ../open-mcp-client:/workspace:cached
+      - /var/run/docker.sock:/var/run/docker.sock
+    # environment:
+      # - NEXT_PUBLIC_BASE_PATH=/mcp-frontend
+      # - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+    entrypoint: /usr/local/share/docker-init.sh
+    command: sleep infinity 
+    expose:
+      - "8123"
+    # labels:
+    #   - "traefik.enable=true"
+    #   - "traefik.http.routers.mcp-frontend.rule=(Host(`localhost`) && PathPrefix(`/mcp-frontend`))"
+    #   - "traefik.http.routers.mcp-frontend.entrypoints=web"
+    networks:
+      - shared-network
+    depends_on:
+      - traefik
 
   # faro:
   #   image: "next-js"
@@ -183,6 +188,20 @@ services:
     ports:
       - "5432:5432"
     command: postgres -c config_file=/etc/postgresql.conf
+
+  mcp_postgres:
+    image: mcp/postgres
+    container_name: mcp_postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=postgres
+    networks:
+      - shared-network
+    ports:
+      - "5433:5432"  # Map to a different host port to avoid conflict
+    command: ["postgresql://host.docker.internal:5432/mydb"]
 
   # rest:
   #   container_name: rest

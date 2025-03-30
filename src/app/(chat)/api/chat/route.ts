@@ -27,8 +27,7 @@ import { requestSuggestions } from '@/lib/ai/tools/request-suggestions';
 import { getWeather } from '@/lib/ai/tools/get-weather';
 import { withTraceAndLogging } from '@/lib/withTraceAndLogging';
 import { experimental_createMCPClient as createMCPClient } from 'ai';
-
-
+import { Experimental_StdioMCPTransport as StdioMCPTransport } from 'ai/mcp-stdio';
 
 export const maxDuration = 60;
 
@@ -63,19 +62,27 @@ export const POST = withTraceAndLogging(async function POST(request: Request) {
     messages: [{ ...userMessage, createdAt: new Date(), chatId: id }],
   });
 
+  // const mcpClient = await createMCPClient({
+  //   transport: {
+  //     type: 'sse',
+  //     url: 'http://mcp:8007/sse'
+  //   },
+  // });
+
   const mcpClient = await createMCPClient({
-    transport: {
-      type: 'sse',
-      url: 'http://mcp:8007/sse'
-    },
+    transport: new StdioMCPTransport({
+      command: 'docker',
+      args: [
+        "run", 
+        "-i", 
+        "--rm", 
+        "mcp/postgres", 
+        "postgres://postgres:postgres@db:5432/postgres"]
+    }),
   });
 
-  const tools = await mcpClient.tools();
-
-  console.log('Tools:', tools);
-
   return createDataStreamResponse({
-    execute: (dataStream) => {
+    execute: async (dataStream) => {
       const result = streamText({
         model: myProvider.languageModel(selectedChatModel),
         system: systemPrompt({ selectedChatModel }),
@@ -83,7 +90,7 @@ export const POST = withTraceAndLogging(async function POST(request: Request) {
         maxSteps: 5,
         experimental_transform: smoothStream({ chunking: 'word' }),
         experimental_generateMessageId: generateUUID,
-        tools: tools,
+        tools: await mcpClient.tools(),
         onFinish: async ({ response, reasoning }) => {
           if (session.user?.id) {
             try {

@@ -12,7 +12,7 @@ const serviceAdapter = new ExperimentalEmptyAdapter();
 const runtime = new CopilotRuntime({
     remoteEndpoints: [
         langGraphPlatformEndpoint({
-            deploymentUrl: `${process.env.AGENT_DEPLOYMENT_URL || 'http://mcp-backend:8123'}`,
+            deploymentUrl: `${process.env.AGENT_DEPLOYMENT_URL || 'http://localhost:8123'}`,
             langsmithApiKey: process.env.LANGSMITH_API_KEY,
             agents: [
                 {
