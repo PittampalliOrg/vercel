@@ -64,10 +64,10 @@ services:
       - ../kiota:/workspace:cached
       - /var/run/docker.sock:/var/run/docker.sock
     command: sleep infinity
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.kiota.rule=(Host(`localhost`) && PathPrefix(`/kiota`))"
-      - "traefik.http.routers.kiota.entrypoints=web"
+    # labels:
+    #   - "traefik.enable=true"
+    #   - "traefik.http.routers.kiota.rule=(Host(`localhost`) && PathPrefix(`/kiota`))"
+    #   - "traefik.http.routers.kiota.entrypoints=web"
     networks:
       - shared-network
     depends_on:
@@ -89,75 +89,162 @@ services:
   #     - traefik
 
   inspector-frontend:
-    image: "plugin"
+    image: "plugin:latest"
     container_name: inspector-frontend
     volumes:
       - ../inspector:/workspace
       - /var/run/docker.sock:/var/run/docker.sock
+    entrypoint: /usr/local/share/docker-init.sh
     command: ["/bin/sh", "-c", "cd client && npm run dev"]
     ports:
       - "5173:5173"  # Maps the client UI to port 8080 on the host
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.inspector.rule=(Host(`localhost`) && PathPrefix(`/inspector`))"
-      - "traefik.http.routers.inspector.entrypoints=web"
     networks:
       - shared-network
-    depends_on:
-      - db
 
   inspector-backend:
-    image: "plugin"
+    image: "plugin:latest"
     container_name: inspector-backend
     volumes:
       - ../inspector:/workspace
       - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - MCP_ENV_VARS={"POSTGRES_HOST":"db","POSTGRES_PORT":"5432","POSTGRES_USER":"postgres","POSTGRES_PASSWORD":"postgres","POSTGRES_DB":"postgres","GRAFANA_URL":"http://grafana:3000","GRAFANA_API_KEY":"${GRAFANA_TOKEN}"}
+    entrypoint: /usr/local/share/docker-init.sh
     command: ["/bin/sh", "-c", "cd server && PORT=3011 npm run dev"]
     ports:
       - "3011:3011"
     networks:
       - shared-network
-    depends_on:
-      - db
-
-
-  mcp:
-    image: "plugin"
-    container_name: mcp
-    volumes:
-      - ../mcp-server:/workspace:cached
-    # environment:
-      # - NEXT_PUBLIC_BASE_PATH=/mcp
-      # - OTEL_EXPORTER_OTLP_ENDPOINT=http://alloy:4318
-    command: sleep infinity
-    expose:
-      - 8007
-    # labels:
-    #   - "traefik.enable=true"
-    #   - "traefik.http.routers.mcp.rule=(Host(`localhost`) && PathPrefix(`/mcp`))"
-    #   - "traefik.http.routers.mcp.entrypoints=web"
+  puppeteer:
+    build:
+      context: ../mcp-servers/src/puppeteer
+      dockerfile: Dockerfile
+    container_name: puppeteer
+    # volumes:
+      # - ../mcp-servers/src/puppeteer:/app/puppeteer # Adjust the host path and container path as needed
+    # entrypoint: ["mcp-server-puppeteer"]
+    # Optionally, you can specify a restart policy to keep the container running
+    restart: always
     networks:
       - shared-network
+
+  git:
+    container_name: git
+    build:
+      context: ../mcp-servers/src/git
+      dockerfile: Dockerfile
+    volumes:
+      - ../mcp-servers/src/git:/app/git
+    entrypoint: ["mcp-server-git"]
+    # Optionally, you can specify a restart policy to keep the container running
+    restart: always
+  # beyla-frontend:
+  #   image: grafana/beyla:latest
+  #   container_name: beyla-frontend
+  #   pid: "service:inspector-frontend"
+  #   privileged: true
+  #   network_mode: "host"
+  #   cap_add:
+  #     - NET_ADMIN
+  #   volumes:
+  #     - /sys/kernel/security:/sys/kernel/security
+  #     - /sys/fs/cgroup:/sys/fs/cgroup
+  #   environment:
+  #     BEYLA_OPEN_PORT: 5173
+  #     OTEL_EXPORTER_OTLP_ENDPOINT: http://localhost:4318
+  #     OTEL_SERVICE_NAME: inspector-frontend
+  #     BEYLA_BPF_ENABLE_CONTEXT_PROPAGATION: true
+  #     BEYLA_BPF_TRACK_REQUEST_HEADERS: true
+  #   restart: unless-stopped
+  #   healthcheck:
+  #     test: ["CMD", "ls", "/proc/self/exe"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #   depends_on:
+  #     - inspector-frontend
+  #     - alloy
+
+  # beyla-backend:
+  #   image: grafana/beyla:latest
+  #   container_name: beyla-backend
+  #   pid: "service:inspector-backend"
+  #   privileged: true
+  #   network_mode: "host"
+  #   cap_add:
+  #     - NET_ADMIN
+  #   volumes:
+  #     - /sys/kernel/security:/sys/kernel/security
+  #     - /sys/fs/cgroup:/sys/fs/cgroup
+  #   environment:
+  #     BEYLA_OPEN_PORT: 3011
+  #     OTEL_EXPORTER_OTLP_ENDPOINT: http://localhost:12345  # Changed from alloy:4318
+  #     OTEL_SERVICE_NAME: inspector-backend
+  #     BEYLA_BPF_ENABLE_CONTEXT_PROPAGATION: true
+  #     BEYLA_BPF_TRACK_REQUEST_HEADERS: true
+  #   restart: unless-stopped  # Added restart policy
+  #   depends_on:
+  #     - inspector-backend
+  #     - alloy
+  # mcp:
+  #   image: "plugin"
+  #   container_name: mcp
+  #   volumes:
+  #     - ../mcp-server:/workspace:cached
+  #   # environment:
+  #     # - NEXT_PUBLIC_BASE_PATH=/mcp
+  #     # - OTEL_EXPORTER_OTLP_ENDPOINT=http://alloy:4318
+  #   command: sleep infinity
+  #   expose:
+  #     - 8007
+  #   # labels:
+  #   #   - "traefik.enable=true"
+  #   #   - "traefik.http.routers.mcp.rule=(Host(`localhost`) && PathPrefix(`/mcp`))"
+  #   #   - "traefik.http.routers.mcp.entrypoints=web"
+  #   networks:
+  #     - shared-network
     # depends_on:
     #   - traefik
 
-  mcp-frontend:
+  open_mcp:
     image: "plugin"
-    container_name: mcp-frontend
+    container_name: open_mcp
     volumes:
       - ../open-mcp-client:/workspace:cached
       - /var/run/docker.sock:/var/run/docker.sock
-    # environment:
-      # - NEXT_PUBLIC_BASE_PATH=/mcp-frontend
+    environment:
+      - NEXT_PUBLIC_BASE_PATH=/open_mcp
       # - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
     entrypoint: /usr/local/share/docker-init.sh
     command: sleep infinity
     expose:
-      - "8123"
-    # labels:
-    #   - "traefik.enable=true"
-    #   - "traefik.http.routers.mcp-frontend.rule=(Host(`localhost`) && PathPrefix(`/mcp-frontend`))"
-    #   - "traefik.http.routers.mcp-frontend.entrypoints=web"
+      - "3000"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.open_mcp.rule=(Host(`localhost`) && PathPrefix(`/open_mcp`))"
+      - "traefik.http.routers.open_mcp.entrypoints=web"
+    networks:
+      - shared-network
+    depends_on:
+      - traefik
+
+  next_mcp:
+    image: "plugin"
+    container_name: next_mcp
+    volumes:
+      - ../next-mcp-example:/workspace:cached
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - NEXT_PUBLIC_BASE_PATH=/next_mcp
+      # - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+    entrypoint: /usr/local/share/docker-init.sh
+    command: sleep infinity
+    expose:
+      - "3000"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.next_mcp.rule=(Host(`localhost`) && PathPrefix(`/next_mcp`))"
+      - "traefik.http.routers.next_mcp.entrypoints=web"
     networks:
       - shared-network
     depends_on:
@@ -222,19 +309,19 @@ services:
       - "5432:5432"
     command: postgres -c config_file=/etc/postgresql.conf
 
-  mcp_postgres:
-    image: mcp/postgres
-    container_name: mcp_postgres
-    restart: unless-stopped
-    environment:
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_USER=postgres
-      - POSTGRES_DB=postgres
-    networks:
-      - shared-network
-    ports:
-      - "5433:5432"  # Map to a different host port to avoid conflict
-    command: ["postgresql://postgres:postgres@host.docker.internal:5432/postgres"]
+  # mcp_postgres:
+  #   image: mcp/postgres
+  #   container_name: mcp_postgres
+  #   restart: unless-stopped
+  #   environment:
+  #     - POSTGRES_PASSWORD=postgres
+  #     - POSTGRES_USER=postgres
+  #     - POSTGRES_DB=postgres
+  #   networks:
+  #     - shared-network
+  #   ports:
+  #     - "5433:5432"  # Map to a different host port to avoid conflict
+  #   command: ["postgresql://postgres:postgres@host.docker.internal:5432/postgres"]
 
   # rest:
   #   container_name: rest

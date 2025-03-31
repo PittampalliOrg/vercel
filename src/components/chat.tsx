@@ -15,6 +15,7 @@ import { Messages } from './messages';
 import { VisibilityType } from './visibility-selector';
 import { useArtifactSelector } from '@/hooks/use-artifact';
 import { toast } from 'sonner';
+import { ActiveMCPServers } from "@/components/active-mcp-servers"
 
 export function Chat({
   id,
@@ -74,7 +75,9 @@ export function Chat({
           selectedVisibilityType={selectedVisibilityType}
           isReadonly={isReadonly}
         />
-
+        <div>
+          <ActiveMCPServers />
+        </div>
         <Messages
           chatId={id}
           isLoading={isLoading}

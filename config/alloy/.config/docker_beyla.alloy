@@ -1,23 +1,23 @@
 declare "docker_beyla" {
   argument "traces_output" { }
-
+  
   beyla.ebpf "default" {
     attributes {
-      // Add Docker container metadata to traces
-      docker {
-        enable = true
+      kubernetes {
+        enable = "false"  // Set to false since we're using Docker, not Kubernetes
       }
     }
     discovery {
-      docker {
-        host = "unix:///var/run/docker.sock"
+      services {
+        exe_path = "."  // Match any executable
+        open_ports = "5173,3011"  // Match your frontend and backend ports
       }
     }
     output {
-      traces = [argument.traces_output.value]
+      traces = argument.traces_output.value  // Remove the square brackets
     }
   }
-
+  
   // Export the targets directly from the beyla.ebpf component
   export "targets" {
     value = beyla.ebpf.default.targets

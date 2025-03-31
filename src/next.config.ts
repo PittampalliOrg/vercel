@@ -3,16 +3,8 @@ import type { NextConfig } from 'next';
  
 const config: NextConfig = {
   basePath: "/frontend",
-  images: {
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "avatar.vercel.sh",
-        port: "",
-        pathname: "**",
-      },
-    ],
-  },
+  assetPrefix: "/frontend",
+  images: {domains: ["avatar.vercel.sh", "localhost/frontend"], },
   productionBrowserSourceMaps: true,
   experimental: {
     nodeMiddleware: true,

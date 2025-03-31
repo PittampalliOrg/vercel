@@ -5,12 +5,18 @@ namespace "spanmetrics" {
     
     otelcol.connector.spanmetrics "default" {
       // Add dimensions to include in the generated metrics
-      dimensions = [
-        { name = "service.name" },
-        { name = "http.method" },
-        { name = "http.target" },
-        { name = "http.status_code" }
-      ]
+      dimension {
+        name = "service.name"
+      }
+      dimension {
+        name = "http.method"
+      }
+      dimension {
+        name = "http.target"
+      }
+      dimension {
+        name = "http.status_code"
+      }
       
       // Configure histogram buckets for latency distribution
       histogram {

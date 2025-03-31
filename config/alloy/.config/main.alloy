@@ -10,6 +10,15 @@ import.file "beyla" {
   filename = "/etc/alloy/.config/docker_beyla.alloy"
 }
 
+beyla.docker_beyla "auto_instrument" {
+  traces_output = [otelcol.processor.batch.default.input]
+}
+
+loki.process "docker_logs" {
+  stage.docker { }
+  forward_to = [loki.write.local_loki.receiver]
+}
+
 // Add endpoints
 loki.write "local_loki" {
   endpoint {
@@ -32,8 +41,13 @@ otelcol.exporter.otlp "traces" {
       insecure_skip_verify = true
     }
   }
+  retry_on_failure {
+    enabled = true
+    initial_interval = "5s"
+    max_interval = "30s"
+    max_elapsed_time = "5m"
+  }
 }
-
 // Define batch processor for better performance
 otelcol.processor.batch "default" {
   output {
@@ -103,7 +117,6 @@ otelcol.connector.servicegraph "default" {
     metrics = [otelcol.exporter.prometheus.metrics.input]
   }
 }
-
 // Define OTLP receiver
 otelcol.receiver.otlp "default" {
   grpc {
@@ -119,6 +132,7 @@ otelcol.receiver.otlp "default" {
     include_metadata = true
   }
   output {
+    metrics = [otelcol.exporter.prometheus.metrics.input]
     traces = [
       otelcol.connector.servicegraph.default.input,
       otelcol.connector.spanmetrics.default.input,
