@@ -4,10 +4,7 @@ import { ThemeProvider } from '@/components/theme-provider';
 import './globals.css';
 import { trace } from '@opentelemetry/api';
 import { TelemetryProvider } from "@/components/telemetry-provider";
-import { MCPServersProvider } from "@/components/providers/mcp-servers-provider"; // <<< CORRECTED
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
-import { MCPConnectionProvider } from "@/components/mcp-connection-provider"; // Assuming this path is correct
-import { MCPConnectionLinker } from "@/components/mcp-connection-linker"; // Assuming this path is correct
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 // Define metadata with a function to get active span at request time
@@ -78,10 +75,6 @@ export default async function RootLayout({
       </head>
       <body className="antialiased">
         <TelemetryProvider>
-                <TooltipProvider delayDuration={0}>
-                  <MCPServersProvider> {/* Provider from correct import */}
-                    <MCPConnectionProvider>
-                      <MCPConnectionLinker /> {/* Linker inside both */}
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -91,9 +84,6 @@ export default async function RootLayout({
           <Toaster position="top-center" />
           {children}
         </ThemeProvider>
-                  </MCPConnectionProvider>
-                </MCPServersProvider>
-              </TooltipProvider>
         </TelemetryProvider>
       </body>
     </html>
