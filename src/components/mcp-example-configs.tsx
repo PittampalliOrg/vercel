@@ -15,6 +15,23 @@ type ExampleConfig = {
   icon: JSX.Element;
 };
 
+export type ExampleConfigSet = Record<
+  string,
+  | {
+      name: string;
+      transport: "stdio";
+      command: string;
+      args: string[];
+      env: Record<string, string>;
+    }
+  | {
+      name: string;
+      transport: "sse";
+      url: string;
+      headers: Record<string, string>;
+    }
+>;
+
 const EXAMPLE_CONFIGS: ExampleConfig[] = [
   {
     name: "Postgres",
@@ -22,7 +39,9 @@ const EXAMPLE_CONFIGS: ExampleConfig[] = [
       "An interface for connecting to a Postgres database",
     icon: <Calculator className="h-4 w-4 text-gray-600" />,
     config: {
-      math: {
+      postgres: {
+        name: "postgres",
+        transport: "stdio",
         command: "docker",
         args: [
           "run", 
@@ -30,7 +49,7 @@ const EXAMPLE_CONFIGS: ExampleConfig[] = [
           "--rm", 
           "mcp/postgres", 
           "postgresql://postgres:postgres@host.docker.internal:5432/postgres"],
-        transport: "stdio",
+        env: {}
       },
     },
   },
@@ -40,8 +59,10 @@ const EXAMPLE_CONFIGS: ExampleConfig[] = [
     icon: <Search className="h-4 w-4 text-gray-600" />,
     config: {
       search: {
-        url: "http://localhost:8000/search/events",
+        name: "search",
         transport: "sse",
+        url: "http://localhost:8000/search/events",
+        headers: {}
       },
     },
   },
@@ -52,25 +73,31 @@ const EXAMPLE_CONFIGS: ExampleConfig[] = [
     icon: <Database className="h-4 w-4 text-gray-600" />,
     config: {
       math: {
+        name: "math",
+        transport: "stdio",
         command: "python",
         args: ["agent/math_server.py"],
-        transport: "stdio",
+        env: {}
       },
       search: {
-        url: "http://localhost:8000/search/events",
+        name: "search",
         transport: "sse",
+        url: "http://localhost:8000/search/events",
+        headers: {}
       },
       database: {
+        name: "database",
+        transport: "stdio",
         command: "node",
         args: ["scripts/db_server.js"],
-        transport: "stdio",
+        env: {}
       },
     },
   },
 ];
 
 interface ExampleConfigsProps {
-  onSelectConfig: (config: Record<string, any>) => void;
+  onSelectConfig: (configs: ExampleConfigSet) => void;
 }
 
 export function ExampleConfigs({ onSelectConfig }: ExampleConfigsProps) {

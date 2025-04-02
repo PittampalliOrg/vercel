@@ -110,7 +110,7 @@ services:
     environment:
       - MCP_ENV_VARS={"POSTGRES_HOST":"db","POSTGRES_PORT":"5432","POSTGRES_USER":"postgres","POSTGRES_PASSWORD":"postgres","POSTGRES_DB":"postgres","GRAFANA_URL":"http://grafana:3000","GRAFANA_API_KEY":"${GRAFANA_TOKEN}"}
     entrypoint: /usr/local/share/docker-init.sh
-    command: ["/bin/sh", "-c", "cd server && PORT=3011 npm run dev"]
+    command: ["/bin/sh", "-c", "cd server && PORT=3011 pnpm run dev"]
     ports:
       - "3011:3011"
     networks:
@@ -186,23 +186,27 @@ services:
   #   depends_on:
   #     - inspector-backend
   #     - alloy
-  # mcp:
-  #   image: "plugin"
-  #   container_name: mcp
-  #   volumes:
-  #     - ../mcp-server:/workspace:cached
-  #   # environment:
-  #     # - NEXT_PUBLIC_BASE_PATH=/mcp
-  #     # - OTEL_EXPORTER_OTLP_ENDPOINT=http://alloy:4318
-  #   command: sleep infinity
-  #   expose:
-  #     - 8007
-  #   # labels:
-  #   #   - "traefik.enable=true"
-  #   #   - "traefik.http.routers.mcp.rule=(Host(`localhost`) && PathPrefix(`/mcp`))"
-  #   #   - "traefik.http.routers.mcp.entrypoints=web"
-  #   networks:
-  #     - shared-network
+  mcp:
+    image: "plugin"
+    container_name: mcp
+    volumes:
+      - ../mcp-server:/workspace:cached
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - MCP_ENV_VARS={"POSTGRES_HOST":"db","POSTGRES_PORT":"5432","POSTGRES_USER":"postgres","POSTGRES_PASSWORD":"postgres","POSTGRES_DB":"postgres","GRAFANA_URL":"http://grafana:3000","GRAFANA_API_KEY":"${GRAFANA_TOKEN}"}
+    # environment:
+      # - NEXT_PUBLIC_BASE_PATH=/mcp
+      # - OTEL_EXPORTER_OTLP_ENDPOINT=http://alloy:4318
+    command: sleep infinity
+    # labels:
+    #   - "traefik.enable=true"
+    #   - "traefik.http.routers.mcp.rule=(Host(`localhost`) && PathPrefix(`/mcp`))"
+    #   - "traefik.http.routers.mcp.entrypoints=web"
+    entrypoint: /usr/local/share/docker-init.sh
+    ports:
+      - "3011:3011"
+    networks:
+      - shared-network
     # depends_on:
     #   - traefik
 

@@ -1,91 +1,110 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { ExampleConfigs } from "./mcp-example-configs"
-import { useMCPServers } from "./providers/mcp-servers-provider"
+import React, { useState } from "react"; // Import React
+import { ExampleConfigs, type ExampleConfigSet } from "./mcp-example-configs";
+// Import hook from the *provider* file now
+import { useMCPServers } from "./providers/mcp-servers-provider";
+import type { ServerConfig } from "@/lib/mcp/config"; // Import the correct type
+import { PlusCircle, Trash2, Terminal, Globe, ChevronDown } from "lucide-react";
 
-// Types
-type ConnectionType = "stdio" | "sse"
-interface StdioConfig {
-  command: string
-  args: string[]
-  transport: "stdio"
-}
-interface SSEConfig {
-  url: string
-  transport: "sse"
-}
-type ServerConfig = StdioConfig | SSEConfig
+// No local type definitions needed
 
 export function MCPConfigForm() {
-  // Local state for the form inputs and UI toggles
-  const [serverName, setServerName] = useState("")
-  const [connectionType, setConnectionType] = useState<ConnectionType>("stdio")
-  const [command, setCommand] = useState("")
-  const [args, setArgs] = useState("")
-  const [url, setUrl] = useState("")
-  const [showAddServerForm, setShowAddServerForm] = useState(false)
-  const [showExampleConfigs, setShowExampleConfigs] = useState(false)
+  const [serverName, setServerName] = useState("");
+  const [connectionType, setConnectionType] = useState<"stdio" | "sse">("stdio");
+  const [command, setCommand] = useState("");
+  const [args, setArgs] = useState("");
+  const [url, setUrl] = useState("");
+  const [showAddServerForm, setShowAddServerForm] = useState(false);
+  const [showExampleConfigs, setShowExampleConfigs] = useState(false);
 
-  // Get servers and actions from context
-  const { servers, activeServers, toggleServer, isServerActive, addServer, removeServer } = useMCPServers()
+  // Destructure using the CORRECT names from the context type
+  const {
+    serverConfigs, // Correct name
+    activeServers,
+    toggleServer,
+    isServerActive,
+    addServerConfig, // Correct name
+    removeServerConfig, // Correct name
+  } = useMCPServers();
 
-  // Derive server statistics
-  const totalServers = Object.keys(servers).length
-  const stdioServers = Object.values(servers).filter((c) => c.transport === "stdio").length
-  const sseServers = Object.values(servers).filter((c) => c.transport === "sse").length
+  // Derive server statistics (use serverConfigs)
+  const totalServers = Object.keys(serverConfigs).length;
+  const stdioServers = Object.values(serverConfigs).filter(
+    (c: ServerConfig) => c.transport === "stdio"
+  ).length;
+  const sseServers = Object.values(serverConfigs).filter(
+    (c: ServerConfig) => c.transport === "sse"
+  ).length;
 
-  // --- Logic Functions ---
+  // --- Logic Functions ---
 
-  const handleExampleConfig = (exampleConfig: Record<string, ServerConfig>) => {
-    // Add example configs to the server list
-    Object.entries(exampleConfig).forEach(([name, config]) => {
-      addServer(name, config)
-    })
-  }
+  const handleExampleConfigs = (configs: ExampleConfigSet) => {
+    for (const [, cfg] of Object.entries(configs) as [string, ServerConfig][]) {
+      addServerConfig(cfg);
+    }
+  };
 
-  const handleAddConfig = () => {
-    if (!serverName.trim()) {
-      alert("Server name is required")
-      return
-    }
+  const handleAddConfig = () => {
+    if (!serverName.trim()) {
+      alert("Server name is required");
+      return;
+    }
+    // DEFINE finalName here
+    const finalName = serverName.trim();
 
-    if (servers[serverName]) {
-      alert("A server with this name already exists")
-      return
-    }
+    if (finalName in serverConfigs) {
+      alert("A server with this name already exists");
+      return;
+    }
 
-    if (connectionType === "stdio") {
-      if (!command.trim()) {
-        alert("Command is required")
-        return
-      }
+    let configToAdd: ServerConfig;
 
-      addServer(serverName, {
-        transport: "stdio",
-        command,
-        args: args.split(" ").filter(Boolean),
-      })
-    } else {
-      if (!url.trim()) {
-        alert("URL is required")
-        return
-      }
+    if (connectionType === "stdio") {
+      if (!command.trim()) {
+        alert("Command is required");
+        return;
+      }
+      // Construct object matching the imported ServerConfig type
+      configToAdd = {
+        name: finalName, // Correct property name
+        transport: "stdio",
+        command: command.trim(),
+        args: args.split(/ +/).filter(Boolean),
+        env: {}, // Add required default
+      };
+    } else { // sse
+      const trimmedUrl = url.trim();
+      if (!trimmedUrl) {
+        alert("URL is required");
+        return;
+      }
+      try {
+        new URL(trimmedUrl);
+      } catch (_) {
+        alert("Invalid URL format");
+        return;
+      }
+      // Construct object matching the imported ServerConfig type
+      configToAdd = {
+        name: finalName, // Correct property name
+        transport: "sse",
+        url: trimmedUrl,
+        headers: {}, // Add required default
+      };
+    }
 
-      addServer(serverName, {
-        transport: "sse",
-        url,
-      })
-    }
+    // Use correct function name from context
+    const success = addServerConfig(configToAdd);
 
-    // Reset form
-    setServerName("")
-    setCommand("")
-    setArgs("")
-    setUrl("")
-    setShowAddServerForm(false)
-  }
-
+    if (success) {
+      setServerName("");
+      setCommand("");
+      setArgs("");
+      setUrl("");
+      setShowAddServerForm(false);
+    }
+  };
   // --- Render Logic ---
   return (
     <div className="space-y-6 p-1">
@@ -144,7 +163,7 @@ export function MCPConfigForm() {
         </button>
         {showExampleConfigs && (
           <div className="mt-2 border rounded-md shadow-sm">
-            <ExampleConfigs onSelectConfig={handleExampleConfig} />
+            <ExampleConfigs onSelectConfig={handleExampleConfigs} />
           </div>
         )}
       </div>
@@ -158,7 +177,7 @@ export function MCPConfigForm() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {Object.entries(servers).map(([name, config]) => (
+            {Object.entries(serverConfigs).map(([name, config]) => (
               <div
                 key={name}
                 className={`border rounded-md overflow-hidden bg-white shadow-sm hover:shadow-md transition-shadow ${isServerActive(name) ? "border-green-500" : ""}`}
@@ -210,7 +229,7 @@ export function MCPConfigForm() {
                         {isServerActive(name) ? "Active" : "Inactive"}
                       </button>
                       <button
-                        onClick={() => removeServer(name)}
+                        onClick={() => removeServerConfig(name)}
                         className="text-gray-400 hover:text-red-500 p-1 -m-1"
                         aria-label={`Remove ${name} server`}
                       >

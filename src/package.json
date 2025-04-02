@@ -47,6 +47,7 @@
     "@grafana/faro-web-sdk": "^1.14.1",
     "@grafana/faro-web-tracing": "^1.14.1",
     "@grafana/grafana-foundation-sdk": "11.4.0-cogv0.0.x.1740757701",
+    "@hookform/resolvers": "^5.0.0",
     "@microsoft/kiota-abstractions": "npm:@microsoft/kiota-abstractions@^1.0.0-preview.80",
     "@microsoft/kiota-authentication-azure": "npm:@microsoft/kiota-authentication-azure@^1.0.0-preview.80",
     "@microsoft/kiota-bundle": "npm:@microsoft/kiota-bundle@^1.0.0-preview.80",
@@ -55,6 +56,7 @@
     "@microsoft/kiota-serialization-json": "npm:@microsoft/kiota-serialization-json@^1.0.0-preview.80",
     "@microsoft/kiota-serialization-multipart": "npm:@microsoft/kiota-serialization-multipart@^1.0.0-preview.80",
     "@microsoft/kiota-serialization-text": "npm:@microsoft/kiota-serialization-text@^1.0.0-preview.80",
+    "@modelcontextprotocol/sdk": "^1.8.0",
     "@openfeature/flagd-provider": "0.13.2",
     "@openfeature/flagd-web-provider": "0.7.2",
     "@openfeature/react-sdk": "0.4.10",
@@ -158,6 +160,7 @@
     "react-data-grid": "7.0.0-beta.47",
     "react-day-picker": "8.10.1",
     "react-dom": "19.0.0",
+    "react-hook-form": "^7.55.0",
     "react-markdown": "^9.0.1",
     "react-resizable-panels": "^2.1.7",
     "recharts": "^2.15.1",
@@ -173,11 +176,12 @@
     "tailwindcss-animate": "^1.0.7",
     "ts-morph": "^25.0.1",
     "ts-node": "^10.9.2",
+    "types": "link:@modelcontextprotocol/sdk/types",
     "typia": "^8.0.0",
     "usehooks-ts": "^3.1.0",
     "uuid": "^11.1.0",
     "winston": "^3.17.0",
-    "zod": "^3.23.8"
+    "zod": "^3.24.2"
   },
   "devDependencies": {
     "@biomejs/biome": "1.9.4",
