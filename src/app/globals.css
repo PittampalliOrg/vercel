@@ -215,3 +215,64 @@
   @apply bg-blue-200 hover:bg-blue-300 dark:hover:bg-blue-400/50 dark:text-blue-50 dark:bg-blue-500/40;
 }
 
+.full-width-container {
+  width: 100%;
+  max-width: none;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@media (min-width: 640px) {
+  .full-width-container {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .full-width-container {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+/* Add this at the end of your globals.css file */
+.full-width-container {
+  width: 100%;
+  max-width: none;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@media (min-width: 640px) {
+  .full-width-container {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .full-width-container {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+/* Add these CSS variables for layout calculations */
+:root {
+  --navbar-height: 3.5rem;
+  --content-height: calc(100vh - var(--navbar-height));
+}
+
+/* Utility class for content that should fill available height */
+.h-content {
+  height: var(--content-height);
+  max-height: var(--content-height);
+}
+
+/* Ensure the app sidebar takes the correct height */
+[data-sidebar="sidebar"] {
+  height: var(--content-height);
+  max-height: var(--content-height);
+}
+

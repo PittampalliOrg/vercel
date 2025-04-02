@@ -6,15 +6,16 @@ import { trace } from '@opentelemetry/api';
 import { TelemetryProvider } from "@/components/telemetry-provider";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { NavBar } from '@/components/navigation/nav-bar';
 
 // Define metadata with a function to get active span at request time
 export async function generateMetadata(): Promise<Metadata> {
   const activeSpan = trace.getActiveSpan();
   
   return {
-    metadataBase: new URL('https://chat.vercel.ai'),
-    title: 'Next.js Chatbot Template',
-    description: 'Next.js chatbot template using the AI SDK.',
+    metadataBase: new URL('https://pittampalli.com'),
+    title: 'AI Chatbot',
+    description: '',
     other: {
       traceparent: activeSpan
         ? `00-${activeSpan.spanContext().traceId}-${
@@ -73,17 +74,16 @@ export default async function RootLayout({
           }}
         />
       </head>
-      <body className="antialiased">
-        <TelemetryProvider>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <Toaster position="top-center" />
-          {children}
-        </ThemeProvider>
+      <body className="antialiased flex flex-col h-screen">
+      <TelemetryProvider>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+            <TooltipProvider>
+        
+                <NavBar />
+                <main className="flex-1 overflow-hidden">{children}</main>
+            <Toaster position="top-center" />
+            </TooltipProvider>
+          </ThemeProvider>
         </TelemetryProvider>
       </body>
     </html>

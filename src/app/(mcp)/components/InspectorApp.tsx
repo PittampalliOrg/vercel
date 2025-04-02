@@ -449,7 +449,7 @@ const InspectorApp = () => {
   };
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-content bg-background">
       <Sidebar
         connectionStatus={connectionStatus}
         transportType={transportType}
