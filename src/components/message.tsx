@@ -1,13 +1,17 @@
 'use client';
 
-import type { ChatRequestOptions, Message } from 'ai';
+import type { ChatRequestOptions, Message, ToolInvocation } from 'ai'; // Import ToolInvocation
 import cx from 'classnames';
 import { AnimatePresence, motion } from 'framer-motion';
 import { memo, useMemo, useState } from 'react';
 
 import type { Vote } from '@/lib/db/schema';
 
-import { DocumentToolCall, DocumentToolResult } from './document';
+// Assuming these components exist and handle their specific tool results visually
+// import { DocumentToolCall, DocumentToolResult } from './document';
+// import { DocumentPreview } from './document-preview';
+// import { Weather } from './weather';
+
 import {
   ChevronDownIcon,
   LoaderIcon,
@@ -17,14 +21,13 @@ import {
 import { Markdown } from './markdown';
 import { MessageActions } from './message-actions';
 import { PreviewAttachment } from './preview-attachment';
-import { Weather } from './weather';
 import equal from 'fast-deep-equal';
 import { cn } from '@/lib/utils';
 import { Button } from './ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { MessageEditor } from './message-editor';
-import { DocumentPreview } from './document-preview';
 import { MessageReasoning } from './message-reasoning';
+import { ToolCallRenderer } from './tool-call-renderer'; // Correct import
 
 const PurePreviewMessage = ({
   chatId,
@@ -48,6 +51,10 @@ const PurePreviewMessage = ({
   isReadonly: boolean;
 }) => {
   const [mode, setMode] = useState<'view' | 'edit'>('view');
+
+  // Use the ToolInvocation type from 'ai'
+  const toolInvocations: ToolInvocation[] = message.toolInvocations || [];
+  const nonToolContent = typeof message.content === 'string' ? message.content : '';
 
   return (
     <AnimatePresence>
@@ -75,7 +82,8 @@ const PurePreviewMessage = ({
           )}
 
           <div className="flex flex-col gap-4 w-full">
-            {message.experimental_attachments && (
+            {/* Render Attachments */}
+            {message.experimental_attachments && message.experimental_attachments.length > 0 && (
               <div className="flex flex-row justify-end gap-2">
                 {message.experimental_attachments.map((attachment) => (
                   <PreviewAttachment
@@ -93,7 +101,7 @@ const PurePreviewMessage = ({
               />
             )}
 
-            {(message.content || message.reasoning) && mode === 'view' && (
+            {(nonToolContent || message.role === 'user') && mode === 'view' && (
               <div className="flex flex-row gap-2 items-start">
                 {message.role === 'user' && !isReadonly && (
                   <Tooltip>
@@ -116,17 +124,16 @@ const PurePreviewMessage = ({
                   className={cn('flex flex-col gap-4', {
                     'bg-primary text-primary-foreground px-3 py-2 rounded-xl':
                       message.role === 'user',
+                    '': message.role === 'assistant' && nonToolContent
                   })}
                 >
-                  <Markdown>{message.content as string}</Markdown>
+                  {nonToolContent && <Markdown>{nonToolContent}</Markdown>}
                 </div>
               </div>
             )}
 
-            {message.content && mode === 'edit' && (
+            {message.role === 'user' && nonToolContent && mode === 'edit' && (
               <div className="flex flex-row gap-2 items-start">
-                <div className="size-8" />
-
                 <MessageEditor
                   key={message.id}
                   message={message}
@@ -137,68 +144,15 @@ const PurePreviewMessage = ({
               </div>
             )}
 
-            {message.toolInvocations && message.toolInvocations.length > 0 && (
-              <div className="flex flex-col gap-4">
-                {message.toolInvocations.map((toolInvocation) => {
-                  const { toolName, toolCallId, state, args } = toolInvocation;
-
-                  if (state === 'result') {
-                    const { result } = toolInvocation;
-
-                    return (
-                      <div key={toolCallId}>
-                        {toolName === 'getWeather' ? (
-                          <Weather weatherAtLocation={result} />
-                        ) : toolName === 'createDocument' ? (
-                          <DocumentPreview
-                            isReadonly={isReadonly}
-                            result={result}
-                          />
-                        ) : toolName === 'updateDocument' ? (
-                          <DocumentToolResult
-                            type="update"
-                            result={result}
-                            isReadonly={isReadonly}
-                          />
-                        ) : toolName === 'requestSuggestions' ? (
-                          <DocumentToolResult
-                            type="request-suggestions"
-                            result={result}
-                            isReadonly={isReadonly}
-                          />
-                        ) : (
-                          <pre>{JSON.stringify(result, null, 2)}</pre>
-                        )}
-                      </div>
-                    );
-                  }
-                  return (
-                    <div
-                      key={toolCallId}
-                      className={cx({
-                        skeleton: ['getWeather'].includes(toolName),
-                      })}
-                    >
-                      {toolName === 'getWeather' ? (
-                        <Weather />
-                      ) : toolName === 'createDocument' ? (
-                        <DocumentPreview isReadonly={isReadonly} args={args} />
-                      ) : toolName === 'updateDocument' ? (
-                        <DocumentToolCall
-                          type="update"
-                          args={args}
-                          isReadonly={isReadonly}
-                        />
-                      ) : toolName === 'requestSuggestions' ? (
-                        <DocumentToolCall
-                          type="request-suggestions"
-                          args={args}
-                          isReadonly={isReadonly}
-                        />
-                      ) : null}
-                    </div>
-                  );
-                })}
+            {toolInvocations.length > 0 && (
+              <div className="flex flex-col gap-2 pl-0">
+                {toolInvocations.map((invocation) => (
+                   // Pass the correctly typed invocation
+                  <ToolCallRenderer
+                     key={invocation.toolCallId}
+                     invocation={invocation}
+                  />
+                ))}
               </div>
             )}
 
@@ -225,13 +179,9 @@ export const PreviewMessage = memo(
     if (prevProps.message.reasoning !== nextProps.message.reasoning)
       return false;
     if (prevProps.message.content !== nextProps.message.content) return false;
-    if (
-      !equal(
-        prevProps.message.toolInvocations,
-        nextProps.message.toolInvocations,
-      )
-    )
-      return false;
+    if (!equal(prevProps.message.experimental_attachments, nextProps.message.experimental_attachments)) return false;
+    // Use deep equality check for toolInvocations
+    if (!equal(prevProps.message.toolInvocations, nextProps.message.toolInvocations)) return false;
     if (!equal(prevProps.vote, nextProps.vote)) return false;
 
     return true;
@@ -252,11 +202,11 @@ export const ThinkingMessage = () => {
         className={cx(
           'flex gap-4 group-data-[role=user]/message:px-3 w-full group-data-[role=user]/message:w-fit group-data-[role=user]/message:ml-auto group-data-[role=user]/message:max-w-2xl group-data-[role=user]/message:py-2 rounded-xl',
           {
-            'group-data-[role=user]/message:bg-muted': true,
+            'group-data-[role=user]/message:bg-muted': false,
           },
         )}
       >
-        <div className="size-8 flex items-center rounded-full justify-center ring-1 shrink-0 ring-border">
+        <div className="size-8 flex items-center rounded-full justify-center ring-1 shrink-0 ring-border bg-background">
           <SparklesIcon size={14} />
         </div>
 

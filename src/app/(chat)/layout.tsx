@@ -20,17 +20,17 @@ export default async function Layout({
 
   return (
     <>
-      {/* <MCPServersProvider>
+      <MCPServersProvider>
         <MCPConnectionProvider>
-          <MCPConnectionLinker /> */}
+          <MCPConnectionLinker />
           <SidebarProvider defaultOpen={!isCollapsed}>
             <AppSidebar user={session?.user} />
             <SidebarInset className="h-content overflow-auto">
               {children}
               </SidebarInset>
           </SidebarProvider>
-        {/* </MCPConnectionProvider>
-      </MCPServersProvider> */}
+        </MCPConnectionProvider>
+      </MCPServersProvider>
     </>
   );
 }

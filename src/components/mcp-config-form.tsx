@@ -258,7 +258,7 @@ export function MCPConfigForm() {
                           Command: <code className="bg-gray-100 px-1 rounded">{config.command}</code>
                         </p>{" "}
                         <p className="truncate">
-                          Args: <code className="bg-gray-100 px-1 rounded">{config.args.join(" ")}</code>
+                          Args: <code className="bg-gray-100 px-1 rounded">{config.args?.join(" ")}</code>
                         </p>{" "}
                       </>
                     ) : (

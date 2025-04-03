@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 
 export async function GET() {
-  // const proxyUrl = process.env.PROXY_SERVER_URL || 'http://localhost:3011';
-  const proxyUrl = "http://inspector-backend:3011";
+  const proxyUrl = process.env.PROXY_SERVER_URL || 'http://localhost:3011';
+
   try {
     console.log('Fetching config from /api/config/route.ts:', proxyUrl);
     const response = await fetch(`${proxyUrl}/config`);

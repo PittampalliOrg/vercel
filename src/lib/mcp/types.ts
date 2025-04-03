@@ -49,12 +49,3 @@ import type {
       >;
     }
     
-    // Type for messages exchanged with the Deno proxy via WebSocket
-    export type ProxyWebSocketIncoming =
-      | { type: "status"; status: ConnectionStatus; message?: string; capabilities?: ServerCapabilities }
-      | { type: "mcp"; payload: MCPResult | McpError | MCPNotification } // Messages *from* target server
-      | { type: "stderr"; content: string };
-    
-    export type ProxyWebSocketOutgoing =
-      | { type: "connect"; config: z.infer<typeof StdioConfigSchema> | z.infer<typeof SSEConfigSchema> }
-      | { type: "mcp"; payload: MCPRequest | MCPNotification }; // Messages *to* target server

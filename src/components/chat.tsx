@@ -8,12 +8,14 @@ import useSWR, { useSWRConfig } from 'swr';
 import { ChatHeader } from '@/components/chat-header';
 import type { Vote } from '@/lib/db/schema';
 import { fetcher, generateUUID } from '@/lib/utils';
+import { ServerConfig } from '@/lib/mcp/config'; // Import ServerConfig type
 
 import { Artifact } from './artifact';
 import { MultimodalInput } from './multimodal-input';
 import { Messages } from './messages';
 import { VisibilityType } from './visibility-selector';
 import { useArtifactSelector } from '@/hooks/use-artifact';
+import { useMCPServers } from '@/components/providers/mcp-servers-provider'; // Import useMCPServers hook
 import { toast } from 'sonner';
 import { ActiveMCPServers } from "@/components/active-mcp-servers"
 
@@ -31,6 +33,12 @@ export function Chat({
   isReadonly: boolean;
 }) {
   const { mutate } = useSWRConfig();
+  const { activeServers, serverConfigs } = useMCPServers(); // Get active servers and configs
+
+  // Prepare active configurations to send to the backend
+  const activeMcpConfigs = activeServers
+    .map(name => serverConfigs[name])
+    .filter((config): config is ServerConfig => !!config);
 
   const {
     messages,
@@ -44,8 +52,13 @@ export function Chat({
     reload,
   } = useChat({
     id,
-    api: '/frontend/api/chat',
-    body: { id, selectedChatModel: selectedChatModel },
+    api: '/frontend/api/chat', // Ensure this path is correct
+    // Send active MCP configs in the body
+    body: {
+      id,
+      selectedChatModel: selectedChatModel,
+      activeMcpConfigs: activeMcpConfigs, // Pass active configs here
+    },
     initialMessages,
     experimental_throttle: 100,
     sendExtraMessageFields: true,
@@ -54,7 +67,8 @@ export function Chat({
       mutate('/api/history');
     },
     onError: (error) => {
-      toast.error('An error occured, please try again!');
+      console.error("Chat error:", error);
+      toast.error('An error occurred, please try again!');
     },
   });
 
@@ -75,7 +89,7 @@ export function Chat({
           selectedVisibilityType={selectedVisibilityType}
           isReadonly={isReadonly}
         />
-        <div>
+        <div className="px-4 pt-2">
           <ActiveMCPServers />
         </div>
         <Messages
@@ -95,14 +109,28 @@ export function Chat({
               chatId={id}
               input={input}
               setInput={setInput}
-              handleSubmit={handleSubmit}
+              handleSubmit={(e, opts) => handleSubmit(e, {
+                  ...opts,
+                  body: {
+                      id,
+                      selectedChatModel: selectedChatModel,
+                      activeMcpConfigs: activeServers.map(name => serverConfigs[name]).filter(Boolean) as ServerConfig[],
+                  }
+              })}
               isLoading={isLoading}
               stop={stop}
               attachments={attachments}
               setAttachments={setAttachments}
               messages={messages}
               setMessages={setMessages}
-              append={append}
+              append={(msg, opts) => append(msg, {
+                ...opts,
+                 body: {
+                      id,
+                      selectedChatModel: selectedChatModel,
+                      activeMcpConfigs: activeServers.map(name => serverConfigs[name]).filter(Boolean) as ServerConfig[],
+                  }
+              })}
             />
           )}
         </form>
