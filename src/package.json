@@ -29,6 +29,7 @@
     "@ai-sdk/azure": "^1.1.15",
     "@ai-sdk/fireworks": "^0.1.8",
     "@ai-sdk/openai": "1.1.9",
+    "@ai-sdk/react": "^1.2.5",
     "@anthropic-ai/claude-code": "^0.2.56",
     "@azure/identity": "npm:@azure/identity@^4.6.0",
     "@azure/msal-browser": "^4.2.0",

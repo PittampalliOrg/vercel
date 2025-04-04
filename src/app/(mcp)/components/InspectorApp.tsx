@@ -56,12 +56,12 @@ const getProxyPort = () => {
 
 const getProxyServerUrl = () => {
   if (typeof window !== 'undefined') {
-    return '/frontend/api/proxy';
+    return '/api/proxy';
   }
-  return '/frontend/api/proxy';
+  return '/api/proxy';
 };
 
-const PROXY_SERVER_URL = getProxyServerUrl();
+// const PROXY_SERVER_URL = getProxyServerUrl();
 
 const InspectorApp = () => {
   const { config, setConfig } = useContext(ConfigContext);
@@ -164,7 +164,7 @@ const InspectorApp = () => {
     sseUrl,
     env,
     bearerToken,
-    proxyServerUrl: PROXY_SERVER_URL,
+    proxyServerUrl: process.env.NEXT_PUBLIC_PROXY_SERVER_URL!,
     requestTimeout: config.MCP_SERVER_REQUEST_TIMEOUT.value as number,
     onNotification: (notification) => {
       setNotifications((prev) => [...prev, notification as ServerNotification]);
@@ -217,7 +217,7 @@ const InspectorApp = () => {
 
   // Fetch default environment
   useEffect(() => {
-    fetch(`${PROXY_SERVER_URL}/config`)
+    fetch(`${process.env.NEXT_PUBLIC_PROXY_SERVER_URL}/config`)
       .then((response) => response.json())
       .then((data) => {
         setEnv(data.defaultEnvironment);

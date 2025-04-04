@@ -233,7 +233,7 @@ export function useConnection({
           },
         },
       );
-      const backendUrl = new URL(`http://localhost:${process.env.NEXT_PUBLIC_PROXY_PORT}/sse`);
+      const backendUrl = new URL(`${process.env.NEXT_PUBLIC_PROXY_SERVER_URL}/sse`);
     //  const backendUrl = new URL(`${proxyServerUrl}/sse`);
       console.log(
         `Connecting to MCP server: transportType=${transportType}, url=${backendUrl}`

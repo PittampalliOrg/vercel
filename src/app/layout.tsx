@@ -4,30 +4,27 @@ import { ThemeProvider } from '@/components/theme-provider';
 import './globals.css';
 import { trace } from '@opentelemetry/api';
 import { TelemetryProvider } from "@/components/telemetry-provider";
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar"; // Keep only SidebarProvider if needed globally
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { NavBar } from '@/components/navigation/nav-bar';
+import { SharedMcpProvider } from '@/lib/contexts/SharedMcpContext'; // Import the new provider
 
-// Define metadata with a function to get active span at request time
 export async function generateMetadata(): Promise<Metadata> {
   const activeSpan = trace.getActiveSpan();
-  
   return {
-    metadataBase: new URL('https://pittampalli.com'),
-    title: 'AI Chatbot',
+    metadataBase: new URL('https://pittampalli.com'), // Replace with your base URL
+    title: 'AI Chatbot & MCP Inspector',
     description: '',
     other: {
       traceparent: activeSpan
-        ? `00-${activeSpan.spanContext().traceId}-${
-            activeSpan.spanContext().spanId
-          }-01`
+        ? `00-${activeSpan.spanContext().traceId}-${activeSpan.spanContext().spanId}-01`
         : '',
     },
   } satisfies Metadata;
 }
 
 export const viewport = {
-  maximumScale: 1, // Disable auto-zoom on mobile Safari
+  maximumScale: 1,
 };
 
 const LIGHT_THEME_COLOR = 'hsl(0 0% 100%)';
@@ -57,31 +54,21 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   console.log('Client instrumentation started.');
-  
+
   return (
-    <html
-      lang="en"
-      // `next-themes` injects an extra classname to the body element to avoid
-      // visual flicker before hydration. Hence the `suppressHydrationWarning`
-      // prop is necessary to avoid the React hydration mismatch warning.
-      // https://github.com/pacocoursey/next-themes?tab=readme-ov-file#with-app
-      suppressHydrationWarning
-    >
+    <html lang="en" suppressHydrationWarning>
       <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: THEME_COLOR_SCRIPT,
-          }}
-        />
+        <script dangerouslySetInnerHTML={{ __html: THEME_COLOR_SCRIPT }} />
       </head>
       <body className="antialiased flex flex-col h-screen">
-      <TelemetryProvider>
+        <TelemetryProvider>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
             <TooltipProvider>
-        
-                <NavBar />
-                <main className="flex-1 overflow-hidden">{children}</main>
-            <Toaster position="top-center" />
+              <SharedMcpProvider>
+                  <NavBar />
+                  <main className="flex-1 overflow-hidden">{children}</main>
+                  <Toaster position="top-center" />
+              </SharedMcpProvider>
             </TooltipProvider>
           </ThemeProvider>
         </TelemetryProvider>

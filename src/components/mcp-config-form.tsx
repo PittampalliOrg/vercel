@@ -1,13 +1,15 @@
 "use client";
 
 import React, { useState } from "react"; // Import React
-import { ExampleConfigs, type ExampleConfigSet } from "./mcp-example-configs";
+import { ExampleConfigs } from "./mcp-example-configs";
 // Import hook from the *provider* file now
 import { useMCPServers } from "./providers/mcp-servers-provider";
 import type { ServerConfig } from "@/lib/mcp/config"; // Import the correct type
 import { PlusCircle, Trash2, Terminal, Globe, ChevronDown } from "lucide-react";
 
-// No local type definitions needed
+interface ExampleConfigSet {
+  [key: string]: ServerConfig;
+}
 
 export function MCPConfigForm() {
   const [serverName, setServerName] = useState("");
@@ -39,11 +41,10 @@ export function MCPConfigForm() {
 
   // --- Logic Functions ---
 
-  const handleExampleConfigs = (configs: ExampleConfigSet) => {
-    for (const [, cfg] of Object.entries(configs) as [string, ServerConfig][]) {
-      addServerConfig(cfg);
-    }
-  };
+const handleExampleConfigs = (config: ServerConfig) => {
+  // Simply add the single config that was selected
+  addServerConfig(config);
+};
 
   const handleAddConfig = () => {
     if (!serverName.trim()) {

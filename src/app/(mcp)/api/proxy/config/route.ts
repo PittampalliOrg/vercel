@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 export async function GET() {
-  const proxyUrl = process.env.PROXY_SERVER_URL || 'http://localhost:3011';
+  const proxyUrl = process.env.PROXY_SERVER_URL || 'http://localhost:3013';
 
   try {
     console.log('Fetching config from /api/config/route.ts:', proxyUrl);
