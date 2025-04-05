@@ -26,7 +26,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Trash2 } from "lucide-react";
-import { useMCPServers } from "@/hooks/use-mcp-servers";
+import { useMCPServers } from "@/components/providers/mcp-servers-provider";
 import { ServerConfig, StdioConfigSchema, SSEConfigSchema, SSEConfig } from "@/lib/mcp/config"; // Import specific types too
 
 interface McpServerConfigDialogProps {

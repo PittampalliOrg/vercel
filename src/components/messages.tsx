@@ -1,11 +1,11 @@
-import { ChatRequestOptions, Message, ToolCallPart, ToolInvocation } from 'ai'; // Import ToolInvocation for broader type check
+import { ChatRequestOptions, Message, ToolCallPart, ToolResultPart } from 'ai'; // Import ToolResultPart
 import { PreviewMessage, ThinkingMessage } from './message';
 import { useScrollToBottom } from './use-scroll-to-bottom';
 import { Overview } from './overview';
 import { memo } from 'react';
 import { Vote } from '@/lib/db/schema';
 import equal from 'fast-deep-equal';
-import { ToolConfirmation } from './tool-confirmation';
+// REMOVE: ToolConfirmation import is no longer needed
 
 interface MessagesProps {
   chatId: string;
@@ -20,8 +20,7 @@ interface MessagesProps {
   ) => Promise<string | null | undefined>;
   isReadonly: boolean;
   isArtifactVisible: boolean;
-  pendingToolConfirmations: Record<string, ToolCallPart>;
-  onUserConfirmation: (toolCallId: string, confirmed: boolean) => void;
+  // REMOVE: pendingToolConfirmations and onUserConfirmation props
 }
 
 function PureMessages({
@@ -33,10 +32,8 @@ function PureMessages({
   reload,
   isReadonly,
   isArtifactVisible,
-  pendingToolConfirmations,
-  onUserConfirmation,
+  // REMOVE: pendingToolConfirmations, onUserConfirmation
 }: MessagesProps) {
-  // Fix: Remove arguments from useScrollToBottom if it expects none
   const [messagesContainerRef, messagesEndRef] = useScrollToBottom<HTMLDivElement>();
 
   return (
@@ -61,23 +58,7 @@ function PureMessages({
               reload={reload}
               isReadonly={isReadonly}
             />
-            {/* Render Confirmation UI */}
-            {message.role === 'assistant' && message.toolInvocations?.map(invocation => {
-                // Check if this specific invocation is pending user confirmation
-                const pendingInvocation = pendingToolConfirmations[invocation.toolCallId];
-                 // Fix: Check state instead of type
-                if (pendingInvocation && invocation.state === 'call') {
-                    return (
-                        <ToolConfirmation
-                            key={invocation.toolCallId}
-                            toolCall={pendingInvocation}
-                            onConfirm={() => onUserConfirmation(invocation.toolCallId, true)}
-                            onDeny={() => onUserConfirmation(invocation.toolCallId, false)}
-                        />
-                    );
-                }
-                return null;
-            })}
+            {/* REMOVE: Confirmation UI rendering logic removed */}
           </div>
       ))}
 
@@ -100,7 +81,7 @@ export const Messages = memo(PureMessages, (prevProps, nextProps) => {
   if (prevProps.messages.length !== nextProps.messages.length) return false;
   if (!equal(prevProps.messages, nextProps.messages)) return false;
   if (!equal(prevProps.votes, nextProps.votes)) return false;
-  if (!equal(prevProps.pendingToolConfirmations, nextProps.pendingToolConfirmations)) return false;
+  // REMOVE: pendingToolConfirmations comparison
 
   return true;
 });

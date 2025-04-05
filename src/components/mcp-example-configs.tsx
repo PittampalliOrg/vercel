@@ -24,7 +24,7 @@ const EXAMPLE_CONFIGS: ExampleConfig[] = [
       "Connect to the demo Postgres MCP server via stdio using npx.",
     icon: <Database className="h-4 w-4 text-gray-600" />,
     config: {
-      name: "Postgres Demo", // Ensure name matches
+      name: "Postgres", // Ensure name matches
       transport: "stdio",
       command: "npx",
       args: [ // Fix: Each argument is a separate string
@@ -41,7 +41,7 @@ const EXAMPLE_CONFIGS: ExampleConfig[] = [
       "Connect to the demo Grafana MCP server.",
     icon: <Network className="h-4 w-4 text-gray-600" />, // Example icon
     config: {
-      name: "Grafana Demo", // Ensure name matches
+      name: "Grafana", // Ensure name matches
       transport: "stdio",
       command: "mcp-grafana", // Adjust command if needed
       args: [], // Add args if required by mcp-grafana

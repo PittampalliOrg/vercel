@@ -49,9 +49,9 @@ import ToolsTab from './ToolsTab';
 const getProxyPort = () => {
   if (typeof window !== 'undefined') {
     const params = new URLSearchParams(window.location.search);
-    return params.get('proxyPort') ?? '6277';
+    return params.get('proxyPort') ?? '3013';
   }
-  return '6277';
+  return '3013';
 };
 
 const getProxyServerUrl = () => {

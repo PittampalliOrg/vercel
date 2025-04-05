@@ -14,7 +14,7 @@ import {
   navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu"
 import { Button } from "@/components/ui/button"
-import { Menu, MessageSquare, Terminal, Home } from "lucide-react"
+import { Menu, MessageSquare, Terminal, Home, Server } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { MobileNav } from "./mobile-nav"
 
@@ -33,12 +33,6 @@ interface NavSection {
 
 const mainNavItems: NavItem[] = [
   {
-    title: "Home",
-    href: "/",
-    description: "Return to the home page",
-    icon: Home,
-  },
-  {
     title: "Chat",
     href: "/chat",
     description: "Interact with the AI assistant",
@@ -49,6 +43,12 @@ const mainNavItems: NavItem[] = [
     href: "/mcp",
     description: "Access MCP servers",
     icon: Terminal,
+  },
+  {
+    title: "Servers",
+    href: "/mcp-test",
+    description: "Manage serverx",
+    icon: Server,
   },
 ]
 

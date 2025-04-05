@@ -12,7 +12,6 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { ServerConfig } from '@/lib/mcp/config';
 import { Notification, StdErrNotificationSchema } from '@/app/(mcp)/lib/notificationTypes'; // Adjust path if needed
-import { useMCPServers } from '@/hooks/use-mcp-servers';
 
 const PACKAGE_VERSION = process.env.NEXT_PUBLIC_PACKAGE_VERSION || 'dev'; // Use NEXT_PUBLIC_ for browser access
 

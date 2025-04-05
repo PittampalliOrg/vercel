@@ -1,22 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { CodeBlock } from "./code-block"; // Use your actual CodeBlock component
-import type { ToolCall, ToolInvocation as SdkToolInvocation, ToolResult } from 'ai'; // Import SDK types
-
-// Define the props for CodeBlock based on its implementation
-interface CodeBlockProps {
-  children: React.ReactNode; // Expects content as children
-  className?: string;
-  // Add other props your CodeBlock accepts, e.g., 'inline'
-  inline?: boolean;
-}
-
-// Use the SDK's ToolInvocation type
-type ToolInvocation = SdkToolInvocation;
+import { CodeBlock } from "./code-block";
+import type { ToolCallPart, ToolResultPart, ToolInvocation } from "ai"
 
 interface ToolCallRendererProps {
-  invocation: ToolInvocation;
+  // The invocation object received from the useChat hook.
+  // Ensure the type includes 'args' as potentially available on both parts,
+  // reflecting how the AI SDK often structures this data within messages.
+  invocation: (ToolCallPart | ToolResultPart) & { args?: any };
 }
 
 export const ToolCallRenderer: React.FC<ToolCallRendererProps> = ({
@@ -28,26 +20,32 @@ export const ToolCallRenderer: React.FC<ToolCallRendererProps> = ({
     setIsExpanded(!isExpanded);
   };
 
-  // Determine status, args, and result based on invocation.state
+  // Determine status, args, and result based on the part type
   let status: 'running' | 'success' | 'error' = 'running';
   let result: any = undefined;
-  // Args can be present in 'call' and 'result' states
-  const args: any = (invocation as ToolCall<string, any> | ToolResult<string, any, any>).args;
+  const args: any = invocation.args; // Access args directly from the union type
 
-  if (invocation.state === 'call' || invocation.state === 'partial-call') {
+  if (invocation.type === 'tool-call') {
     status = 'running';
-  } else if (invocation.state === 'result') {
-    result = (invocation as ToolResult<string, any, any>).result;
-    // Basic check if result indicates an error
-    if (typeof result?.error === 'string' || (typeof result === 'string' && result.toLowerCase().includes('error'))) {
+  } else if (invocation.type === 'tool-result') {
+    result = invocation.result;
+    // Check if result indicates an error more robustly
+    const resultIsErrorObject = typeof result === 'object' && result !== null && typeof result.error === 'string';
+    const resultIsErrorString = typeof result === 'string' && result.toLowerCase().includes('error');
+
+    if (resultIsErrorObject || resultIsErrorString) {
       status = 'error';
     } else {
       status = 'success';
     }
   } else {
-    console.warn("Unexpected tool invocation state:", invocation);
-    status = 'error'; // Fallback for unknown states
+    // This case should ideally not happen with standard AI SDK usage
+    console.warn("Unexpected tool part type:", invocation);
+    // Assert the type to satisfy TypeScript - this should be reviewed if custom types are used
+    const exhaustiveCheck: never = invocation;
+    status = 'error';
   }
+
 
   // Status color mapping
   const statusColors: Record<string, string> = {
@@ -69,8 +67,11 @@ export const ToolCallRenderer: React.FC<ToolCallRendererProps> = ({
     }
   };
 
+   const formattedArgs: string = formatJsonSafe(args);
+   const formattedResult: string = formatJsonSafe(result);
+
   return (
-    <div className="my-2 rounded-lg border border-border overflow-hidden shadow-sm bg-muted/30">
+    <div className="ml-12 my-2 rounded-lg border border-border overflow-hidden shadow-sm bg-muted/30">
       {/* Header */}
       <div
         className="flex items-center justify-between p-3 bg-muted/50 cursor-pointer hover:bg-muted/70 transition-colors"
@@ -106,44 +107,41 @@ export const ToolCallRenderer: React.FC<ToolCallRendererProps> = ({
       {isExpanded && (
         <div id={`tool-details-${invocation.toolCallId}`} className="p-3 border-t border-border bg-background">
           {/* Arguments Section */}
-          {args != null && (
+          {args != null && ( // Display args if they exist
              <div className="mb-3">
                 <div className="text-xs font-medium text-muted-foreground mb-1">Arguments:</div>
-                 {/* Pass content as children to CodeBlock */}
-                <CodeBlock>
-                  {formatJsonSafe(args)}
+                <CodeBlock className="text-xs max-h-32 overflow-auto">
+                   {formattedArgs}
                 </CodeBlock>
              </div>
           )}
 
           {/* Result Section */}
-          {result != null && (
+          {invocation.type === 'tool-result' && (
              <div>
                 <div className="text-xs font-medium text-muted-foreground mb-1">Result:</div>
-                 {/* Pass content as children to CodeBlock */}
-                 <CodeBlock>
-                   {formatJsonSafe(result)}
+                 <CodeBlock className="text-xs max-h-48 overflow-auto">
+                   {formattedResult}
                  </CodeBlock>
              </div>
           )}
-           {result == null && status === 'success' && (
+           {invocation.type === 'tool-result' && result == null && status === 'success' && (
               <div className="text-xs text-muted-foreground italic">Tool executed successfully (no explicit result).</div>
            )}
            {/* Error display */}
             {status === 'error' && result?.error && (
                  <div>
                     <div className="text-xs font-medium text-red-500 mb-1">Error:</div>
-                     {/* Pass content as children to CodeBlock */}
-                     <CodeBlock>
+                     <CodeBlock className="text-xs max-h-32 overflow-auto">
                        {formatJsonSafe(result.error)}
                      </CodeBlock>
                  </div>
             )}
-             {status === 'error' && !result?.error && ( // Handle generic errors shown in result
+             {status === 'error' && !result?.error && invocation.type === 'tool-result' && ( // Handle generic errors shown in result
                   <div>
                      <div className="text-xs font-medium text-red-500 mb-1">Error Result:</div>
-                      <CodeBlock>
-                        {formatJsonSafe(result)}
+                      <CodeBlock className="text-xs max-h-32 overflow-auto">
+                        {formattedResult}
                       </CodeBlock>
                   </div>
              )}

@@ -2,14 +2,12 @@
 "use client";
 
 import React, { createContext, useContext, type ReactNode } from "react";
-// Import the MANAGER interface
-import { type MCPConnectionManager, useMCPConnectionManager } from "@/hooks/use-mcp-connection-manager";
-
+import type { McpConnectionManagerContextType } from "@/lib/contexts/McpConnectionManagerContext"; // Import the new type
 // Use the updated interface for the context type
-const MCPConnectionContext = createContext<MCPConnectionManager | undefined>(undefined);
+const MCPConnectionContext = createContext<McpConnectionManagerContextType | undefined>(undefined);
 
-export function MCPConnectionProvider({ children }: { children: ReactNode }) {
-  const manager = useMCPConnectionManager(); // Get the manager object with new API
+export function McpConnectionManagerProvider({ children }: { children: ReactNode }) { // Renamed provider component
+  const manager = useMcpConnectionManager(); // Get the manager object with new API
 
   return (
     <MCPConnectionContext.Provider value={manager}> {/* Provide the manager object */}
@@ -18,11 +16,11 @@ export function MCPConnectionProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// Consumer hook remains the same, returns the manager object
-export function useMCPConnections(): MCPConnectionManager {
+// Renamed consumer hook
+export function useMcpConnectionManager() {
   const context = useContext(MCPConnectionContext);
   if (context === undefined) {
-    throw new Error("useMCPConnections must be used within a MCPConnectionProvider");
+    throw new Error("useMcpConnectionManager must be used within a McpConnectionManagerProvider");
   }
   return context;
 }
