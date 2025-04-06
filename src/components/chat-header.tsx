@@ -1,3 +1,4 @@
+// src/components/chat-header.tsx
 'use client';
 
 import Link from 'next/link';
@@ -12,7 +13,7 @@ import { useSidebar } from './ui/sidebar';
 import { memo } from 'react';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { VisibilityType, VisibilitySelector } from './visibility-selector';
-import { MCPServerButton } from './mcp-server-button';
+import { MCPServerButton } from './mcp-server-button'; // Manages connections globally
 
 function PureChatHeader({
   chatId,
@@ -41,7 +42,7 @@ function PureChatHeader({
               variant="outline"
               className="order-2 md:order-1 md:px-2 px-2 md:h-fit ml-auto md:ml-0"
               onClick={() => {
-                router.push('/');
+                router.push('/frontend'); // Adjusted path
                 router.refresh();
               }}
             >
@@ -68,7 +69,8 @@ function PureChatHeader({
         />
       )}
 
-      <div className="hidden md:block order-4 md:ml-auto">
+       {/* Global Server Connection Management Button */}
+      <div className="ml-auto order-4">
         <MCPServerButton />
       </div>
     </header>

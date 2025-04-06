@@ -7,6 +7,7 @@ const config: NextConfig = {
   experimental: {
     nodeMiddleware: true,
   },
+  reactStrictMode: false
 }
 
 export default config

@@ -1,12 +1,11 @@
 "use client"
 
-// Import MessagePart specifically for type narrowing in useEffect
-import type { Attachment, Message, ToolCallPart } from "ai"
+import type { Attachment, Message, ToolCall } from "ai"
 import { useChat } from "@ai-sdk/react"
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useMemo } from "react"
 import useSWR, { useSWRConfig } from "swr"
 import { toast } from "sonner"
-import { CompatibilityCallToolResultSchema } from "@modelcontextprotocol/sdk/types.js"
+import type { Tool as McpTool } from "@modelcontextprotocol/sdk/types.js"
 
 import { ChatHeader } from "@/components/chat-header"
 import type { Vote } from "@/lib/db/schema"
@@ -16,11 +15,11 @@ import { MultimodalInput } from "./multimodal-input"
 import { Messages } from "./messages"
 import type { VisibilityType } from "./visibility-selector"
 import { useArtifactSelector } from "@/hooks/use-artifact"
-import { useSharedMcp } from "@/lib/contexts/SharedMcpContext"
+import { useMcpManager } from "@/lib/contexts/McpManagerContext"
 import { convertMcpToolsToAiSdkFormat } from "@/lib/ai/format-tools"
 import { ActiveMCPServers } from "@/components/active-mcp-servers"
-
-const LOCAL_TOOL_NAMES = ["getWeather", "createDocument", "updateDocument", "requestSuggestions"]
+import { McpConnectionState } from "@/lib/mcp/mcp.types" // Adjust path if needed
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface ChatProps {
   className?: string
@@ -40,173 +39,186 @@ export function Chat({
   isReadonly: boolean
 }) {
   const { mutate } = useSWRConfig()
-  const { connectionStatus, makeRequest, fetchedMcpTools } = useSharedMcp()
+  const {
+    wsStatus,
+    serverStates,
+    serverTools,
+    sendMcpRequest,
+    // FIX: Remove fetchToolsForServer from destructuring
+  } = useMcpManager()
 
+  const [primaryServerId, setPrimaryServerId] = useState<string | null>(null)
   const [llmTools, setLlmTools] = useState<ReturnType<typeof convertMcpToolsToAiSdkFormat>>({})
-  // Store pending ToolCallPart objects
-  const [pendingToolConfirmations, setPendingToolConfirmations] = useState<Record<string, ToolCallPart>>({})
 
+  const runningServers = useMemo(
+    () => Object.values(serverStates).filter((s) => s.status === McpConnectionState.Running),
+    [serverStates],
+  )
+
+  // Effect 1: Manage primaryServerId selection
   useEffect(() => {
-    if (connectionStatus === "connected") {
-      const formattedMcpTools = convertMcpToolsToAiSdkFormat(fetchedMcpTools)
-      setLlmTools({ ...formattedMcpTools })
-      console.log("Formatted MCP tools for LLM:", Object.keys(formattedMcpTools))
-    } else {
-      setLlmTools({})
+    const currentPrimaryRunning =
+      primaryServerId && serverStates[primaryServerId]?.status === McpConnectionState.Running
+    if (!currentPrimaryRunning) {
+      const firstRunningId = runningServers[0]?.id ?? null
+      if (primaryServerId !== firstRunningId) {
+        console.log(`[Chat] Auto-updating primary server ID to: ${firstRunningId}`)
+        setPrimaryServerId(firstRunningId)
+      }
     }
-  }, [fetchedMcpTools, connectionStatus])
+  }, [primaryServerId, serverStates, runningServers])
 
+  // Effect 3: Format tools *only* when successfully fetched
+  useEffect(() => {
+    const toolsState = primaryServerId ? serverTools[primaryServerId] : null
+    let toolsChanged = false
+
+    // Check if tools are fetched and valid before formatting
+    if (toolsState?.status === "fetched" && Array.isArray(toolsState.tools)) {
+      const formatted = convertMcpToolsToAiSdkFormat(toolsState.tools as McpTool[])
+      if (JSON.stringify(formatted) !== JSON.stringify(llmTools)) {
+        console.log(`[Chat] Updating LLM tools for ${primaryServerId}:`, Object.keys(formatted))
+        setLlmTools(formatted)
+        toolsChanged = true
+      }
+    } else if (primaryServerId && toolsState?.status !== "fetched" && Object.keys(llmTools).length > 0) {
+      // Clear tools if the primary server changes OR if the tool state is no longer 'fetched' (e.g., becomes 'idle' or 'error')
+      console.log(
+        `[Chat] Clearing LLM tools (primary server changed or tools not fetched for ${primaryServerId}). Status: ${toolsState?.status}`,
+      )
+      setLlmTools({})
+      toolsChanged = true
+    } else if (!primaryServerId && Object.keys(llmTools).length > 0) {
+      // Clear tools if no primary server is selected
+      console.log("[Chat] Clearing LLM tools (no primary server selected).")
+      setLlmTools({})
+      toolsChanged = true
+    }
+    // Log if needed:
+    // if (!toolsChanged) console.debug("[Chat] LLM tools unchanged.");
+  }, [primaryServerId, serverTools, llmTools]) // Keep dependencies
+
+  // --- AI SDK useChat Hook ---
   const {
     messages,
     setMessages,
     handleSubmit,
     input,
     setInput,
-    append, // Use append to send tool results
-    isLoading,
+    append,
+    isLoading: isChatHookLoading,
     stop,
     reload,
-    // NOTE: addToolResult removed
+    // FIX: Removed toolCalls from destructuring since it doesn't exist
   } = useChat({
     id,
-    api: "/frontend/api/chat",
+    api: "/frontend/api/chat", // Your backend endpoint
     body: {
-      id,
-      selectedChatModel: selectedChatModel,
+      // Data sent WITH EACH request to your backend
+      id, // Chat ID
+      selectedChatModel, // The LLM model selected by the user
+      // Pass the formatted tools AVAILABLE WHEN THE MESSAGE IS SENT
       availableTools: llmTools,
+      // Include primaryServerId to inform backend which server's tools are intended
+      primaryServerId,
     },
     initialMessages,
-    experimental_throttle: 100,
-    sendExtraMessageFields: true,
-    generateId: generateUUID,
-    onFinish: () => {
-      mutate("/api/history")
+    // FIX: Changed from object to number
+    experimental_throttle: 100, // Optional: Throttle UI updates
+    sendExtraMessageFields: true, // If you have custom fields in Message
+    generateId: generateUUID, // Function to generate message IDs
+    onFinish: (message) => {
+      // Called when a response finishes streaming
+      mutate("/api/history") // Revalidate chat history
+      console.log("[Chat] Finished response for message:", message.id)
     },
     onError: (error) => {
-      console.error("Chat hook error:", error)
-      toast.error(error.message || "An error occurred, please try again!")
+      // Handle errors from the useChat hook/backend
+      console.error("[Chat] useChat hook error:", error)
+      toast.error(error.message || "An error occurred during the chat request!")
     },
-  })
+    // --- NEW: onToolCall handler with correct signature for AI SDK 4.2.10 ---
+    onToolCall: async ({ toolCall }: { toolCall: ToolCall<string, unknown> }) => {
+      console.log(`[Chat] Received toolCall instruction:`, toolCall)
+      const targetServerId = primaryServerId // Assume call is for primary server
 
-  // --- Corrected useEffect for pending confirmations ---
-  useEffect(() => {
-    const pending: Record<string, ToolCallPart> = {}
-    let needsUpdate = false
-
-    // Check the last assistant message for pending calls
-    const lastMessage = messages[messages.length - 1]
-    if (lastMessage?.role === "assistant" && lastMessage.toolInvocations) {
-      for (const invocation of lastMessage.toolInvocations) {
-        // Check if it's a call state and not a local tool
-        if (invocation.state === "call" && !LOCAL_TOOL_NAMES.includes(invocation.toolName)) {
-          // If it's not already in the current pending state, mark for update
-          if (!pendingToolConfirmations[invocation.toolCallId]) {
-            // Create a proper ToolCallPart object
-            pending[invocation.toolCallId] = {
-              type: "tool-call",
-              toolCallId: invocation.toolCallId,
-              toolName: invocation.toolName,
-              args: invocation.args,
-            }
-            needsUpdate = true
-          } else {
-            // If it was already pending, keep it
-            pending[invocation.toolCallId] = pendingToolConfirmations[invocation.toolCallId]
-          }
-        }
+      if (!targetServerId) {
+        console.error("[Chat] Cannot handle toolCall: No primary server selected.")
+        return { error: "No target server selected for tool call." } // Inform LLM
       }
-    }
-
-    // Check if the number of pending items differs (simple check for changes)
-    if (Object.keys(pending).length !== Object.keys(pendingToolConfirmations).length) {
-      needsUpdate = true
-    }
-
-    if (needsUpdate) {
-      console.log("Updating pending confirmations:", Object.keys(pending))
-      setPendingToolConfirmations(pending)
-    }
-    // Only depend on messages array content
-  }, [messages]) // Removed pendingToolConfirmations from deps to avoid loops
-
-  const executeMcpTool = useCallback(
-    async (toolCall: ToolCallPart) => {
-      const { toolName, args, toolCallId } = toolCall
-      console.log(`Client executing confirmed MCP tool: ${toolName} (Call ID: ${toolCallId}) with args:`, args)
-
-      if (connectionStatus !== "connected") {
-        toast.error(`Cannot execute tool "${toolName}": MCP client not connected.`)
-        // Use append for error result with content as string
-        append({
-          role: "assistant",
-          content: `Error: MCP client not connected when trying to execute ${toolName}`,
-        })
-        return
-      }
-
-      const validatedArgs = typeof args === "object" && args !== null ? (args as Record<string, unknown>) : {}
-      if (typeof args !== "object" || args === null) {
-        console.warn(`Tool call arguments for ${toolName} are not an object, using empty object. Original args:`, args)
+      const serverStatus = serverStates[targetServerId]?.status
+      if (serverStatus !== McpConnectionState.Running) {
+        console.error(`[Chat] Cannot handle toolCall: Target server ${targetServerId} not running.`)
+        return { error: `Target server ${targetServerId} is not running.` } // Inform LLM
       }
 
       try {
-        const result = await makeRequest(
-          {
-            method: "tools/call",
-            params: { name: toolName, arguments: validatedArgs },
+        // Access properties based on the actual structure of toolCall
+        // Let's log the toolCall to see its structure
+        console.debug(`[Chat] ToolCall structure:`, JSON.stringify(toolCall))
+
+        // Extract tool name and arguments from the toolCall object
+        // Using type assertion to access properties
+        const toolName = (toolCall as any).type || (toolCall as any).toolName || (toolCall as any).function?.name
+        const toolArgs = (toolCall as any).args || (toolCall as any).arguments || (toolCall as any).function?.arguments
+        const toolCallId = (toolCall as any).id || (toolCall as any).toolCallId
+
+        if (!toolName || !toolCallId) {
+          console.error(`[Chat] Invalid toolCall structure:`, toolCall)
+          return { error: "Invalid tool call structure" }
+        }
+
+        console.debug(`[Chat] Executing tool '${toolName}' on server ${targetServerId} with args:`, toolArgs)
+
+        // Send the MCP 'tools/call' request via the context
+        const mcpResult = await sendMcpRequest<any>(targetServerId, {
+          method: "tools/call",
+          params: {
+            name: toolName,
+            arguments: toolArgs,
           },
-          CompatibilityCallToolResultSchema,
-        )
-        console.log(`MCP tool "${toolName}" result:`, result)
-        // Use append for success result
-        append({
-          role: "assistant",
-          content: `Tool ${toolName} executed successfully with result: ${JSON.stringify(result)}`,
         })
+
+        console.log(`[Chat] Received toolResult from MCP server ${targetServerId}:`, mcpResult)
+
+        // Format the result
+        let formattedResult
+        if (mcpResult.result && typeof mcpResult.result === "object" && "content" in mcpResult.result) {
+          formattedResult = (mcpResult.result.content as Array<{ type: string; text?: string }>)
+            .map((part) => part.text ?? "")
+            .join("\n")
+        } else {
+          formattedResult = mcpResult.result
+        }
+
+        return {
+          toolCallId: toolCallId,
+          toolName: toolName,
+          result: formattedResult,
+        }
       } catch (error: any) {
-        console.error(`Error executing MCP tool "${toolName}":`, error)
-        toast.error(`Error executing tool "${toolName}": ${error.message || String(error)}`)
-        // Use append for error result
-        append({
-          role: "assistant",
-          content: `Error executing tool ${toolName}: ${error.message || String(error)}`,
-        })
+        console.error(`[Chat] Error executing tool call on server ${targetServerId}:`, error)
+
+        // Try to extract tool name and ID for the error response
+        const toolName =
+          (toolCall as any).type || (toolCall as any).toolName || (toolCall as any).function?.name || "unknown"
+        const toolCallId = (toolCall as any).id || (toolCall as any).toolCallId || "unknown"
+
+        return {
+          toolCallId: toolCallId,
+          toolName: toolName,
+          error: `Failed to execute tool: ${error.message || String(error)}`,
+        }
       }
     },
-    [connectionStatus, makeRequest, append],
-  )
+  })
 
-  const handleUserConfirmation = useCallback(
-    (toolCallId: string, confirmed: boolean) => {
-      const toolCall = pendingToolConfirmations[toolCallId]
-      if (!toolCall) return
-
-      // Remove from pending state immediately
-      setPendingToolConfirmations((prev) => {
-        const newState = { ...prev }
-        delete newState[toolCallId]
-        return newState
-      })
-
-      if (confirmed) {
-        // Execute async
-        void executeMcpTool(toolCall)
-      } else {
-        // User denied, send denial result back via append
-        append({
-          role: "assistant",
-          content: `User denied execution of tool ${toolCall.toolName}`,
-        })
-      }
-    },
-    [pendingToolConfirmations, append, executeMcpTool],
-  )
+  const isLoading = isChatHookLoading || wsStatus === "connecting"
 
   const { data: votes } = useSWR<Array<Vote>>(`/api/vote?chatId=${id}`, fetcher)
-
   const [attachments, setAttachments] = useState<Array<Attachment>>([])
   const isArtifactVisible = useArtifactSelector((state) => state.isVisible)
-  const currentBody = { id, selectedChatModel, availableTools: llmTools }
+  // Removed currentBody variable as it wasn't used
 
   return (
     <>
@@ -217,20 +229,51 @@ export function Chat({
           selectedVisibilityType={selectedVisibilityType}
           isReadonly={isReadonly}
         />
-        <div className="px-4 pt-2">
-          <ActiveMCPServers />
+        <div className="flex items-center justify-between gap-4 px-4 pt-2 border-b pb-2">
+          <div className="flex items-center gap-2 flex-shrink min-w-0">
+            <label htmlFor="primary-server-select" className="text-xs text-muted-foreground flex-shrink-0">
+              Chat Target:
+            </label>
+            <Select
+              value={primaryServerId ?? ""}
+              onValueChange={setPrimaryServerId}
+              disabled={isLoading || runningServers.length === 0}
+            >
+              <SelectTrigger
+                id="primary-server-select"
+                className="h-8 text-xs w-full sm:w-[200px] truncate flex-shrink"
+              >
+                <SelectValue placeholder="Select target..." />
+              </SelectTrigger>
+              <SelectContent>
+                {runningServers.length === 0 && (
+                  <SelectItem value="no-servers" disabled>
+                    No running servers
+                  </SelectItem>
+                )}
+                {runningServers.map((server) => (
+                  <SelectItem key={server.id} value={server.id} className="text-xs">
+                    {server.label || server.id}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex-grow overflow-x-auto">
+            {" "}
+            <ActiveMCPServers />{" "}
+          </div>
         </div>
+
         <Messages
           chatId={id}
           isLoading={isLoading}
           votes={votes}
           messages={messages}
           setMessages={setMessages}
-          reload={(opts) => reload({ ...opts, body: currentBody })}
+          reload={reload}
           isReadonly={isReadonly}
           isArtifactVisible={isArtifactVisible}
-          pendingToolConfirmations={pendingToolConfirmations}
-          onUserConfirmation={handleUserConfirmation}
         />
 
         <form className="flex mx-auto px-4 bg-background pb-4 md:pb-6 gap-2 w-full md:max-w-3xl">
@@ -239,34 +282,72 @@ export function Chat({
               chatId={id}
               input={input}
               setInput={setInput}
-              handleSubmit={(e, opts) => handleSubmit(e, { ...opts, body: currentBody })}
-              isLoading={isLoading || Object.keys(pendingToolConfirmations).length > 0}
+              // Pass the modified handleSubmit which includes availableTools
+              handleSubmit={(e, { data } = {}) => {
+                const currentToolState = primaryServerId ? serverTools[primaryServerId] : null
+                // Ensure tools are actually fetched before submitting
+                const toolsToSend =
+                  currentToolState?.status === "fetched" && currentToolState.tools
+                    ? convertMcpToolsToAiSdkFormat(currentToolState.tools as McpTool[])
+                    : {}
+
+                console.log(
+                  `[Chat] Submitting message with ${Object.keys(toolsToSend).length} tools for server ${primaryServerId}`,
+                )
+
+                // FIX: Removed options property
+                handleSubmit(e, {
+                  data, // Pass through any extra data from MultimodalInput
+                  body: {
+                    // Updated to use body directly instead of options.body
+                    id,
+                    selectedChatModel,
+                    availableTools: toolsToSend,
+                    primaryServerId,
+                  },
+                })
+              }}
+              isLoading={isLoading}
               stop={stop}
               attachments={attachments}
               setAttachments={setAttachments}
               messages={messages}
               setMessages={setMessages}
-              append={(msg, opts) => append(msg, { ...opts, body: currentBody })}
+              append={append}
             />
           )}
         </form>
       </div>
 
+      {/* Artifact rendering - Ensure it receives necessary props, including potential toolCalls */}
       <Artifact
         chatId={id}
         input={input}
         setInput={setInput}
-        handleSubmit={(e, opts) => handleSubmit(e, { ...opts, body: currentBody })}
+        // Pass the modified handleSubmit again
+        handleSubmit={(e, { data } = {}) => {
+          const currentToolState = primaryServerId ? serverTools[primaryServerId] : null
+          const toolsToSend =
+            currentToolState?.status === "fetched" && currentToolState.tools
+              ? convertMcpToolsToAiSdkFormat(currentToolState.tools as McpTool[])
+              : {}
+          // FIX: Removed options property
+          handleSubmit(e, {
+            data,
+            body: { id, selectedChatModel, availableTools: toolsToSend, primaryServerId },
+          })
+        }}
         isLoading={isLoading}
         stop={stop}
         attachments={attachments}
         setAttachments={setAttachments}
-        append={(msg, opts) => append(msg, { ...opts, body: currentBody })}
+        append={append}
         messages={messages}
         setMessages={setMessages}
-        reload={(opts) => reload({ ...opts, body: currentBody })}
+        reload={reload}
         votes={votes}
         isReadonly={isReadonly}
+        // Consider if Artifact needs access to toolCalls or sendMcpRequest
       />
     </>
   )

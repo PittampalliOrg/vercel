@@ -4,10 +4,9 @@ import { ThemeProvider } from '@/components/theme-provider';
 import './globals.css';
 import { trace } from '@opentelemetry/api';
 import { TelemetryProvider } from "@/components/telemetry-provider";
-import { SidebarProvider } from "@/components/ui/sidebar"; // Keep only SidebarProvider if needed globally
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { NavBar } from '@/components/navigation/nav-bar';
-import { SharedMcpProvider } from '@/lib/contexts/SharedMcpContext'; // Import the new provider
+import { McpManagerProvider } from '@/lib/contexts/McpManagerContext'; // Ensure this is imported
 
 export async function generateMetadata(): Promise<Metadata> {
   const activeSpan = trace.getActiveSpan();
@@ -64,11 +63,11 @@ export default async function RootLayout({
         <TelemetryProvider>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
             <TooltipProvider>
-              <SharedMcpProvider>
+              <McpManagerProvider>
                   <NavBar />
                   <main className="flex-1 overflow-hidden">{children}</main>
                   <Toaster position="top-center" />
-              </SharedMcpProvider>
+              </McpManagerProvider>
             </TooltipProvider>
           </ThemeProvider>
         </TelemetryProvider>

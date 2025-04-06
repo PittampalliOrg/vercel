@@ -118,6 +118,24 @@ services:
       - "3013:3013"
     networks:
       - shared-network
+
+  registry:
+    image: "plugin:latest"
+    container_name: registry
+    volumes:
+      - ../mcp-registry:/workspace
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - MCP_ENV_VARS={"POSTGRES_HOST":"db","POSTGRES_PORT":"5432","POSTGRES_USER":"postgres","POSTGRES_PASSWORD":"postgres","POSTGRES_DB":"postgres","GRAFANA_URL":"http://grafana:3000","GRAFANA_API_KEY":"${GRAFANA_TOKEN}"}
+      - PORT=3013
+    entrypoint: /usr/local/share/docker-init.sh
+    # command: ["/bin/sh", "-c", "npm install && cd server && PORT=3013 npm run dev"]
+    command: sleep infinity
+    ports:
+      - "6278:6278"
+    networks:
+      - shared-network
+
   puppeteer:
     build:
       context: ../mcp-servers/src/puppeteer
