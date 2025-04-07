@@ -105,6 +105,7 @@ export async function POST(request: Request) {
           const reader = bridgeResponse.body!.getReader()
           const decoder = new TextDecoder()
           let buffer = ""
+          let assistantMessage = ""
 
           function processBuffer() {
             let boundary = buffer.indexOf("\n\n")
@@ -116,26 +117,65 @@ export async function POST(request: Request) {
                 if (jsonData) {
                   try {
                     const bridgeChunk = JSON.parse(jsonData)
+
+                    // Map the bridge chunk types to AI SDK format
                     switch (bridgeChunk.type) {
-                      case "chatChunk":
-                        // Write text content
-                        dataWriter.write(`0:${bridgeChunk.content}\n`)
+                      case "text":
+                        // This is text content from the LLM
+                        assistantMessage += bridgeChunk.value
+                        // Write text content in AI SDK format - properly JSON stringified
+                        dataWriter.write(`0:${JSON.stringify(bridgeChunk.value)}\n`)
                         break
-                      case "toolStart":
-                        // Format tool start as text
-                        dataWriter.write(`0:[Using tool: ${bridgeChunk.toolName}]\n`)
+                      case "tool_call":
+                        // Format tool call for AI SDK - as a data array
+                        dataWriter.write(
+                          `2:${JSON.stringify([
+                            {
+                              type: "toolCall",
+                              payload: {
+                                toolCallId: bridgeChunk.toolCallId,
+                                toolName: bridgeChunk.toolName,
+                                toolInput: bridgeChunk.args,
+                              },
+                            },
+                          ])}\n`,
+                        )
                         break
-                      case "toolEnd":
-                        // Format tool end as text
-                        dataWriter.write(`0:[Tool ${bridgeChunk.toolName} completed]\n`)
+                      case "tool_result":
+                        // Format tool result for AI SDK - as a data array
+                        dataWriter.write(
+                          `2:${JSON.stringify([
+                            {
+                              type: "toolResult",
+                              payload: {
+                                toolCallId: bridgeChunk.toolCallId,
+                                output: bridgeChunk.content,
+                                isError: bridgeChunk.isError,
+                              },
+                            },
+                          ])}\n`,
+                        )
                         break
                       case "chatError":
-                        // Format error as text
-                        dataWriter.write(`0:[Error: ${bridgeChunk.error}]\n`)
+                        // Format error as data array
+                        dataWriter.write(
+                          `2:${JSON.stringify([
+                            {
+                              type: "chatError",
+                              payload: { message: bridgeChunk.message || "An error occurred" },
+                            },
+                          ])}\n`,
+                        )
                         break
                       case "chatEnd":
-                        // Format chat end as text
-                        dataWriter.write(`0:[Chat completed]\n`)
+                        // Format chat end as data array
+                        dataWriter.write(
+                          `2:${JSON.stringify([
+                            {
+                              type: "chatEnd",
+                            },
+                          ])}\n`,
+                        )
                         break
                       default:
                         logger.warn(`[API Route] Unknown chunk type from bridge: ${bridgeChunk.type}`)
@@ -175,11 +215,6 @@ export async function POST(request: Request) {
           `[API Route] Stream error for chat ${chatId}: ${error instanceof Error ? error.message : String(error)}`,
         )
         return `Error processing chat: ${error instanceof Error ? error.message : "Unknown error"}`
-      },
-      headers: {
-        "Content-Type": "text/plain; charset=utf-8",
-        "Transfer-Encoding": "chunked",
-        Connection: "keep-alive",
       },
     })
   } catch (error: unknown) {

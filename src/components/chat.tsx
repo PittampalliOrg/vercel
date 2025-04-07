@@ -74,6 +74,7 @@ export function Chat({
     stop,
     reload,
     data,
+    status, // Extract status from useChat hook
   } = useChat({
     id,
     api: "/frontend/api/chat", // Your Next.js API endpoint
@@ -207,7 +208,7 @@ export function Chat({
 
   return (
     <>
-      <div className="flex flex-col min-w-0 h-content bg-background">
+      <div className="flex flex-col min-w-0 h-dvh bg-background">
         <ChatHeader
           chatId={id}
           selectedModelId={selectedChatModel}
@@ -255,7 +256,7 @@ export function Chat({
         </div>
         <Messages
           chatId={id}
-          isLoading={isLoading}
+          status={status} // Use the correct status from useChat
           votes={votes}
           messages={messages}
           setMessages={setMessages}
@@ -266,18 +267,18 @@ export function Chat({
         <div className="flex mx-auto px-4 bg-background pb-4 md:pb-6 gap-2 w-full md:max-w-3xl">
           {!isReadonly && (
             <MultimodalInput
-              chatId={id}
-              input={input}
-              setInput={setInput}
-              handleSubmit={handleFormSubmit}
-              isLoading={isLoading}
-              stop={stop}
-              attachments={attachments}
-              setAttachments={setAttachments}
-              messages={messages}
-              setMessages={setMessages}
-              append={append}
-            />
+            chatId={id}
+            input={input}
+            setInput={setInput}
+            handleSubmit={handleFormSubmit} // Fix: Use handleFormSubmit instead of handleSubmit
+            status={status} // Use the correct status from useChat
+            stop={stop}
+            attachments={attachments}
+            setAttachments={setAttachments}
+            messages={messages}
+            setMessages={setMessages}
+            append={append}
+          />
           )}
         </div>
       </div>
@@ -285,8 +286,8 @@ export function Chat({
         chatId={id}
         input={input}
         setInput={setInput}
-        handleSubmit={handleFormSubmit}
-        isLoading={isLoading}
+        handleSubmit={handleFormSubmit} // Fix: Use handleFormSubmit instead of handleSubmit
+        status={status} // Use the correct status from useChat
         stop={stop}
         attachments={attachments}
         setAttachments={setAttachments}
