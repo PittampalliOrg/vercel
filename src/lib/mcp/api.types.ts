@@ -1,8 +1,10 @@
+// src/api/api.types.ts
 import { z } from 'zod';
 import {
-    McpConnectionState, ManagedServerState, JsonRpcRequestSchema, JsonRpcNotificationSchema,
-    JsonRpcResponseSchema, JsonRpcMessageSchema, ToolSchema, Tool // Import ToolSchema and Tool type
-} from "./mcp.types"; // Use correct relative path
+  McpConnectionState, ManagedServerState, JsonRpcRequestSchema, JsonRpcNotificationSchema,
+  JsonRpcResponseSchema, JsonRpcMessageSchema, ToolSchema, Tool,
+  LanguageModelChatMessage // Use type
+} from './mcp.types'; // Adjust path if needed
 
 // --- Client -> Server Message Types ---
 
@@ -23,7 +25,6 @@ export const DisconnectServerRequestSchema = z.object({
 });
 export type DisconnectServerRequest = z.infer<typeof DisconnectServerRequestSchema>;
 
-// --- NEW: GetTools Request ---
 export const GetToolsRequestSchema = z.object({
     type: z.literal('getTools'),
     serverId: z.string(),
@@ -45,6 +46,19 @@ export const McpApiNotificationSchema = z.object({
 });
 export type McpApiNotification = z.infer<typeof McpApiNotificationSchema>;
 
+// --- NEW: Chat Request ---
+export const ChatRequestMessageSchema = z.object({
+    type: z.literal('chatRequest'),
+    payload: z.object({
+        prompt: z.string(),
+        history: z.array(z.custom<LanguageModelChatMessage>()).optional(), // Validate using custom if complex
+        selectedTools: z.array(z.string()).optional(), // IDs of tools selected by user
+        sessionId: z.string().optional(), // Optional session ID for context
+        // Add other relevant options if needed
+    })
+});
+export type ChatRequestMessage = z.infer<typeof ChatRequestMessageSchema>;
+
 
 export const ClientToServerMessageSchema = z.union([
   ListServersRequestSchema,
@@ -53,6 +67,7 @@ export const ClientToServerMessageSchema = z.union([
   GetToolsRequestSchema,
   McpApiRequestSchema,
   McpApiNotificationSchema,
+  ChatRequestMessageSchema, // Add chat request
 ]);
 export type ClientToServerMessage = z.infer<typeof ClientToServerMessageSchema>;
 
@@ -71,18 +86,15 @@ export const ServerStatusUpdateSchema = z.object({
   serverId: z.string(),
   status: z.nativeEnum(McpConnectionState),
   error: z.string().optional(),
+  // Include tool info in status updates if fetched
+  tools: z.array(ToolSchema).optional(),
+  toolFetchStatus: z.enum(['idle', 'fetching', 'fetched', 'error']).optional(),
 });
 export type ServerStatusUpdate = z.infer<typeof ServerStatusUpdateSchema>;
 
-// --- NEW: ToolList Response ---
-export const ToolListResponseSchema = z.object({
-    type: z.literal('toolList'),
-    serverId: z.string(),
-    tools: z.array(ToolSchema), // Use the Tool Zod schema
-    error: z.string().optional(),
-});
-export type ToolListResponse = z.infer<typeof ToolListResponseSchema>;
-
+// --- REMOVED: ToolListResponse (merged into ServerStatusUpdate) ---
+// export const ToolListResponseSchema = z.object({ ... });
+// export type ToolListResponse = z.infer<typeof ToolListResponseSchema>;
 
 export const McpApiResponseSchema = z.object({
     type: z.literal('response'),
@@ -115,13 +127,63 @@ export const ApiErrorResponseSchema = z.object({
 export type ApiErrorResponse = z.infer<typeof ApiErrorResponseSchema>;
 
 
+// --- NEW: Chat Response Stream Types ---
+export const ChatChunkMessageSchema = z.object({
+    type: z.literal('chatChunk'),
+    payload: z.object({
+        type: z.literal('text'),
+        content: z.string()
+    })
+});
+export type ChatChunkMessage = z.infer<typeof ChatChunkMessageSchema>;
+
+export const ToolStartMessageSchema = z.object({
+    type: z.literal('toolStart'),
+    payload: z.object({
+        toolCallId: z.string(),
+        toolName: z.string(),
+        toolInput: z.unknown(),
+    })
+});
+export type ToolStartMessage = z.infer<typeof ToolStartMessageSchema>;
+
+export const ToolEndMessageSchema = z.object({
+    type: z.literal('toolEnd'),
+    payload: z.object({
+        toolCallId: z.string(),
+        output: z.string(), // Stringified tool output
+        isError: z.boolean().optional(),
+    })
+});
+export type ToolEndMessage = z.infer<typeof ToolEndMessageSchema>;
+
+export const ChatErrorMessageSchema = z.object({
+    type: z.literal('chatError'),
+    payload: z.object({
+        message: z.string(),
+    })
+});
+export type ChatErrorMessage = z.infer<typeof ChatErrorMessageSchema>;
+
+export const ChatEndMessageSchema = z.object({
+    type: z.literal('chatEnd'),
+});
+export type ChatEndMessage = z.infer<typeof ChatEndMessageSchema>;
+
+
 export const ServerToClientMessageSchema = z.union([
   ServerListResponseSchema,
   ServerStatusUpdateSchema,
-  ToolListResponseSchema,
+  // ToolListResponseSchema, // Removed
   McpApiResponseSchema,
   McpServerNotificationSchema,
   ServerStderrMessageSchema,
   ApiErrorResponseSchema,
+  // Add chat stream messages
+  ChatChunkMessageSchema,
+  ToolStartMessageSchema,
+  ToolEndMessageSchema,
+  ChatErrorMessageSchema,
+  ChatEndMessageSchema,
 ]);
 export type ServerToClientMessage = z.infer<typeof ServerToClientMessageSchema>;

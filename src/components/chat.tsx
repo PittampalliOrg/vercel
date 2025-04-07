@@ -1,28 +1,26 @@
-"use client"
-
-import type { Attachment, Message, ToolCall } from "ai"
-import { useChat } from "@ai-sdk/react"
-import { useState, useEffect, useMemo } from "react"
-import useSWR, { useSWRConfig } from "swr"
-import { toast } from "sonner"
-import type { Tool as McpTool } from "@modelcontextprotocol/sdk/types.js"
-
-import { ChatHeader } from "@/components/chat-header"
-import type { Vote } from "@/lib/db/schema"
-import { fetcher, generateUUID } from "@/lib/utils"
-import { Artifact } from "./artifact"
-import { MultimodalInput } from "./multimodal-input"
-import { Messages } from "./messages"
-import type { VisibilityType } from "./visibility-selector"
-import { useArtifactSelector } from "@/hooks/use-artifact"
-import { useMcpManager } from "@/lib/contexts/McpManagerContext"
-import { convertMcpToolsToAiSdkFormat } from "@/lib/ai/format-tools"
-import { ActiveMCPServers } from "@/components/active-mcp-servers"
-import { McpConnectionState } from "@/lib/mcp/mcp.types" // Adjust path if needed
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+"use client";
+// ... other imports ...
+import type { Attachment, Message, ToolCall, ToolResult, ChatRequestOptions } from "ai";
+import { useChat } from "@ai-sdk/react";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import useSWR, { useSWRConfig } from "swr";
+import { toast } from "sonner";
+import type { Tool as McpTool } from "@/lib/mcp/mcp.types";
+import { ChatHeader } from "@/components/chat-header";
+import type { Vote } from "@/lib/db/schema";
+import { fetcher, generateUUID, convertToUIMessages, sanitizeUIMessages } from "@/lib/utils";
+import { Artifact } from "./artifact";
+import { MultimodalInput } from "./multimodal-input";
+import { Messages } from "./messages";
+import type { VisibilityType } from "./visibility-selector";
+import { useArtifactSelector } from "@/hooks/use-artifact";
+import { useMcpManager } from "@/lib/contexts/McpManagerContext";
+import { ActiveMCPServers } from "@/components/active-mcp-servers";
+import { McpConnectionState, ManagedServerState } from "@/lib/mcp/mcp.types";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface ChatProps {
-  className?: string
+  className?: string;
 }
 
 export function Chat({
@@ -42,19 +40,16 @@ export function Chat({
   const {
     wsStatus,
     serverStates,
-    serverTools,
-    sendMcpRequest,
-    // FIX: Remove fetchToolsForServer from destructuring
+    sendChatPrompt,
+    selectedTools,
   } = useMcpManager()
-
   const [primaryServerId, setPrimaryServerId] = useState<string | null>(null)
-  const [llmTools, setLlmTools] = useState<ReturnType<typeof convertMcpToolsToAiSdkFormat>>({})
-
+  
   const runningServers = useMemo(
     () => Object.values(serverStates).filter((s) => s.status === McpConnectionState.Running),
     [serverStates],
   )
-
+  
   // Effect 1: Manage primaryServerId selection
   useEffect(() => {
     const currentPrimaryRunning =
@@ -62,163 +57,153 @@ export function Chat({
     if (!currentPrimaryRunning) {
       const firstRunningId = runningServers[0]?.id ?? null
       if (primaryServerId !== firstRunningId) {
-        console.log(`[Chat] Auto-updating primary server ID to: ${firstRunningId}`)
         setPrimaryServerId(firstRunningId)
       }
     }
   }, [primaryServerId, serverStates, runningServers])
-
-  // Effect 3: Format tools *only* when successfully fetched
-  useEffect(() => {
-    const toolsState = primaryServerId ? serverTools[primaryServerId] : null
-    let toolsChanged = false
-
-    // Check if tools are fetched and valid before formatting
-    if (toolsState?.status === "fetched" && Array.isArray(toolsState.tools)) {
-      const formatted = convertMcpToolsToAiSdkFormat(toolsState.tools as McpTool[])
-      if (JSON.stringify(formatted) !== JSON.stringify(llmTools)) {
-        console.log(`[Chat] Updating LLM tools for ${primaryServerId}:`, Object.keys(formatted))
-        setLlmTools(formatted)
-        toolsChanged = true
-      }
-    } else if (primaryServerId && toolsState?.status !== "fetched" && Object.keys(llmTools).length > 0) {
-      // Clear tools if the primary server changes OR if the tool state is no longer 'fetched' (e.g., becomes 'idle' or 'error')
-      console.log(
-        `[Chat] Clearing LLM tools (primary server changed or tools not fetched for ${primaryServerId}). Status: ${toolsState?.status}`,
-      )
-      setLlmTools({})
-      toolsChanged = true
-    } else if (!primaryServerId && Object.keys(llmTools).length > 0) {
-      // Clear tools if no primary server is selected
-      console.log("[Chat] Clearing LLM tools (no primary server selected).")
-      setLlmTools({})
-      toolsChanged = true
-    }
-    // Log if needed:
-    // if (!toolsChanged) console.debug("[Chat] LLM tools unchanged.");
-  }, [primaryServerId, serverTools, llmTools]) // Keep dependencies
-
-  // --- AI SDK useChat Hook ---
+  
+  // --- AI SDK useChat Hook Configuration ---
   const {
     messages,
     setMessages,
-    handleSubmit,
+    handleSubmit: chatHookHandleSubmit,
     input,
     setInput,
     append,
     isLoading: isChatHookLoading,
     stop,
     reload,
-    // FIX: Removed toolCalls from destructuring since it doesn't exist
+    data,
   } = useChat({
     id,
-    api: "/frontend/api/chat", // Your backend endpoint
+    api: "/frontend/api/chat", // Your Next.js API endpoint
     body: {
-      // Data sent WITH EACH request to your backend
-      id, // Chat ID
-      selectedChatModel, // The LLM model selected by the user
-      // Pass the formatted tools AVAILABLE WHEN THE MESSAGE IS SENT
-      availableTools: llmTools,
-      // Include primaryServerId to inform backend which server's tools are intended
-      primaryServerId,
+      // Data sent WITH EACH request to YOUR /api/chat endpoint
+      id,
+      selectedChatModel,
+      primaryServerId, // Useful for context if bridge handles multiple servers
+      selectedTools, // Send the user-selected tool IDs
     },
     initialMessages,
-    // FIX: Changed from object to number
-    experimental_throttle: 100, // Optional: Throttle UI updates
-    sendExtraMessageFields: true, // If you have custom fields in Message
-    generateId: generateUUID, // Function to generate message IDs
+    streamProtocol: "data",
+    sendExtraMessageFields: true,
+    generateId: generateUUID,
     onFinish: (message) => {
-      // Called when a response finishes streaming
-      mutate("/api/history") // Revalidate chat history
-      console.log("[Chat] Finished response for message:", message.id)
+      mutate("/api/history");
+      console.info(`[Chat ${id}] Finished response for message: ${message.id}`);
+      setMessages(msgs => sanitizeUIMessages(msgs));
     },
     onError: (error) => {
-      // Handle errors from the useChat hook/backend
-      console.error("[Chat] useChat hook error:", error)
-      toast.error(error.message || "An error occurred during the chat request!")
+      console.error(`[Chat ${id}] useChat hook error:`, error);
+      toast.error(error.message || "An error occurred during the chat request!");
+      setMessages(msgs => sanitizeUIMessages(msgs));
     },
-    // --- NEW: onToolCall handler with correct signature for AI SDK 4.2.10 ---
-    onToolCall: async ({ toolCall }: { toolCall: ToolCall<string, unknown> }) => {
-      console.log(`[Chat] Received toolCall instruction:`, toolCall)
-      const targetServerId = primaryServerId // Assume call is for primary server
-
-      if (!targetServerId) {
-        console.error("[Chat] Cannot handle toolCall: No primary server selected.")
-        return { error: "No target server selected for tool call." } // Inform LLM
-      }
-      const serverStatus = serverStates[targetServerId]?.status
-      if (serverStatus !== McpConnectionState.Running) {
-        console.error(`[Chat] Cannot handle toolCall: Target server ${targetServerId} not running.`)
-        return { error: `Target server ${targetServerId} is not running.` } // Inform LLM
-      }
-
-      try {
-        // Access properties based on the actual structure of toolCall
-        // Let's log the toolCall to see its structure
-        console.debug(`[Chat] ToolCall structure:`, JSON.stringify(toolCall))
-
-        // Extract tool name and arguments from the toolCall object
-        // Using type assertion to access properties
-        const toolName = (toolCall as any).type || (toolCall as any).toolName || (toolCall as any).function?.name
-        const toolArgs = (toolCall as any).args || (toolCall as any).arguments || (toolCall as any).function?.arguments
-        const toolCallId = (toolCall as any).id || (toolCall as any).toolCallId
-
-        if (!toolName || !toolCallId) {
-          console.error(`[Chat] Invalid toolCall structure:`, toolCall)
-          return { error: "Invalid tool call structure" }
-        }
-
-        console.debug(`[Chat] Executing tool '${toolName}' on server ${targetServerId} with args:`, toolArgs)
-
-        // Send the MCP 'tools/call' request via the context
-        const mcpResult = await sendMcpRequest<any>(targetServerId, {
-          method: "tools/call",
-          params: {
-            name: toolName,
-            arguments: toolArgs,
-          },
-        })
-
-        console.log(`[Chat] Received toolResult from MCP server ${targetServerId}:`, mcpResult)
-
-        // Format the result
-        let formattedResult
-        if (mcpResult.result && typeof mcpResult.result === "object" && "content" in mcpResult.result) {
-          formattedResult = (mcpResult.result.content as Array<{ type: string; text?: string }>)
-            .map((part) => part.text ?? "")
-            .join("\n")
-        } else {
-          formattedResult = mcpResult.result
-        }
-
-        return {
-          toolCallId: toolCallId,
-          toolName: toolName,
-          result: formattedResult,
-        }
-      } catch (error: any) {
-        console.error(`[Chat] Error executing tool call on server ${targetServerId}:`, error)
-
-        // Try to extract tool name and ID for the error response
-        const toolName =
-          (toolCall as any).type || (toolCall as any).toolName || (toolCall as any).function?.name || "unknown"
-        const toolCallId = (toolCall as any).id || (toolCall as any).toolCallId || "unknown"
-
-        return {
-          toolCallId: toolCallId,
-          toolName: toolName,
-          error: `Failed to execute tool: ${error.message || String(error)}`,
-        }
-      }
-    },
-  })
-
-  const isLoading = isChatHookLoading || wsStatus === "connecting"
-
-  const { data: votes } = useSWR<Array<Vote>>(`/api/vote?chatId=${id}`, fetcher)
-  const [attachments, setAttachments] = useState<Array<Attachment>>([])
+  });
+  
+  const isLoading = isChatHookLoading || wsStatus === "connecting";
+  
+  // Effect to handle custom stream data from the backend bridge via StreamData
+  useEffect(() => {
+    if (data && Array.isArray(data)) {
+        data.forEach((dataItem: any) => {
+            try {
+                if (dataItem.type === 'toolStart') {
+                    setMessages(currentMessages => {
+                         const lastMessage = currentMessages[currentMessages.length - 1];
+                         if (lastMessage && lastMessage.role === 'assistant') {
+                              return [
+                                   ...currentMessages.slice(0, -1),
+                                   {
+                                        ...lastMessage,
+                                        toolInvocations: [
+                                             ...(lastMessage.toolInvocations ?? []),
+                                             {
+                                                 toolCallId: dataItem.payload.toolCallId,
+                                                 toolName: dataItem.payload.toolName,
+                                                 args: dataItem.payload.toolInput,
+                                                 state: 'call',
+                                             }
+                                        ]
+                                   }
+                              ];
+                         } else {
+                               return [
+                                    ...currentMessages,
+                                    {
+                                        id: generateUUID(),
+                                        role: 'assistant',
+                                        content: '',
+                                        toolInvocations: [{
+                                             toolCallId: dataItem.payload.toolCallId,
+                                             toolName: dataItem.payload.toolName,
+                                             args: dataItem.payload.toolInput,
+                                             state: 'call',
+                                        }]
+                                    }
+                               ];
+                         }
+                    });
+                } else if (dataItem.type === 'toolEnd') {
+                    setMessages(currentMessages => currentMessages.map(msg => {
+                        if (msg.toolInvocations) {
+                            return {
+                                ...msg,
+                                toolInvocations: msg.toolInvocations.map(inv => {
+                                    if (inv.toolCallId === dataItem.payload.toolCallId) {
+                                        console.debug(`[Chat ${id}] Updating tool result for ${inv.toolName} (${inv.toolCallId})`);
+                                        return {
+                                            ...inv,
+                                            state: 'result',
+                                            result: dataItem.payload.output,
+                                        };
+                                    }
+                                    return inv;
+                                })
+                            };
+                        }
+                        return msg;
+                    }));
+                } else if (dataItem.type === 'chatError') {
+                     toast.error(dataItem.payload.message);
+                } else if (dataItem.type === 'chatEnd') {
+                    console.debug(`[Chat ${id}] Received chatEnd from stream data.`);
+                }
+            } catch (error) {
+                 console.error(`[Chat ${id}] Error processing stream data item:`, error, 'Data:', dataItem);
+            }
+        });
+    }
+  }, [data, setMessages]);
+  
+  const { data: votes } = useSWR<Array<Vote>>(`/api/vote?chatId=${id}`, fetcher);
+  const [attachments, setAttachments] = useState<Array<Attachment>>([]);
   const isArtifactVisible = useArtifactSelector((state) => state.isVisible)
-  // Removed currentBody variable as it wasn't used
+  
+  // Create a type-compatible handleSubmit function for MultimodalInput and Artifact components
+  const handleFormSubmit = useCallback(
+    (event?: { preventDefault?: () => void } | undefined, chatRequestOptions?: ChatRequestOptions | undefined) => {
+      if (event?.preventDefault) {
+        event.preventDefault();
+      }
+      
+      const options: ChatRequestOptions = {
+        ...chatRequestOptions,
+        body: {
+          id,
+          selectedChatModel,
+          primaryServerId,
+          selectedTools,
+          ...(chatRequestOptions?.body || {})
+        },
+        experimental_attachments: attachments,
+        data: chatRequestOptions?.data
+      };
+      
+      chatHookHandleSubmit(event, options);
+      setAttachments([]);
+    },
+    [chatHookHandleSubmit, id, selectedChatModel, primaryServerId, selectedTools, attachments]
+  );
 
   return (
     <>
@@ -230,41 +215,44 @@ export function Chat({
           isReadonly={isReadonly}
         />
         <div className="flex items-center justify-between gap-4 px-4 pt-2 border-b pb-2">
-          <div className="flex items-center gap-2 flex-shrink min-w-0">
-            <label htmlFor="primary-server-select" className="text-xs text-muted-foreground flex-shrink-0">
-              Chat Target:
-            </label>
-            <Select
-              value={primaryServerId ?? ""}
-              onValueChange={setPrimaryServerId}
-              disabled={isLoading || runningServers.length === 0}
-            >
-              <SelectTrigger
-                id="primary-server-select"
-                className="h-8 text-xs w-full sm:w-[200px] truncate flex-shrink"
+           <div className="flex items-center gap-2 flex-shrink min-w-0">
+              <label htmlFor="primary-server-select" className="text-xs text-muted-foreground flex-shrink-0">
+                 Chat Target:
+              </label>
+              <Select
+                 value={primaryServerId ?? ""}
+                 onValueChange={setPrimaryServerId}
+                 disabled={isLoading || runningServers.length === 0 || wsStatus !== 'open'}
               >
-                <SelectValue placeholder="Select target..." />
-              </SelectTrigger>
-              <SelectContent>
-                {runningServers.length === 0 && (
-                  <SelectItem value="no-servers" disabled>
-                    No running servers
-                  </SelectItem>
-                )}
-                {runningServers.map((server) => (
-                  <SelectItem key={server.id} value={server.id} className="text-xs">
-                    {server.label || server.id}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex-grow overflow-x-auto">
-            {" "}
-            <ActiveMCPServers />{" "}
-          </div>
+                 <SelectTrigger
+                    id="primary-server-select"
+                    className="h-8 text-xs w-full sm:w-[200px] truncate flex-shrink"
+                 >
+                    <SelectValue placeholder="Select target..." />
+                 </SelectTrigger>
+                 <SelectContent>
+                    {runningServers.length === 0 && wsStatus === 'open' && (
+                       <SelectItem value="no-servers" disabled>
+                          No running servers
+                       </SelectItem>
+                    )}
+                     {wsStatus !== 'open' && (
+                         <SelectItem value="ws-disconnected" disabled>
+                              {wsStatus === 'connecting' ? 'Connecting...' : 'Disconnected'}
+                         </SelectItem>
+                     )}
+                    {runningServers.map((server) => (
+                       <SelectItem key={server.id} value={server.id} className="text-xs">
+                          {server.label || server.id}
+                       </SelectItem>
+                    ))}
+                 </SelectContent>
+              </Select>
+           </div>
+           <div className="flex-grow overflow-x-auto">
+               <ActiveMCPServers />
+           </div>
         </div>
-
         <Messages
           chatId={id}
           isLoading={isLoading}
@@ -275,38 +263,13 @@ export function Chat({
           isReadonly={isReadonly}
           isArtifactVisible={isArtifactVisible}
         />
-
-        <form className="flex mx-auto px-4 bg-background pb-4 md:pb-6 gap-2 w-full md:max-w-3xl">
+        <div className="flex mx-auto px-4 bg-background pb-4 md:pb-6 gap-2 w-full md:max-w-3xl">
           {!isReadonly && (
             <MultimodalInput
               chatId={id}
               input={input}
               setInput={setInput}
-              // Pass the modified handleSubmit which includes availableTools
-              handleSubmit={(e, { data } = {}) => {
-                const currentToolState = primaryServerId ? serverTools[primaryServerId] : null
-                // Ensure tools are actually fetched before submitting
-                const toolsToSend =
-                  currentToolState?.status === "fetched" && currentToolState.tools
-                    ? convertMcpToolsToAiSdkFormat(currentToolState.tools as McpTool[])
-                    : {}
-
-                console.log(
-                  `[Chat] Submitting message with ${Object.keys(toolsToSend).length} tools for server ${primaryServerId}`,
-                )
-
-                // FIX: Removed options property
-                handleSubmit(e, {
-                  data, // Pass through any extra data from MultimodalInput
-                  body: {
-                    // Updated to use body directly instead of options.body
-                    id,
-                    selectedChatModel,
-                    availableTools: toolsToSend,
-                    primaryServerId,
-                  },
-                })
-              }}
+              handleSubmit={handleFormSubmit}
               isLoading={isLoading}
               stop={stop}
               attachments={attachments}
@@ -316,27 +279,13 @@ export function Chat({
               append={append}
             />
           )}
-        </form>
+        </div>
       </div>
-
-      {/* Artifact rendering - Ensure it receives necessary props, including potential toolCalls */}
       <Artifact
         chatId={id}
         input={input}
         setInput={setInput}
-        // Pass the modified handleSubmit again
-        handleSubmit={(e, { data } = {}) => {
-          const currentToolState = primaryServerId ? serverTools[primaryServerId] : null
-          const toolsToSend =
-            currentToolState?.status === "fetched" && currentToolState.tools
-              ? convertMcpToolsToAiSdkFormat(currentToolState.tools as McpTool[])
-              : {}
-          // FIX: Removed options property
-          handleSubmit(e, {
-            data,
-            body: { id, selectedChatModel, availableTools: toolsToSend, primaryServerId },
-          })
-        }}
+        handleSubmit={handleFormSubmit}
         isLoading={isLoading}
         stop={stop}
         attachments={attachments}
@@ -347,9 +296,7 @@ export function Chat({
         reload={reload}
         votes={votes}
         isReadonly={isReadonly}
-        // Consider if Artifact needs access to toolCalls or sendMcpRequest
       />
     </>
   )
 }
-

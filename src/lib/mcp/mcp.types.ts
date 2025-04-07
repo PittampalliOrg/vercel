@@ -1,3 +1,4 @@
+// src/types/mcp.types.ts
 import { z } from 'zod';
 
 // --- Basic JSON-RPC Types ---
@@ -8,7 +9,7 @@ export const JsonRpcRequestSchema = z.object({
   jsonrpc: JsonRpcVersionSchema,
   id: JsonRpcIdSchema.refine((val) => val !== null, {
     message: 'Request ID must not be null',
-  }), // id is required for requests
+  }),
   method: z.string(),
   params: z.union([z.record(z.unknown()), z.array(z.unknown())]).optional(),
 });
@@ -55,11 +56,7 @@ export const JsonRpcMessageSchema = z.union([
 ]);
 export type JsonRpcMessage = z.infer<typeof JsonRpcMessageSchema>;
 
-
-// --- NEW: MCP Tool Types (Based on modelContextProtocol.ts) ---
-
-// Basic JSON Schema Object representation for Zod validation
-// This is a simplified version; a full JSON schema validator might be needed for complex cases.
+// --- MCP Tool Types ---
 const BaseJsonSchema: z.ZodType<any> = z.lazy(() => z.object({
     type: z.string().optional(),
     description: z.string().optional(),
@@ -67,12 +64,11 @@ const BaseJsonSchema: z.ZodType<any> = z.lazy(() => z.object({
     required: z.array(z.string()).optional(),
     items: BaseJsonSchema.optional(),
     enum: z.array(z.union([z.string(), z.number(), z.boolean(), z.null()])).optional(),
-    // Add other JSON schema properties as needed
 }));
 
 export const ToolInputSchema = z.object({
     type: z.literal("object"),
-    properties: z.record(BaseJsonSchema).optional(),
+    properties: z.record(BaseJsonSchema).optional().default({}), // Ensure properties exists, default to empty
     required: z.array(z.string()).optional(),
 });
 export type ToolInputSchema = z.infer<typeof ToolInputSchema>;
@@ -82,36 +78,34 @@ export const ToolSchema = z.object({
     description: z.string().optional(),
     inputSchema: ToolInputSchema,
 });
-export type Tool = z.infer<typeof ToolSchema>; // Export the Zod inferred type
+export type Tool = z.infer<typeof ToolSchema>;
 
-// Interface matching the MCP namespace Tool (useful for type checking)
-export interface MCPToolInterface {
-     name: string;
-     description?: string;
-     inputSchema: {
-         type: "object";
-         properties?: { [key: string]: object }; // Use generic object for properties
-         required?: string[];
-     };
-}
-
-// Define Result and PaginatedResult schemas (assuming basic structure)
 export const ResultSchema = z.object({
     _meta: z.record(z.unknown()).optional(),
-}).catchall(z.unknown()); // Allow other properties
+}).catchall(z.unknown());
 
 export const PaginatedResultSchema = ResultSchema.extend({
-    nextCursor: z.string().optional(), // Opaque cursor
+    nextCursor: z.string().optional(),
 });
 
 export const ListToolsResultSchema = PaginatedResultSchema.extend({
-    tools: z.array(ToolSchema), // Use the Tool schema defined above
+    tools: z.array(ToolSchema),
 });
 export type ListToolsResult = z.infer<typeof ListToolsResultSchema>;
 
+export const CallToolResultContentSchema: z.ZodType<any> = z.lazy(() => z.object({
+    type: z.string(),
+    text: z.string().optional(),
+}));
 
-// --- MCP Server Definition Types (Adapted from VS Code) ---
+export const CallToolResultSchema = ResultSchema.extend({
+    content: z.array(CallToolResultContentSchema),
+    isError: z.boolean().optional(),
+});
+export type CallToolResult = z.infer<typeof CallToolResultSchema>;
 
+
+// --- MCP Server Definition Types ---
 export const StdioMcpConnectionDefinitionPartSchema = z.object({
   transport: z.literal('stdio'),
   command: z.string(),
@@ -134,25 +128,152 @@ export type SseMcpConnectionDefinitionPart = z.infer<
 export const McpServerDefinitionSchema = z.object({
   id: z.string().min(1),
   label: z.string(),
-  transport: z.enum(['stdio', 'sse']), // Discriminator
+  transport: z.enum(['stdio', 'sse']),
 }).and(z.union([StdioMcpConnectionDefinitionPartSchema, SseMcpConnectionDefinitionPartSchema]));
 
 export type McpServerDefinition = z.infer<typeof McpServerDefinitionSchema>;
 
-// --- Connection State Types (Adapted from VS Code) ---
-
+// --- Connection State Types ---
 export enum McpConnectionState {
   Stopped = 0,
   Starting = 1,
   Running = 2,
-  Failed = 3, // Indicates a failure to start or a crash
-  Stopping = 4, // Indicates graceful shutdown in progress
+  Failed = 3,
+  Stopping = 4,
 }
 
-// Combined state for API reporting
 export type ManagedServerState = {
   id: string;
   label: string;
   status: McpConnectionState;
-  error?: string; // Last error message if status is Failed
+  error?: string;
+  tools?: Tool[];
+  toolFetchStatus?: ToolFetchStatus;
 };
+
+export type ToolFetchStatus = 'idle' | 'fetching' | 'fetched' | 'error';
+
+
+// --- LLM Interaction Types (Inspired by VS Code) ---
+
+export enum LanguageModelChatMessageRole {
+  System = "system",
+  User = "user",
+  Assistant = "assistant",
+  Tool = "tool",
+}
+
+export interface LanguageModelTextPart {
+  type: 'text';
+  value: string;
+}
+
+export interface LanguageModelToolCallPart {
+  type: 'tool_call';
+  toolCallId: string;
+  toolName: string;
+  args: any;
+}
+
+export interface LanguageModelToolResultPart {
+  type: 'tool_result';
+  toolCallId: string;
+  content: string;
+  isError?: boolean;
+}
+
+export type LanguageModelChatMessagePart =
+  | { type: "text"; value: string }
+  | { type: "tool_call"; toolCallId: string; toolName: string; args: Record<string, any> }
+  | { type: "tool_result"; content: string }
+
+export type LanguageModelChatMessage = {
+  role: LanguageModelChatMessageRole
+  content: string | LanguageModelChatMessagePart[]
+}
+
+// Type for schema validation if needed, otherwise use the interface
+export const LanguageModelChatMessageSchema = z.custom<LanguageModelChatMessage>();
+
+export type LanguageModelChatTool = {
+  name: string
+  description?: string
+  inputSchema: any 
+}
+
+export type LanguageModelChatResponse = {
+  stream: AsyncIterable<LanguageModelChatMessagePart>
+}
+
+// --- Tool Service Types ---
+
+export type ToolDataSourceType = 'mcp' | 'local' | 'internal';
+
+export interface ToolDataSource {
+    type: ToolDataSourceType;
+    serverId?: string;
+    toolName?: string;
+}
+
+export interface IToolData {
+  id: string;
+  name: string;
+  displayName: string;
+  description?: string;
+  inputSchema: ToolInputSchema;
+  source: ToolDataSource;
+}
+
+export interface IToolInvocationContext {
+    sessionId?: string;
+}
+
+export interface IToolResult {
+    content: string;
+    isError?: boolean;
+}
+
+export interface IToolImpl {
+  invoke(parameters: any, context?: IToolInvocationContext): Promise<IToolResult>;
+}
+
+// --- Chat Service Types (Internal Stream Chunks - NO payload wrapper) ---
+export interface ChatStreamChunkText {
+    type: 'chatChunk';
+    content: string;
+}
+export interface ChatStreamChunkToolStart {
+    type: 'toolStart';
+    toolCallId: string;
+    toolName: string;
+    toolInput: any;
+}
+export interface ChatStreamChunkToolEnd {
+    type: 'toolEnd';
+    toolCallId: string;
+    output: string; // Stringified output
+    isError?: boolean;
+}
+export interface ChatStreamChunkError {
+    type: 'chatError';
+    message: string;
+}
+export interface ChatStreamChunkEnd {
+    type: 'chatEnd';
+}
+
+// Union type for the internal stream between ChatService and WebSocketHandler
+export type ChatStreamChunk = ChatStreamChunkText | ChatStreamChunkToolStart | ChatStreamChunkToolEnd | ChatStreamChunkError | ChatStreamChunkEnd;
+
+
+// --- Utility Error Class ---
+export class McpError extends Error {
+    code: number;
+    data?: unknown;
+    constructor(message: string, code: number, data?: unknown) {
+        super(message);
+        this.name = 'McpError';
+        this.code = code;
+        this.data = data;
+    }
+}

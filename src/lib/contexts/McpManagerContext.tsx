@@ -1,6 +1,4 @@
-// src/lib/contexts/McpManagerContext.tsx
 'use client';
-
 import React, {
   createContext, useContext, useState, useEffect, useCallback, useRef,
   type ReactNode, type FC, useMemo
@@ -8,12 +6,20 @@ import React, {
 import { toast } from 'sonner';
 import {
   ManagedServerState, McpConnectionState, JsonRpcRequest, JsonRpcNotification,
-  JsonRpcResponse, Tool, JsonRpcErrorResponseSchema, JsonRpcSuccessResponseSchema, // Import specific schemas
-  JsonRpcNotificationSchema // Import notification schema
+  JsonRpcResponse, Tool, McpError, ToolFetchStatus, LanguageModelChatMessage,
+  ChatStreamChunk, // Use internal stream chunk type
+  JsonRpcNotificationSchema
 } from "@/lib/mcp/mcp.types"; // Adjust path if needed
 import {
   ClientToServerMessage, ServerToClientMessage, ServerToClientMessageSchema,
-  McpApiResponse, ToolListResponse
+  ServerStatusUpdate,
+  ChatRequestMessage, // Import specific type from api.types
+  // Import specific message types for discriminated union check
+  ChatChunkMessage,
+  ToolStartMessage,
+  ToolEndMessage,
+  ChatErrorMessage,
+  ChatEndMessage
 } from '@/lib/mcp/api.types'; // Adjust path if needed
 import { generateUUID } from '@/lib/utils';
 
@@ -25,17 +31,10 @@ interface PendingRequest {
   timer: NodeJS.Timeout;
 }
 
-type ToolFetchStatus = 'idle' | 'fetching' | 'fetched' | 'error';
-
-interface ServerToolState {
-    status: ToolFetchStatus;
-    tools: Tool[] | null;
-}
-
+// Interface definition matching the implementation
 interface McpManagerContextType {
   wsStatus: WebSocketStatus;
   serverStates: Record<string, ManagedServerState>;
-  serverTools: Record<string, ServerToolState>;
   connectToServer: (serverId: string) => void;
   disconnectFromServer: (serverId: string) => void;
   sendMcpRequest: (
@@ -47,7 +46,15 @@ interface McpManagerContextType {
     serverId: string,
     notification: Omit<JsonRpcNotification, 'jsonrpc'>,
   ) => void;
-  fetchToolsForServer: (serverId: string) => void;
+  // Correct signature for sendChatPrompt
+  sendChatPrompt: (
+      payload: ChatRequestMessage['payload'],
+      onChunk: (chunk: ChatStreamChunk) => void,
+      onError: (error: Error) => void,
+      onEnd: () => void
+  ) => void;
+  selectedTools: string[];
+  setSelectedTools: React.Dispatch<React.SetStateAction<string[]>>; // Needs to be exposed
 }
 
 const McpManagerContext = createContext<McpManagerContextType | undefined>(undefined);
@@ -63,132 +70,188 @@ const getWebSocketUrl = (): string => {
 export const McpManagerProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [wsStatus, setWsStatus] = useState<WebSocketStatus>('connecting');
   const [serverStates, setServerStates] = useState<Record<string, ManagedServerState>>({});
-  const [serverTools, setServerTools] = useState<Record<string, ServerToolState>>({});
+  const [selectedTools, setSelectedTools] = useState<string[]>([]); // State for selected tools
+
   const ws = useRef<WebSocket | null>(null);
   const reconnectAttempts = useRef(0);
   const reconnectTimeout = useRef<NodeJS.Timeout | null>(null);
   const pendingRequests = useRef<Map<string | number, PendingRequest>>(new Map());
   const connectionAttemptActive = useRef(false);
-  const isUnmountingRef = useRef(false); // Definition is correct
+  const isUnmountingRef = useRef(false);
+  // Store callbacks for the *active* chat stream
+  const chatStreamHandlers = useRef<{
+      onChunk: (chunk: ChatStreamChunk) => void;
+      onError: (error: Error) => void;
+      onEnd: () => void;
+  } | null>(null);
 
   const sendMessage = useCallback((message: ClientToServerMessage) => {
     if (ws.current?.readyState === WebSocket.OPEN) {
-        console.debug('[McpManagerContext] Sending WS:', message.type);
       ws.current.send(JSON.stringify(message));
     } else {
       console.error('[McpManagerContext] Cannot send, WS not open.');
+      toast.error("Connection error. Please try refreshing.");
     }
   }, []);
 
   const connectWebSocket = useCallback(() => {
     if (connectionAttemptActive.current || (ws.current && ws.current.readyState !== WebSocket.CLOSED)) {
-        console.debug(`[McpManagerContext] WS connect skipped (active: ${connectionAttemptActive.current}, state: ${ws.current?.readyState})`);
-        return () => {}; // Return no-op cleanup
+        return () => {};
     }
     connectionAttemptActive.current = true;
-    setWsStatus('connecting'); console.log('[McpManagerContext] Attempting WS connection...');
+    setWsStatus('connecting');
+    console.info('[McpManagerContext] Attempting WS connection...');
     if (reconnectTimeout.current) { clearTimeout(reconnectTimeout.current); reconnectTimeout.current = null; }
-    if (ws.current) { console.log("[McpManagerContext] Closing existing WS before reconnect..."); ws.current.close(1000, "New connection attempt"); ws.current = null; }
+    if (ws.current) { ws.current.close(1000, "New connection attempt"); ws.current = null; }
 
     const socketUrl = getWebSocketUrl();
-    let socketInstance: WebSocket | null = null; // Use local var for instance
-    try { socketInstance = new WebSocket(socketUrl); }
+    let socketInstance: WebSocket | null = null;
+    try { socketInstance = new WebSocket(socketUrl, "mcp"); }
     catch (error) {
-        console.error("[McpManagerContext] WS constructor failed:", error); setWsStatus('error'); connectionAttemptActive.current = false;
-        if (!isUnmountingRef.current && reconnectAttempts.current < 5) {
-             const delay = Math.pow(2, reconnectAttempts.current++) * 1000; console.log(`[McpManagerContext] Scheduling reconnect after constructor error in ${delay}ms...`);
-             reconnectTimeout.current = setTimeout(connectWebSocket, delay);
-        } else { toast.error("Failed to establish WS connection."); } return () => {}; // Return no-op cleanup
+       console.error("[McpManagerContext] WS constructor failed:", error); setWsStatus('error'); connectionAttemptActive.current = false;
+       if (!isUnmountingRef.current && reconnectAttempts.current < 5) {
+           const delay = Math.pow(2, reconnectAttempts.current++) * 1000; console.info(`[McpManagerContext] Scheduling reconnect after constructor error in ${delay}ms...`);
+           reconnectTimeout.current = setTimeout(connectWebSocket, delay);
+       } else { toast.error("Failed to establish WebSocket connection."); } return () => {};
     }
 
-    let isOpen = false; // Track if open was ever called for this instance
+    let isOpen = false;
 
     const handleOpen = () => {
-      // Ensure this handler is for the socket we just created AND it hasn't been superseded
-      if (socketInstance && (ws.current === null || ws.current === socketInstance)) {
-         isOpen = true; // Mark as opened
-         console.log('[McpManagerContext] WebSocket connected.'); connectionAttemptActive.current = false;
-         ws.current = socketInstance; // Assign to ref only on successful open
-         setWsStatus('open'); reconnectAttempts.current = 0;
-         sendMessage({ type: 'listServers' });
-      } else { console.log('[McpManagerContext] Ignoring open from stale/superseded socket.'); socketInstance?.close(1000, "Stale connection opened"); }
+       if (socketInstance && (ws.current === null || ws.current === socketInstance)) {
+          isOpen = true;
+          console.info('[McpManagerContext] WebSocket connected.'); connectionAttemptActive.current = false;
+          ws.current = socketInstance;
+          setWsStatus('open'); reconnectAttempts.current = 0;
+          sendMessage({ type: 'listServers' });
+       } else { socketInstance?.close(1000, "Stale connection opened"); }
     };
 
     const handleClose = (event: CloseEvent) => {
-      console.warn(`[McpManagerContext] WebSocket closed. Code: ${event.code}`); connectionAttemptActive.current = false;
-      // Only act if this socket was the currently active one or if the ref is already null
-      if (ws.current === socketInstance || ws.current === null) {
-          if (ws.current === socketInstance) ws.current = null; // Clear the main ref
-          setWsStatus('closed'); setServerStates({}); setServerTools({});
-          pendingRequests.current.forEach((req) => { clearTimeout(req.timer); req.reject(new Error('WS closed')); }); pendingRequests.current.clear();
-          // --- MODIFIED: Check unmounting ref state ---
+       console.warn(`[McpManagerContext] WebSocket closed. Code: ${event.code}`); connectionAttemptActive.current = false;
+       if (ws.current === socketInstance || ws.current === null) {
+          if (ws.current === socketInstance) ws.current = null;
+          setWsStatus('closed'); setServerStates({});
+          pendingRequests.current.forEach((req) => { clearTimeout(req.timer); req.reject(new Error('WebSocket closed')); }); pendingRequests.current.clear();
+          chatStreamHandlers.current?.onError(new Error('WebSocket closed'));
+          chatStreamHandlers.current = null;
+
           if (!event.wasClean && !isUnmountingRef.current && reconnectAttempts.current < 5) {
-            const delay = Math.pow(2, reconnectAttempts.current++) * 1000; console.log(`[McpManagerContext] Scheduling reconnect ${reconnectAttempts.current} in ${delay}ms...`);
-            reconnectTimeout.current = setTimeout(connectWebSocket, delay);
-          } else if (reconnectAttempts.current >= 5) { console.error('[McpManagerContext] Max reconnects.'); toast.error("WS Reconnect failed."); }
-      } else { console.log("[McpManagerContext] Ignoring close from non-current socket."); }
-      // Ensure listeners are removed from this specific instance regardless
-      removeSocketListeners();
+             const delay = Math.pow(2, reconnectAttempts.current++) * 1000; console.info(`[McpManagerContext] Scheduling reconnect ${reconnectAttempts.current} in ${delay}ms...`);
+             reconnectTimeout.current = setTimeout(connectWebSocket, delay);
+          } else if (reconnectAttempts.current >= 5) { console.error('[McpManagerContext] Max reconnects reached.'); toast.error("WebSocket Reconnect failed."); }
+       }
+       removeSocketListeners();
     };
 
-    const handleError = (error: Event) => { console.error('[McpManagerContext] WebSocket error:', error); connectionAttemptActive.current = false; if (ws.current === socketInstance) { setWsStatus('error'); } socketInstance?.close(); }; // Trigger close
+    const handleError = (error: Event) => { console.error('[McpManagerContext] WebSocket error:', error); connectionAttemptActive.current = false; if (ws.current === socketInstance) { setWsStatus('error'); } socketInstance?.close(); };
 
     const handleMessage = (event: MessageEvent) => {
-       if (ws.current !== socketInstance || isUnmountingRef.current) return;
-        try {
-            const messageData = JSON.parse(event.data.toString());
-            const validation = ServerToClientMessageSchema.safeParse(messageData);
-            if (!validation.success) { console.warn('[McpManagerContext] Invalid message:', validation.error.errors); return; }
-            const message = validation.data;
-            // --- Processing logic (ensure correct property access) ---
-            switch (message.type) {
-                case 'serverList':
-                    const newStates: Record<string, ManagedServerState> = {};
-                    message.servers.forEach((s) => { newStates[s.id] = s; });
-                    setServerStates(newStates);
-                    setServerTools(prevTools => { const ut = {...prevTools}; message.servers.forEach(s => { if (!(s.id in ut)) { ut[s.id] = { status: 'idle', tools: null }; } }); return ut; });
-                    break;
-                case 'statusUpdate':
-                    setServerStates((prev) => ({ ...prev, [message.serverId]: { ...(prev[message.serverId] || { id: message.serverId, label: 'Unknown', status: message.status }), status: message.status, error: message.error } }));
-                    if(message.status === McpConnectionState.Stopped || message.status === McpConnectionState.Failed) { setServerTools(prev => ({...prev, [message.serverId]: { status: 'idle', tools: null }})); }
-                    break;
-                case 'toolList':
-                    setServerTools(prev => ({ ...prev, [message.serverId]: { status: message.error ? 'error' : 'fetched', tools: message.error ? null : message.tools } }));
-                    if(message.error) { toast.error(`Tools fetch failed for ${serverStates[message.serverId]?.label || message.serverId}: ${message.error}`); }
-                    break;
-                case 'response':
-                    if (message.response.id === null) { console.warn('[McpManagerContext] Null ID response'); break; }
-                    const pending = pendingRequests.current.get(message.response.id);
-                    if (pending) {
-                        clearTimeout(pending.timer);
-                        if ('error' in message.response) { console.warn(`[McpManagerContext] MCP Error (ID: ${message.response.id}):`, message.response.error); pending.reject(new McpError(message.response.error.message, message.response.error.code, message.response.error.data)); }
-                        else { pending.resolve(message.response); }
-                        pendingRequests.current.delete(message.response.id);
-                    } else { console.warn(`[McpManagerContext] Unknown request ID: ${message.response.id}`); }
-                    break;
-                case 'notification':
-                     // --- MODIFIED: Type check before accessing .method ---
-                    const notificationValidation = JsonRpcNotificationSchema.safeParse(message.notification);
-                    if (notificationValidation.success) {
-                        console.log(`[McpManagerContext] MCP Notif (from ${message.serverId}):`, notificationValidation.data.method);
-                    } else {
-                        console.log(`[McpManagerContext] Received non-notification message forwarded as notification from ${message.serverId}`);
-                    }
-                    break;
-                case 'stderr': console.log(`[McpManagerContext] MCP Stderr (from ${message.serverId}): ${message.data.trim()}`); break;
-                case 'error':
-                    console.error(`[McpManagerContext] API Error: ${message.message}`); toast.error(`Manager Error: ${message.message}`);
-                     if(message.originalRequestId !== null && message.originalRequestId && pendingRequests.current.has(message.originalRequestId)) {
-                        const failedReq = pendingRequests.current.get(message.originalRequestId);
-                        if(failedReq) { clearTimeout(failedReq.timer); failedReq.reject(new Error(`Backend API Error: ${message.message}`)); pendingRequests.current.delete(message.originalRequestId); }
+        if (ws.current !== socketInstance || isUnmountingRef.current) return;
+         try {
+             const messageData = JSON.parse(event.data.toString());
+             const validation = ServerToClientMessageSchema.safeParse(messageData);
+             if (!validation.success) { console.warn('[McpManagerContext] Invalid message:', validation.error.errors); return; }
+             const message = validation.data;
+
+             switch (message.type) {
+                 case 'serverList':
+                     const newStates: Record<string, ManagedServerState> = {};
+                     message.servers.forEach((s) => {
+                         newStates[s.id] = { ...s, toolFetchStatus: s.toolFetchStatus ?? 'idle', tools: s.tools ?? undefined };
+                     });
+                     setServerStates(newStates);
+                     break;
+                 case 'statusUpdate': {
+                      const statusUpdateMsg = message as ServerStatusUpdate;
+                      console.info(`[McpManagerContext] Received statusUpdate for ${statusUpdateMsg.serverId}:`, statusUpdateMsg); // Log received data
+                      setServerStates((prev) => {
+                        const existing = prev[statusUpdateMsg.serverId] || { id: statusUpdateMsg.serverId, label: 'Unknown', status: statusUpdateMsg.status, toolFetchStatus: 'idle' };
+                        const newStateForServer = {
+                            ...existing,
+                            status: statusUpdateMsg.status,
+                            error: statusUpdateMsg.error,
+                            tools: statusUpdateMsg.tools !== undefined ? statusUpdateMsg.tools : existing.tools,
+                            toolFetchStatus: statusUpdateMsg.toolFetchStatus !== undefined ? statusUpdateMsg.toolFetchStatus : existing.toolFetchStatus,
+                        };
+                        return { ...prev, [statusUpdateMsg.serverId]: newStateForServer };
+                      });
+                     break;
+                 }
+                 // Removed 'toolList' case
+
+                 case 'response':
+                     const responseId = message.response.id;
+                     // FIX: Check responseId is not null before using as map key
+                     if (responseId === null) {
+                         console.warn('[McpManagerContext] Null ID response received');
+                         break;
                      }
-                    break;
-                default: const exhaustiveCheck: never = message; console.warn(`[McpManagerContext] Unhandled type: ${(exhaustiveCheck as any)?.type}`);
-            }
-        } catch (error: any) { console.error('[McpManagerContext] Failed processing message:', error.message); }
+                     const pending = pendingRequests.current.get(responseId);
+                     if (pending) {
+                          clearTimeout(pending.timer);
+                          const response = message.response;
+                          if ('error' in response) {
+                               console.warn(`[McpManagerContext] MCP Error (ID: ${response.id}):`, response.error);
+                               pending.reject(new McpError(response.error.message, response.error.code, response.error.data));
+                           } else {
+                               pending.resolve(response);
+                           }
+                          pendingRequests.current.delete(responseId);
+                     } else {
+                          console.warn(`[McpManagerContext] Unknown request ID: ${responseId}`);
+                     }
+                     break;
+                 case 'notification':
+                      const notification = message.notification;
+                      if ('method' in notification && !('id' in notification)) {
+                           console.info(`[McpManagerContext] MCP Notif (from ${message.serverId}):`, notification.method);
+                      } else {
+                           console.warn(`[McpManagerContext] Received non-notification message via 'notification' type from ${message.serverId}`);
+                      }
+                     break;
+                 case 'stderr': console.info(`[McpManagerContext] MCP Stderr (from ${message.serverId}): ${message.data.trim()}`); break;
+                 case 'error':
+                     console.error(`[McpManagerContext] API Error: ${message.message}`); toast.error(`Manager Error: ${message.message}`);
+                      if(message.originalRequestId && pendingRequests.current.has(message.originalRequestId)) {
+                          const failedReq = pendingRequests.current.get(message.originalRequestId);
+                          if(failedReq) { clearTimeout(failedReq.timer); failedReq.reject(new Error(`Backend API Error: ${message.message}`)); pendingRequests.current.delete(message.originalRequestId); }
+                      }
+                     break;
+                 // --- Handle Chat Stream Messages ---
+                 case 'chatChunk':
+                 case 'toolStart':
+                 case 'toolEnd':
+                 case 'chatError':
+                 case 'chatEnd':
+                      if (chatStreamHandlers.current) {
+                          // FIX: Handle chatEnd separately as it has no payload
+                          if (message.type === 'chatEnd') {
+                              chatStreamHandlers.current.onEnd();
+                          } else if (message.type === 'chatError') { // Check payload existence for others
+                              chatStreamHandlers.current.onError(new Error(message.payload.message));
+                          } else if (message.type === 'chatChunk') {
+                               chatStreamHandlers.current.onChunk({ type: 'chatChunk', content: message.payload.content });
+                          } else if (message.type === 'toolStart') {
+                               chatStreamHandlers.current.onChunk({ type: 'toolStart', toolCallId: message.payload.toolCallId, toolName: message.payload.toolName, toolInput: message.payload.toolInput });
+                          } else if (message.type === 'toolEnd') {
+                               chatStreamHandlers.current.onChunk({ type: 'toolEnd', toolCallId: message.payload.toolCallId, output: message.payload.output, isError: message.payload.isError });
+                          }
+                      } else {
+                          console.warn(`[McpManagerContext] Received chat stream message but no handler is active: ${message.type}`);
+                      }
+                      if (message.type === 'chatEnd' || message.type === 'chatError') {
+                          chatStreamHandlers.current = null;
+                      }
+                      break;
+                 default:
+                     // This ensures exhaustive checks for the *parsed message type*
+                     const exhaustiveCheck: never = message;
+                     console.warn(`[McpManagerContext] Unhandled message type: ${(exhaustiveCheck as any)?.type}`);
+             }
+         } catch (error: any) { console.error('[McpManagerContext] Failed processing message:', error.message); }
     };
 
-    // --- NEW: Separate listener removal function ---
     const removeSocketListeners = () => {
         if (socketInstance) {
             socketInstance.removeEventListener('open', handleOpen);
@@ -203,77 +266,102 @@ export const McpManagerProvider: FC<{ children: ReactNode }> = ({ children }) =>
     socketInstance.addEventListener('error', handleError);
     socketInstance.addEventListener('message', handleMessage);
 
-    // Return cleanup specific to *this* socket instance/attempt
     return () => {
-        console.log("[McpManagerContext] Cleanup running for connectWebSocket attempt.");
-        removeSocketListeners(); // Use the helper
-        // Only close if it hasn't successfully opened AND become the main ws.current instance
+        removeSocketListeners();
         if (!isOpen && ws.current !== socketInstance && socketInstance?.readyState !== WebSocket.CLOSED) {
-            console.log("[McpManagerContext] Closing unsuccessful/stale socket attempt.");
             socketInstance?.close(1000, "Cleanup unsuccessful attempt");
         }
-        // Reset connection flag if this specific attempt failed without opening/closing cleanly
-        if (!isOpen) {
-            connectionAttemptActive.current = false;
-        }
+        if (!isOpen) { connectionAttemptActive.current = false; }
     };
+  }, [sendMessage]);
 
-  }, [sendMessage]); // Use stable sendMessage
-
-  // Effect for mounting and unmounting
   useEffect(() => {
-    isUnmountingRef.current = false; // Reset on mount
-    const cleanupListeners = connectWebSocket(); // Start connection
+    isUnmountingRef.current = false;
+    const cleanupListeners = connectWebSocket();
 
     return () => {
-       isUnmountingRef.current = true; // --- MODIFIED: Set flag correctly ---
-       console.log('[McpManagerContext] Provider unmounting - Cleaning up.');
-       if (reconnectTimeout.current) { clearTimeout(reconnectTimeout.current); }
-       pendingRequests.current.forEach(req => { clearTimeout(req.timer); req.reject(new Error("Component unmounted")); });
-       pendingRequests.current.clear();
-       const socketToClose = ws.current;
-       ws.current = null;
-       connectionAttemptActive.current = false;
-       socketToClose?.close(1000, "Provider unmounting");
-       cleanupListeners?.(); // Run cleanup returned by connectWebSocket
+        isUnmountingRef.current = true;
+        console.info('[McpManagerContext] Provider unmounting - Cleaning up.');
+        if (reconnectTimeout.current) { clearTimeout(reconnectTimeout.current); }
+        pendingRequests.current.forEach(req => { clearTimeout(req.timer); req.reject(new Error("Component unmounted")); });
+        pendingRequests.current.clear();
+        chatStreamHandlers.current?.onError(new Error("Component unmounted"));
+        chatStreamHandlers.current = null;
+        const socketToClose = ws.current;
+        ws.current = null;
+        connectionAttemptActive.current = false;
+        socketToClose?.close(1000, "Provider unmounting");
+        cleanupListeners?.();
     };
   }, [connectWebSocket]);
 
-
-  const connectToServer = useCallback((serverId: string) => sendMessage({ type: 'connect', serverId }), [sendMessage]);
-  const disconnectFromServer = useCallback((serverId: string) => sendMessage({ type: 'disconnect', serverId }), [sendMessage]);
-  const fetchToolsForServer = useCallback((serverId: string) => {
-      setServerTools(prev => {
-          const current = prev[serverId];
-          if (!current || current.status === 'idle' || current.status === 'error') {
-               console.log(`[McpManagerContext] Requesting tools for ${serverId} (Status: ${current?.status ?? 'idle'})...`);
-               sendMessage({ type: 'getTools', serverId });
-               return { ...prev, [serverId]: { status: 'fetching', tools: current?.tools ?? null } };
-          }
-           console.debug(`[McpManagerContext] Skipping fetch for ${serverId}, status: ${current.status}`);
-           return prev;
-      });
+  const connectToServer = useCallback((serverId: string) => {
+      console.info(`[Context] Requesting connect for ${serverId}`);
+      sendMessage({ type: 'connect', serverId });
   }, [sendMessage]);
 
-   const sendMcpRequest = useCallback(( serverId: string, request: Omit<JsonRpcRequest, 'jsonrpc' | 'id'> & { id?: string | number }, timeoutMs: number = DEFAULT_REQUEST_TIMEOUT ): Promise<JsonRpcResponse> => {
-        return new Promise((resolve, reject) => {
-             if (wsStatus !== 'open') { return reject(new Error("WebSocket not open.")); }
-            const requestId = request.id ?? generateUUID();
-             if (pendingRequests.current.has(requestId)) { return reject(new Error(`Duplicate request ID: ${requestId}`)); }
-             const timer = setTimeout(() => { pendingRequests.current.delete(requestId); console.error(`[McpManagerContext] Request ${requestId} timed out.`); reject(new Error(`Request timed out.`)); }, timeoutMs);
-             pendingRequests.current.set(requestId, { resolve, reject, timer });
-             sendMessage({ type: 'request', serverId, request: { ...request, id: requestId } });
-        });
-    }, [sendMessage, wsStatus]);
+  const disconnectFromServer = useCallback((serverId: string) => {
+       console.info(`[Context] Requesting disconnect for ${serverId}`);
+      sendMessage({ type: 'disconnect', serverId });
+  }, [sendMessage]);
+
+  // fetchToolsForServer removed
+
+  const sendMcpRequest = useCallback(( serverId: string, request: Omit<JsonRpcRequest, 'jsonrpc' | 'id'> & { id?: string | number }, timeoutMs: number = DEFAULT_REQUEST_TIMEOUT ): Promise<JsonRpcResponse> => {
+      return new Promise((resolve, reject) => {
+           if (wsStatus !== 'open') { return reject(new Error("WebSocket not open.")); }
+           const requestId = request.id ?? generateUUID();
+            if (pendingRequests.current.has(requestId)) { return reject(new Error(`Duplicate request ID: ${requestId}`)); }
+            const timer = setTimeout(() => { pendingRequests.current.delete(requestId); console.error(`[McpManagerContext] Request ${requestId} timed out.`); reject(new Error(`Request timed out.`)); }, timeoutMs);
+            pendingRequests.current.set(requestId, { resolve, reject, timer });
+            sendMessage({ type: 'request', serverId, request: { ...request, id: requestId } });
+      });
+  }, [sendMessage, wsStatus]);
 
   const sendMcpNotification = useCallback(( serverId: string, notification: Omit<JsonRpcNotification, 'jsonrpc'> ) => {
     sendMessage({ type: 'notification', serverId, notification });
   }, [sendMessage]);
 
+  // --- Correct sendChatPrompt function ---
+  const sendChatPrompt = useCallback((
+    payload: ChatRequestMessage['payload'], // Use correct type from api.types
+    onChunk: (chunk: ChatStreamChunk) => void,
+    onError: (error: Error) => void,
+    onEnd: () => void
+  ) => {
+     // Use the ref defined in the component scope
+     if (chatStreamHandlers.current) {
+          console.warn("[McpManagerContext] Overwriting existing chat stream handler.");
+          chatStreamHandlers.current.onError(new Error("New chat request started."));
+     }
+     chatStreamHandlers.current = { onChunk, onError, onEnd }; // Assign callbacks to the ref
+     const messageToSend: ClientToServerMessage = { type: 'chatRequest', payload };
+     sendMessage(messageToSend);
+  }, [sendMessage]); // console is imported globally
+
+  // --- CORRECTED contextValue memo ---
   const contextValue = useMemo(() => ({
-    wsStatus, serverStates, serverTools, connectToServer, disconnectFromServer,
-    sendMcpRequest, sendMcpNotification, fetchToolsForServer
-  }), [ wsStatus, serverStates, serverTools, connectToServer, disconnectFromServer, sendMcpRequest, sendMcpNotification, fetchToolsForServer ]);
+    wsStatus,
+    serverStates,
+    connectToServer,
+    disconnectFromServer,
+    sendMcpRequest,
+    sendMcpNotification,
+    sendChatPrompt, // Ensure this refers to the actual function
+    selectedTools,
+    setSelectedTools // Ensure this is provided
+  }), [
+    wsStatus,
+    serverStates,
+    connectToServer,
+    disconnectFromServer,
+    sendMcpRequest,
+    sendMcpNotification,
+    sendChatPrompt, // Dependency on the actual function
+    selectedTools,
+    setSelectedTools // Dependency on the setter
+  ]);
+
 
   return ( <McpManagerContext.Provider value={contextValue}> {children} </McpManagerContext.Provider> );
 };
@@ -284,4 +372,5 @@ export function useMcpManager() {
   return context;
 }
 
-class McpError extends Error { code: number; data?: unknown; constructor(message: string, code: number, data?: unknown) { super(message); this.name = 'McpError'; this.code = code; this.data = data; } }
+// McpError defined in mcp.types.ts now
+// class McpError extends Error { ... }
