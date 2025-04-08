@@ -1,6 +1,6 @@
 "use client";
 // ... other imports ...
-import type { Attachment, Message, ToolCall, ToolResult, ChatRequestOptions } from "ai";
+import type { Attachment, Message, ToolCall, ToolResult, ChatRequestOptions, UIMessage } from "ai";
 import { useChat } from "@ai-sdk/react";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import useSWR, { useSWRConfig } from "swr";
@@ -31,7 +31,7 @@ export function Chat({
   isReadonly,
 }: {
   id: string
-  initialMessages: Array<Message>
+  initialMessages: Array<UIMessage>
   selectedChatModel: string
   selectedVisibilityType: VisibilityType
   isReadonly: boolean
@@ -70,11 +70,10 @@ export function Chat({
     input,
     setInput,
     append,
-    isLoading: isChatHookLoading,
+    status,
     stop,
     reload,
     data,
-    status, // Extract status from useChat hook
   } = useChat({
     id,
     api: "/frontend/api/chat", // Your Next.js API endpoint
@@ -89,94 +88,19 @@ export function Chat({
     streamProtocol: "data",
     sendExtraMessageFields: true,
     generateId: generateUUID,
-    onFinish: (message) => {
-      mutate("/api/history");
-      console.info(`[Chat ${id}] Finished response for message: ${message.id}`);
-      setMessages(msgs => sanitizeUIMessages(msgs));
+    onFinish: () => {
+      mutate(unstable_serialize(getChatHistoryPaginationKey));
     },
-    onError: (error) => {
-      console.error(`[Chat ${id}] useChat hook error:`, error);
-      toast.error(error.message || "An error occurred during the chat request!");
-      setMessages(msgs => sanitizeUIMessages(msgs));
+    onError: () => {
+      toast.error('An error occured, please try again!');
     },
   });
-  
-  const isLoading = isChatHookLoading || wsStatus === "connecting";
-  
-  // Effect to handle custom stream data from the backend bridge via StreamData
-  useEffect(() => {
-    if (data && Array.isArray(data)) {
-        data.forEach((dataItem: any) => {
-            try {
-                if (dataItem.type === 'toolStart') {
-                    setMessages(currentMessages => {
-                         const lastMessage = currentMessages[currentMessages.length - 1];
-                         if (lastMessage && lastMessage.role === 'assistant') {
-                              return [
-                                   ...currentMessages.slice(0, -1),
-                                   {
-                                        ...lastMessage,
-                                        toolInvocations: [
-                                             ...(lastMessage.toolInvocations ?? []),
-                                             {
-                                                 toolCallId: dataItem.payload.toolCallId,
-                                                 toolName: dataItem.payload.toolName,
-                                                 args: dataItem.payload.toolInput,
-                                                 state: 'call',
-                                             }
-                                        ]
-                                   }
-                              ];
-                         } else {
-                               return [
-                                    ...currentMessages,
-                                    {
-                                        id: generateUUID(),
-                                        role: 'assistant',
-                                        content: '',
-                                        toolInvocations: [{
-                                             toolCallId: dataItem.payload.toolCallId,
-                                             toolName: dataItem.payload.toolName,
-                                             args: dataItem.payload.toolInput,
-                                             state: 'call',
-                                        }]
-                                    }
-                               ];
-                         }
-                    });
-                } else if (dataItem.type === 'toolEnd') {
-                    setMessages(currentMessages => currentMessages.map(msg => {
-                        if (msg.toolInvocations) {
-                            return {
-                                ...msg,
-                                toolInvocations: msg.toolInvocations.map(inv => {
-                                    if (inv.toolCallId === dataItem.payload.toolCallId) {
-                                        console.debug(`[Chat ${id}] Updating tool result for ${inv.toolName} (${inv.toolCallId})`);
-                                        return {
-                                            ...inv,
-                                            state: 'result',
-                                            result: dataItem.payload.output,
-                                        };
-                                    }
-                                    return inv;
-                                })
-                            };
-                        }
-                        return msg;
-                    }));
-                } else if (dataItem.type === 'chatError') {
-                     toast.error(dataItem.payload.message);
-                } else if (dataItem.type === 'chatEnd') {
-                    console.debug(`[Chat ${id}] Received chatEnd from stream data.`);
-                }
-            } catch (error) {
-                 console.error(`[Chat ${id}] Error processing stream data item:`, error, 'Data:', dataItem);
-            }
-        });
-    }
-  }, [data, setMessages]);
-  
-  const { data: votes } = useSWR<Array<Vote>>(`/api/vote?chatId=${id}`, fetcher);
+
+  const { data: votes } = useSWR<Array<Vote>>(
+    messages.length >= 2 ? `/api/vote?chatId=${id}` : null,
+    fetcher,
+  );
+
   const [attachments, setAttachments] = useState<Array<Attachment>>([]);
   const isArtifactVisible = useArtifactSelector((state) => state.isVisible)
   

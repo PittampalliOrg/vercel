@@ -1,5 +1,4 @@
 {
-    "typescript.tsdk": "node_modules/typescript/lib",
     "typescript.enablePromptUseWorkspaceTsdk": true,
     "sqltools.connections": [
       {
@@ -35,4 +34,20 @@
         "password": "postgres"
       }
     ]
-  }
+  ,
+  "editor.formatOnSave": true,
+  "[javascript]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "eslint.workingDirectories": [
+    { "pattern": "app/*" },
+    { "pattern": "packages/*" }
+  ]
+}

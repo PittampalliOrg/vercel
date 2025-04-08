@@ -129,7 +129,7 @@
     "@vercel/blob": "^0.24.1",
     "@vercel/otel": "^1.10.1",
     "@vercel/postgres": "^0.10.0",
-    "ai": "4.3.2",
+    "ai": "4.2.10",
     "bcrypt-ts": "^5.0.2",
     "class-variance-authority": "^0.7.1",
     "classnames": "^2.5.1",
@@ -218,21 +218,7 @@
     "tailwindcss": "^3.4.1",
     "ts-patch": "^3.3.0",
     "tsx": "^4.19.1",
-    "typescript": "~5.8.2"
+    "typescript": "^5.6.3"
   },
-  "packageManager": "pnpm@10.5.2+sha512.da9dc28cd3ff40d0592188235ab25d3202add8a207afbedc682220e4a0029ffbff4562102b9e6e46b4e3f9e8bd53e6d05de48544b0c57d4b0179e22c76d1199b",
-  "type": "module",
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "@biomejs/biome",
-      "@scarf/scarf",
-      "bufferutil",
-      "esbuild",
-      "protobufjs",
-      "sharp"
-    ],
-    "ignoredBuiltDependencies": [
-      "typia"
-    ]
-  }
+  "packageManager": "pnpm@9.12.3"
 }

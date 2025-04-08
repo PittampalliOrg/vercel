@@ -44,6 +44,7 @@ yarn-error.log*
 .env
 .vercel
 .env*.local
+<<<<<<< HEAD
 clients/dist/
 dapr/secrets.json
 **.go
@@ -63,3 +64,11 @@ config/grizzly/vendor
 alloy-1.7.4-1.amd64.deb
 config/grizzly/src/.pnpm-store
 config/grizzly/src/vendor
+=======
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/*
+>>>>>>> ccbc649317e3378115e2cc6e688432ea2b0d0c38
