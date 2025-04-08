@@ -5,20 +5,17 @@ import { fireworks } from '@ai-sdk/fireworks';
 import {
   customProvider,
   extractReasoningMiddleware,
-  LanguageModelV1,
   wrapLanguageModel,
 } from 'ai';
-import { wrap } from 'module';
 
 export const DEFAULT_CHAT_MODEL: string = 'chat-model-small';
-
 
 export const myProvider = customProvider({
   languageModels: {
     'chat-model-small': openai('gpt-4o-mini'),
-    'chat-model-large': azure("gpt-4o") as LanguageModelV1,
+    'chat-model-large': azure("gpt-4o"),
     'chat-model-reasoning': wrapLanguageModel({
-      model: anthropic('claude-3-7-sonnet-20250219') as LanguageModelV1,
+      model: anthropic('claude-3-7-sonnet-20250219'),
       middleware: extractReasoningMiddleware({ tagName: 'think' }),
     }),
     'title-model': openai('gpt-4-turbo'),

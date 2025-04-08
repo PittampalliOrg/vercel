@@ -1,47 +1,25 @@
 // src/app/(chat)/layout.tsx
-import type React from "react";
-import { AppSidebar } from "@/components/app-sidebar";
-import { auth } from "@/app/(auth)/auth"; // Use correct auth import
-import Script from "next/script";
-import { MCPServersProvider } from "@/components/providers/mcp-servers-provider"; // Corrected path
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
-import { MCPConnectionProvider } from "../../components/mcp-connection-provider";
-import { MCPConnectionLinker } from "@/components/mcp-connection-linker";
-import { TooltipProvider } from "@/components/ui/tooltip"; // Add TooltipProvider
+// --- MAKE SURE THIS FILE LOOKS EXACTLY LIKE THIS ---
+import { cookies } from 'next/headers';
+import { AppSidebar } from '@/components/app-sidebar';
+import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
+import { auth } from '../(auth)/auth';
+// --- (Ensure) the old provider imports are DELETED ---
 
-interface ChatLayoutProps {
-  children: React.ReactNode;
-}
+export const experimental_ppr = true;
 
-const ChatLayout = async ({ children }: ChatLayoutProps) => {
-  let session;
-  try {
-    session = await auth();
-  } catch (error) {
-    console.error("Error getting session in ChatLayout:", error);
-  }
+export default async function Layout({ children }: { children: React.ReactNode; }) {
+  const [session, cookieStore] = await Promise.all([auth(), cookies()]);
+  const isCollapsed = cookieStore.get('sidebar:state')?.value !== 'true';
 
   return (
-    <>
-      <Script
-        src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"
-        strategy="beforeInteractive"
-      />
-      {/* TooltipProvider is often needed for Shadcn UI components */}
-      <TooltipProvider delayDuration={0}>
-        <MCPServersProvider>
-          <MCPConnectionProvider>
-            {/* Linker must be inside both providers */}
-            <MCPConnectionLinker />
-            <SidebarProvider defaultOpen={true}>
-              <AppSidebar user={session?.user} />
-              <SidebarInset>{children}</SidebarInset>
-            </SidebarProvider>
-          </MCPConnectionProvider>
-        </MCPServersProvider>
-      </TooltipProvider>
-    </>
+    // --- NO PROVIDERS SHOULD WRAP SidebarProvider HERE ---
+    <SidebarProvider defaultOpen={!isCollapsed}>
+      <AppSidebar user={session?.user} />
+      <SidebarInset className="h-content overflow-auto">
+        {children}
+      </SidebarInset>
+    </SidebarProvider>
+    // --- END ---
   );
-};
-
-export default ChatLayout;
+}
